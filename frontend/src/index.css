@@ -1,0 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-400: #60a5fa;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-primary-800: #1e40af;
+  --color-primary-900: #1e3a8a;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-800 antialiased font-sans;
+  }
+}
+
+@layer components {
+  /* Komponen Tombol Utility Global */
+  .btn {
+    @apply cursor-pointer inline-flex items-center justify-center px-4 py-2 text-sm font-medium transition-colors border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-primary {
+    @apply text-white bg-primary-600 hover:bg-primary-700 focus:ring-primary-500 shadow-sm shadow-blue-500/20 disabled:shadow-none;
+  }
+  .btn-secondary {
+    @apply text-slate-700 bg-white border-slate-300 hover:bg-slate-50 focus:ring-primary-500 shadow-sm;
+  }
+  .btn-danger {
+    @apply text-white bg-red-600 hover:bg-red-700 focus:ring-red-500 shadow-sm disabled:shadow-none shadow-red-500/20;
+  }
+  
+  /* Utilities untuk Card */
+  .card {
+    @apply bg-white border border-slate-200/60 rounded-xl shadow-sm overflow-hidden;
+  }
+  .glass-header {
+    @apply bg-white/80 backdrop-blur-md border-b border-slate-200/60 z-10 sticky top-0;
+  }
+}
+
+/* Animasi fade in ringan */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}

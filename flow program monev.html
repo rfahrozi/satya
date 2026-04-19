@@ -1,0 +1,2876 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem SATYA - Arsitektur & Alur Program</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #F8FAFC;
+            --surface: #FFFFFF;
+            --surface-hover: #F1F5F9;
+            --text-main: #334155;
+            --heading: #0F172A;
+            --primary: #2563EB;
+            --primary-soft: #DBEAFE;
+            --secondary: #10B981;
+            --secondary-soft: #D1FAE5;
+            --accent: #8B5CF6;
+            --border: #E2E8F0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text-main); line-height: 1.65; padding: 2rem; }
+        
+        .container { max-width: 1000px; margin: 0 auto; background: var(--surface); padding: 3rem; border-radius: 20px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.08); }
+        
+        header { text-align: center; border-bottom: 2px solid var(--border); padding-bottom: 2rem; margin-bottom: 2rem; }
+        header .badge { display: inline-block; background-color: var(--primary-soft); color: var(--primary); font-size: 0.8rem; font-weight: 700; padding: 6px 16px; border-radius: 99px; margin-bottom: 12px; letter-spacing: 1px;}
+        header h1 { color: var(--heading); font-size: 2.2rem; margin-bottom: 0.5rem; line-height: 1.2;}
+        header p { font-size: 1.1rem; color: #64748B; max-width: 700px; margin: 0 auto; }
+
+        section { margin-bottom: 3rem; }
+        h2 { display: flex; align-items: center; gap: 10px; color: var(--heading); font-size: 1.5rem; margin-bottom: 1.2rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+        h2 span { background: var(--primary); color: white; width: 32px; height: 32px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+
+        h3 { color: #1E293B; font-size: 1.15rem; margin: 1.5rem 0 0.5rem; }
+        p { margin-bottom: 1rem; }
+
+        .arch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 1.5rem; }
+        .arch-card { background: var(--surface-hover); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; transition: transform 0.2s; }
+        .arch-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); }
+        .arch-card h4 { font-size: 1.05rem; color: var(--primary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px; }
+        .arch-card p { font-size: 0.9rem; margin-bottom: 0; color: #475569; }
+
+        .flow-list { list-style: none; padding: 0; position: relative; }
+        .flow-list::before { content: ''; position: absolute; top: 0; bottom: 0; left: 15px; width: 2px; background: var(--border); }
+        .flow-item { position: relative; margin-bottom: 1.5rem; padding-left: 45px; }
+        .flow-item::before { content: ''; position: absolute; left: 9px; top: 6px; width: 14px; height: 14px; background: var(--primary); border-radius: 50%; border: 3px solid white; box-shadow: 0 0 0 2px var(--primary-soft); }
+        .flow-item h4 { font-size: 1.05rem; color: var(--heading); margin-bottom: 0.25rem; }
+        .flow-item p { font-size: 0.95rem; margin: 0; }
+        .flow-item code { background: #E2E8F0; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; color: #0F172A; }
+
+        .future-box { background: linear-gradient(135deg, #F8FAFC, #F0FDF4); border: 1px solid #BBF7D0; border-radius: 16px; padding: 2rem; margin-top: 2rem; }
+        .future-box h3 { color: #166534; margin-top: 0; }
+        .future-list { margin-top: 1rem; padding-left: 1.5rem; color: #15803D; }
+        .future-list li { margin-bottom: 0.5rem; }
+
+        .highlight-box { background: var(--primary-soft); border-left: 4px solid var(--primary); padding: 1rem 1.5rem; border-radius: 0 8px 8px 0; margin: 1.5rem 0; font-size: 0.95rem; }
+
+        footer { text-align: center; border-top: 1px solid var(--border); padding-top: 2rem; margin-top: 3rem; color: #94A3B8; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <span class="badge">DEVELOPER DOCUMENTATION</span>
+        <h1>Alur Program & Arsitektur SATYA</h1>
+        <p>Penjelasan teknis siklus hidup sistem secara _End-to-End_ dari perspektif rekayasa perangkat lunak (_Software Engineering_).</p>
+    </header>
+
+    <section>
+        <h2><span>1</span> Tinjauan Arsitektur Berorientasi Micro-services</h2>
+        <p>Aplikasi SATYA secara struktur dide-kopel (*decoupled*) ke dalam kontainer-kontainer tertutup demi menjamin skalabilitas I/O, keamanan, pengelolaan statis, dan stabilitas performa tinggi.</p>
+        
+        <div class="arch-grid">
+            <div class="arch-card">
+                <h4>🚀 Web Server & API (Node/Express)</h4>
+                <p>Mesin utama RESTful. Bertugas melakukan validasi payload, melayani permintaan SPA React, injeksi rute <code>/api/v1</code>, pembungkusan Error Handler terpusat, dan otentikasi lapis atas. Berjalan pada antarmuka port 3000.</p>
+            </div>
+            <div class="arch-card">
+                <h4>🎨 Frontend (React Vite - Single Page App)</h4>
+                <p>Memisahkan beban kerja representasi UI (*offloading rendering*) ke peramban milik user. Di-[_build_] langsung menjadi bundel statis JS/CSS dan disajikan secara asinkron menggunakan NGINX/Express SPA fallback. Dikombinasikan dengan <code>React Query</code> dan Axios Proxy.</p>
+            </div>
+            <div class="arch-card">
+                <h4>💾 Data Store (PostgreSQL)</h4>
+                <p>Tempat bersandarnya skema normalisasi tabel relasional yang menangani `users`, `satkers`, dan metadata subjek `report_submissions`. Algoritma berat (seperti N+1 agregasi) dilaksanakan di dalam _query_ instancenya langsung.</p>
+            </div>
+            <div class="arch-card">
+                <h4>📥 Object Storage (MinIO S3-Compatible)</h4>
+                <p>Untuk menghindari *"Fat Database"* (Database gemuk), berkas PDF dan Excell (.xlsx) dicegat melalui *Multer HTTP Stream* lalu dipompa ke bucket MinIO. Penyajian (Unduh Laporan) cukup memberikan <code>Pre-Signed URL</code> yang kedaluwarsa.</p>
+            </div>
+            <div class="arch-card">
+                <h4>⚡ Antrian Memori (Redis + BullMQ)</h4>
+                <p>Penyangga (*Buffer*) untuk proses berat (*CPU-Bound*). Setiap pemicu *Email* atau perhitungan rentang waktu Scheduler (Cron-job H-3 atau H-1) tidak akan menggantung (blocking) Thread Node.js melainkan ditransfer ke *Worker Node* independen.</p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2><span>2</span> Detail Alur Teknis Program (Data Flow)</h2>
+        
+        <div class="flow-list">
+            <div class="flow-item">
+                <h4>Otentikasi & Interseptor</h4>
+                <p>Klien log-in memanggil endpoint <code>POST /auth/login</code>. Express memvalidasi sandi (Bcrypt), mengeluarkan token JWT (ter-encode ID, Role, Satker_Id). Di React Frontend, pustaka Axios membungkus token tersebut pada <code>Authorization: Bearer</code> secara konstan di latar belakang lewat pola *Axios Interceptor*.</p>
+            </div>
+            
+            <div class="flow-item">
+                <h4>Aksi Upload (Stream Pipe Object Storage)</h4>
+                <p>Ketika User Satker PN mengupload PDF, React menggunakan <code>FormData</code>. Express mengeksekusi <i>middleware</i> <code>uploadSingle(Multer)</code> (Maks. 10MB). Lapis <i>Repository</i> (*MinIO Client*) *Stream buffer* ke Bucket <code>satya-documents</code>. MinIO mengembalikan _Filename_ atau Hash. Path ini di-*INSERT/UPSERT* ke Postgres `report_submissions` dengan status <code>belum_lengkap</code>.</p>
+            </div>
+            
+            <div class="flow-item">
+                <h4>Kalkulator Performa Kepatuhan Bebas N+1</h4>
+                <p>Ketika Pimpinan memuat "Dashboard Agregat", Request GET membentur <code>getRekapitulasiPimpinan</code> Controller. Alih-alih melakukan *loop mapping* tanggal dengan Javascript di server (yg membebani RAM), Node mengutus perintah <code>CASE WHEN rs.created_at <= ? THEN 'Tepat_Waktu' ELSE 'Terlambat' END</code> tepat di *Query Text Postgres*. Sehingga, database Postgres langsung membungkus (*Aggregate*) format JSON Final untuk ditangkap Node. Waktu respon ditekan dari ratusan Milisekon menjadi kurang dari ~20ms.</p>
+            </div>
+
+            <div class="flow-item">
+                <h4>Worker Email Otomatis Bertenggang (BullMQ)</h4>
+                <p>Server menjalankan satu proses terpisah "Worker". Sebuah cron-job Node berjalan setiap dini hari berpatokan pada fungsi <i>Pure Math</i> <code>isReminderDay(today, deadlineLimit)</code>. Jika ia menemukan jatuh *Trigger H-3* atau *H-1*, ia menangkap satker yang <strong>Kekurangan Berkas</strong> melalui Query DB kustom, lalu mendorong (Push bulk) instruksi "KIRIM EMAIL" ke Redis. Redis memanggil <code>emailWorker.js</code> untuk meluncurkan SMTP Nodemailer satu-persatu tanpa membebani server/API utama.</p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2><span>3</span> Pengembangan Lanjutan (Evolusi Dashboard Pimpinan)</h2>
+        <p>Berdasarkan struktur arsitektur yang sudah solid saat ini, terdapat tuntutan/kewajiban pengembangan fitur tingkat menengah-atas di masa mendatang. Khususnya untuk <strong>Dashboard Pimpinan Tertinggi Pengadilan Tinggi</strong>, yang diharapkan tidak sekadar menjadi sistem "Lapor-dan-Lihat", namun menjadi alat bantu **Business Intelligence (Decision Maker).**</p>
+
+        <div class="highlight-box">
+            Sistem API saat ini masih berbasis <em>Satu Periode Waktu Dimensi (Triwulan atau Bulan)</em>, Pimpinan membutuhkan kapabilitas melacak metrik historis lintas waktu (Trend Analysis).
+        </div>
+
+        <div class="future-box">
+            <h3>Roadmap Pengembangan Skala Prioritas - (Dashboard Pimpinan)</h3>
+            <ul class="future-list">
+                <li>
+                    <strong>Fitur Laporan Tren (Time-Series Graph):</strong> 
+                    Memanfaatkan data historis periode bulan/tahun yang utuh. Akan dibuat Endpoint Agregat Multi-Periode menggunakan *SQL Window Function*. Di Frontend (React), Pimpinan akan melihat garis _Chart_ Kepatuhan Satker PN sepanjang tahun menggunakan library visualisasi data (e.g. <code>Recharts</code> atau <code>Chart.js</code>).
+                </li>
+                <li>
+                    <strong>Eksport Tabel Excel Dinamis & Cetak PDF:</strong> 
+                    Seringkali hasil rekap (Ketepatan waktu dan Laporan kurang) harus dicetak rapi. Kewajiban dev ke depan adalah membuat Endpoint <code>/export-dashboard</code> pada Worker (Agar kompilasi PDF/Xlsx berat di-*offload* ke Redis Worker). Outputnya langsung masuk ke antrian unduhan Pimpinan.
+                </li>
+                <li>
+                    <strong>Matrix Nilai Komposit Kepatuhan:</strong>
+                    Dashboard saat ini menggunakan "Total Wajib / Total Upload (%)". Ke depan sistem harus menghitung "Nilai Performa/Kepatuhan Mutlak" dengan _Weighted Score_. Satker PN yang unggah "Tepat Waktu" memiliki pengali lebih tinggi dibandingkan dengan "Terlambat". Hitungan ini perlu direlasikan ke sertifikat/kepatuhan level nasional.
+                </li>
+                <li>
+                    <strong>Sinkronisasi & Modul Penilaian Mutu AMPUH:</strong>
+                    Karena monev ini erat kaitan dengan penilaian AMPUH, dibutuhkan modul tambahan yang memungkinkan pimpinan tidak hanya melabeli 'Lengkap/Revisi', namun memberikan 'Angka/Rating Mutu' berkas (Mungkin skala 0-5), beserta rekapan penilaian akhir bulanan yang lebih kompleks.
+                </li>
+            </ul>
+        </div>
+    </section>
+
+    
+<section>
+    <h2><span>4</span> Hierarki Folder & Kode Sumber Lengkap</h2>
+    <p>Berikut adalah struktur direktori aplikasi SATYA (*Mono-repo*) beserta rekam historis cuplikan seluruh baris kode sumber asli (Source Code) yang kami gunakan. Variabel lingkungan (*Environment*) telah dinetralkan.</p>
+    
+    <div style="background:#1E293B; color:#A7F3D0; padding:1.5rem; border-radius:12px; font-family:monospace; font-size:0.9rem; overflow-x:auto; line-height:1.6; margin-bottom: 2rem;">
+        <pre style="margin:0;">├── .env
+├── docker-compose.yml
+├── Dockerfile
+├── jest.config.js
+├── migrations
+│   ├── 20240101000000_initial_schema.js
+│   └── 20260419000000_add_email_to_users.js
+├── package.json
+├── seeds
+│   └── 01_initial_data.js
+├── src
+│   ├── app.js
+│   ├── config
+│   │   ├── knex.js
+│   │   ├── minio.js
+│   │   ├── redis.js
+│   │   └── __mocks__
+│   │       └── minio.js
+│   ├── controllers
+│   │   ├── authController.js
+│   │   └── reportController.js
+│   ├── emailWorker.js
+│   ├── middlewares
+│   │   ├── errorHandler.js
+│   │   └── tenant.js
+│   ├── repositories
+│   │   └── reportRepo.js
+│   ├── routes
+│   │   ├── authRoutes.js
+│   │   ├── index.js
+│   │   └── reportRoutes.js
+│   ├── scheduler.js
+│   ├── services
+│   │   ├── authService.js
+│   │   ├── emailService.js
+│   │   └── reportService.js
+│   ├── worker-app.js
+│   └── __mocks__
+│       └── emailWorker.js
+└── tests
+    ├── integration
+    │   ├── authFlow.test.js
+    │   ├── reportFlow.test.js
+    │   └── reportManagement.test.js
+    ├── setup.js
+    ├── unit
+    │   ├── authService.test.js
+    │   └── reportController.test.js
+    └── __mocks__
+        └── externalServices.js
+</pre>
+    </div>
+
+    <h3>Daftar Kompilasi Source Code</h3>
+    
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        .env
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code># Server Config
+PORT=***KABUR***
+NODE_ENV=***KABUR***
+JWT_SECRET=***KABUR***
+JWT_EXPIRES_IN=***KABUR***
+
+# Database (PostgreSQL)
+DB_HOST=***KABUR***
+DB_PORT=***KABUR***
+DB_USER=***KABUR***
+DB_PASSWORD=***KABUR***
+DB_NAME=***KABUR***
+
+# Redis (Untuk BullMQ)
+REDIS_HOST=***KABUR***
+REDIS_PORT=***KABUR***
+
+# MinIO (Object Storage)
+MINIO_ENDPOINT=***KABUR***
+MINIO_PORT=***KABUR***
+MINIO_USE_SSL=***KABUR***
+MINIO_ACCESS_KEY=***KABUR***
+MINIO_SECRET_KEY=***KABUR***
+MINIO_BUCKET_NAME=***KABUR***
+
+#Admin PT: Username: admin_pt, Password: password123
+#Pimpinan: Username: pimpinan_pt, Password: password123
+#Satker (Contoh): Username: pn_tpi, Password: password123</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        docker-compose.yml
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>version: &#039;3.8&#039;
+
+services:
+  app:
+    build: .
+    container_name: satya_app
+    ports:
+      - &quot;3000:3000&quot;
+    volumes:
+      - .:/app
+      - /app/node_modules
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+      - minio
+    command: npm run dev:api
+
+  worker:
+    build: .
+    container_name: satya_worker
+    volumes:
+      - .:/app
+      - /app/node_modules
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+      - minio
+    command: npm run start:worker
+
+  db:
+    image: postgres:15-alpine
+    container_name: satya_postgres
+    environment:
+      POSTGRES_USER: satya_admin
+      POSTGRES_PASSWORD: secure_password_here
+      POSTGRES_DB: satya_db
+    ports:
+      - &quot;5432:5432&quot;
+
+  redis:
+    image: redis:7-alpine
+    container_name: satya_redis
+    ports:
+      - &quot;6379:6379&quot;
+
+  minio:
+    image: minio/minio
+    container_name: satya_minio
+    environment:
+      MINIO_ROOT_USER: minio_admin
+      MINIO_ROOT_PASSWORD: minio_secure_password
+    command: server /data --console-address &quot;:9001&quot;
+    ports:
+      - &quot;9000:9000&quot;
+      - &quot;9001:9001&quot;</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        Dockerfile
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy package.json dan package-lock.json
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy seluruh source code
+COPY . .
+
+# Expose port API
+EXPOSE 3000</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        jest.config.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/** @type {import(&#039;jest&#039;).Config} */
+module.exports = {
+    testEnvironment: &#039;node&#039;,
+    testMatch: [&#039;**/tests/**/*.test.js&#039;],
+    testTimeout: 30000,
+    forceExit: true,
+    clearMocks: true,
+    verbose: true,
+};
+</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        migrations/20240101000000_initial_schema.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * SATYA - Initial Schema Migration
+ * Membuat tabel: satkers, users, report_types, report_submissions
+ */
+
+exports.up = async function(knex) {
+    // 1. Tabel Satuan Kerja (Kantor Pengadilan Negeri)
+    await knex.schema.createTable(&#039;satkers&#039;, (table) =&gt; {
+        table.increments(&#039;id&#039;).primary();
+        table.string(&#039;nama_satker&#039;, 255).notNullable().unique();
+        table.timestamps(true, true);
+    });
+
+    // 2. Tabel User (Admin PT, Pimpinan, Satker PN)
+    await knex.schema.createTable(&#039;users&#039;, (table) =&gt; {
+        table.increments(&#039;id&#039;).primary();
+        table.string(&#039;username&#039;, 100).notNullable().unique();
+        table.string(&#039;password_hash&#039;, 255).notNullable();
+        table.enu(&#039;role&#039;, [&#039;ADMIN_PT&#039;, &#039;PIMPINAN&#039;, &#039;SATKER_PN&#039;]).notNullable();
+        table.integer(&#039;satker_id&#039;).unsigned().references(&#039;id&#039;).inTable(&#039;satkers&#039;).onDelete(&#039;SET NULL&#039;).nullable();
+        table.boolean(&#039;is_active&#039;).defaultTo(true);
+        table.timestamps(true, true);
+    });
+
+    // 3. Tabel Jenis Laporan
+    await knex.schema.createTable(&#039;report_types&#039;, (table) =&gt; {
+        table.increments(&#039;id&#039;).primary();
+        table.string(&#039;nama_laporan&#039;, 500).notNullable();
+        table.boolean(&#039;is_wajib&#039;).defaultTo(true);
+        table.timestamps(true, true);
+    });
+
+    // 4. Tabel Pengumpulan Laporan (Inti Sistem Monev)
+    await knex.schema.createTable(&#039;report_submissions&#039;, (table) =&gt; {
+        table.increments(&#039;id&#039;).primary();
+        table.integer(&#039;satker_id&#039;).unsigned().references(&#039;id&#039;).inTable(&#039;satkers&#039;).onDelete(&#039;CASCADE&#039;).notNullable();
+        table.integer(&#039;report_type_id&#039;).unsigned().references(&#039;id&#039;).inTable(&#039;report_types&#039;).onDelete(&#039;CASCADE&#039;).notNullable();
+        table.integer(&#039;periode_bulan&#039;).notNullable(); // 1-12
+        table.integer(&#039;periode_tahun&#039;).notNullable(); // e.g. 2026
+        table.string(&#039;file_url&#039;, 500).notNullable(); // Path di MinIO
+        table.string(&#039;nama_file_asli&#039;, 255).notNullable();
+        table.enu(&#039;status_verifikasi&#039;, [&#039;belum_lengkap&#039;, &#039;lengkap&#039;, &#039;revisi&#039;]).defaultTo(&#039;belum_lengkap&#039;);
+        table.text(&#039;catatan_admin&#039;).nullable();
+        table.timestamps(true, true);
+
+        // Satu satker hanya boleh memiliki satu submission per jenis laporan per periode
+        table.unique([&#039;satker_id&#039;, &#039;report_type_id&#039;, &#039;periode_bulan&#039;, &#039;periode_tahun&#039;]);
+    });
+};
+
+exports.down = async function(knex) {
+    await knex.schema.dropTableIfExists(&#039;report_submissions&#039;);
+    await knex.schema.dropTableIfExists(&#039;report_types&#039;);
+    await knex.schema.dropTableIfExists(&#039;users&#039;);
+    await knex.schema.dropTableIfExists(&#039;satkers&#039;);
+};
+</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        migrations/20260419000000_add_email_to_users.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * SATYA - Migration: Add email column to users table
+ * Diperlukan untuk sistem reminder otomatis (H-3, H-1, Hari-H)
+ * Email bersifat nullable agar backward-compatible dengan data lama.
+ */
+
+exports.up = async function(knex) {
+    await knex.schema.alterTable(&#039;users&#039;, (table) =&gt; {
+        table.string(&#039;email&#039;, 255).nullable().comment(&#039;Alamat email penanggung jawab satker untuk notifikasi otomatis&#039;);
+    });
+};
+
+exports.down = async function(knex) {
+    await knex.schema.alterTable(&#039;users&#039;, (table) =&gt; {
+        table.dropColumn(&#039;email&#039;);
+    });
+};
+</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        package.json
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>{
+  &quot;name&quot;: &quot;satya-backend&quot;,
+  &quot;version&quot;: &quot;1.0.0&quot;,
+  &quot;scripts&quot;: {
+    &quot;start:api&quot;: &quot;node src/app.js&quot;,
+    &quot;start:worker&quot;: &quot;node src/worker-app.js&quot;,
+    &quot;dev:api&quot;: &quot;nodemon src/app.js&quot;,
+    &quot;migrate:make&quot;: &quot;knex migrate:make&quot;,
+    &quot;migrate:latest&quot;: &quot;knex migrate:latest&quot;,
+    &quot;migrate:rollback&quot;: &quot;knex migrate:rollback&quot;,
+    &quot;seed:run&quot;: &quot;knex seed:run&quot;,
+    &quot;test&quot;: &quot;cross-env NODE_ENV=test jest --runInBand --detectOpenHandles --coverage&quot;
+  },
+  &quot;dependencies&quot;: {
+    &quot;bcryptjs&quot;: &quot;^2.4.3&quot;,
+    &quot;bullmq&quot;: &quot;^5.0.0&quot;,
+    &quot;cors&quot;: &quot;^2.8.5&quot;,
+    &quot;dotenv&quot;: &quot;^16.0.3&quot;,
+    &quot;express&quot;: &quot;^4.18.2&quot;,
+    &quot;express-rate-limit&quot;: &quot;^8.3.2&quot;,
+    &quot;ioredis&quot;: &quot;^5.3.2&quot;,
+    &quot;jsonwebtoken&quot;: &quot;^9.0.0&quot;,
+    &quot;knex&quot;: &quot;^2.4.2&quot;,
+    &quot;minio&quot;: &quot;^7.1.1&quot;,
+    &quot;multer&quot;: &quot;^1.4.5-lts.1&quot;,
+    &quot;nodemailer&quot;: &quot;^6.9.1&quot;,
+    &quot;pg&quot;: &quot;^8.10.0&quot;
+  },
+  &quot;devDependencies&quot;: {
+    &quot;cross-env&quot;: &quot;^7.0.3&quot;,
+    &quot;jest&quot;: &quot;^29.5.0&quot;,
+    &quot;nodemon&quot;: &quot;^2.0.22&quot;,
+    &quot;supertest&quot;: &quot;^6.3.3&quot;
+  }
+}
+</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        seeds/01_initial_data.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>const bcrypt = require(&#039;bcryptjs&#039;);
+
+exports.seed = async function(knex) {
+    // Hapus data yang ada sebelumnya (untuk mereset)
+    await knex(&#039;report_submissions&#039;).del();
+    await knex(&#039;users&#039;).del();
+    await knex(&#039;satkers&#039;).del();
+    await knex(&#039;report_types&#039;).del();
+
+    // 1. Data Satker (Pengadilan Negeri)
+    await knex(&#039;satkers&#039;).insert([
+        { id: 1, nama_satker: &#039;PN Tanjung Pinang&#039; },
+        { id: 2, nama_satker: &#039;PN Batam&#039; },
+        { id: 3, nama_satker: &#039;PN Karimun&#039; },
+        { id: 4, nama_satker: &#039;PN Natuna&#039; },
+        { id: 5, nama_satker: &#039;PN Ranai&#039; }
+    ]);
+
+    // 2. Data Akun Pengguna (Default Password: password123)
+    const defaultPassword = await bcrypt.hash(&#039;password123&#039;, 10);
+    await knex(&#039;users&#039;).insert([
+        { id: 1, username: &#039;admin_pt&#039;, password_hash: defaultPassword, role: &#039;ADMIN_PT&#039;, satker_id: null },
+        { id: 2, username: &#039;pimpinan_pt&#039;, password_hash: defaultPassword, role: &#039;PIMPINAN&#039;, satker_id: null },
+        { id: 3, username: &#039;pn_tpi&#039;, password_hash: defaultPassword, role: &#039;SATKER_PN&#039;, satker_id: 1 },
+        { id: 4, username: &#039;pn_batam&#039;, password_hash: defaultPassword, role: &#039;SATKER_PN&#039;, satker_id: 2 }
+    ]);
+
+    // 3. Data Jenis Laporan Wajib
+    await knex(&#039;report_types&#039;).insert([
+        { id: 1, nama_laporan: &#039;Laporan Delegasi Keluar yang Kurang dan Lebih dari 14 Hari&#039;, is_wajib: true },
+        { id: 2, nama_laporan: &#039;Laporan Delegasi Masuk dan Keluar 5 Hari Belum Selesai Dilaksanakan&#039;, is_wajib: true },
+        { id: 3, nama_laporan: &#039;Laporan Delegasi Masuk dan Keluar&#039;, is_wajib: true },
+        { id: 4, nama_laporan: &#039;Laporan Evaluasi Bulanan Perkara Pidana dan Perdata&#039;, is_wajib: true },
+        { id: 5, nama_laporan: &#039;Laporan Jenis Perkara Perdata (M.IIA)&#039;, is_wajib: true },
+        { id: 6, nama_laporan: &#039;Laporan Jenis Perkara Pidana (M.IA)&#039;, is_wajib: true },
+        { id: 7, nama_laporan: &#039;Laporan Keadaan Keuangan Perkara Perdata (L1.A7)&#039;, is_wajib: true },
+        { id: 8, nama_laporan: &#039;Laporan Keadaan Perkara Perdata (L1.A1)&#039;, is_wajib: true },
+        { id: 9, nama_laporan: &#039;Laporan Keadaan Perkara Pidana (L1.B1)&#039;, is_wajib: true },
+        { id: 10, nama_laporan: &#039;Laporan Keberhasilan Mediasi&#039;, is_wajib: true },
+        { id: 11, nama_laporan: &#039;Laporan Kepatuhan Pengembalian Sisa Panjar&#039;, is_wajib: true },
+        { id: 12, nama_laporan: &#039;Laporan Monev Litigasi Perdata Sudah&#039;, is_wajib: true },
+        { id: 13, nama_laporan: &#039;Laporan Monev Perkara Perdata BHT Tidak Dapat Dieksekusi&#039;, is_wajib: true },
+        { id: 14, nama_laporan: &#039;Laporan Pembebasan Biaya Perkara&#039;, is_wajib: true },
+        { id: 15, nama_laporan: &#039;Laporan Pengaduan&#039;, is_wajib: true },
+        { id: 16, nama_laporan: &#039;Laporan Pengembalian Sisa Panjar&#039;, is_wajib: true },
+        { id: 17, nama_laporan: &#039;Laporan Penyelesaian Pengaduan&#039;, is_wajib: true },
+        { id: 18, nama_laporan: &#039;Laporan Perdata yang Diajukan Banding, Kasasi, PK dan Eksekusi&#039;, is_wajib: true },
+        { id: 19, nama_laporan: &#039;Laporan Perkara Perdata Eksekusi yang Belum Dilaksanakan&#039;, is_wajib: true },
+        { id: 20, nama_laporan: &#039;Laporan Pidana yang Diajukan Banding, Kasasi, PK dan Grasi&#039;, is_wajib: true },
+        { id: 21, nama_laporan: &#039;Laporan Posbakum&#039;, is_wajib: true },
+        { id: 22, nama_laporan: &#039;Laporan Rekapitulasi Diversi&#039;, is_wajib: true },
+        { id: 23, nama_laporan: &#039;Laporan Rekapitulasi Mediasi&#039;, is_wajib: true },
+        { id: 24, nama_laporan: &#039;Laporan Rekapitulasi Restoratif Justice&#039;, is_wajib: true },
+        { id: 25, nama_laporan: &#039;Laporan Sidang di Luar Gedung Pengadilan&#039;, is_wajib: true },
+        { id: 26, nama_laporan: &#039;Monev Akurasi dan Kualitas Data SIPP&#039;, is_wajib: true },
+        { id: 27, nama_laporan: &#039;Monev E-BERPADU&#039;, is_wajib: true },
+        { id: 28, nama_laporan: &#039;Rekapitulasi Laporan Perkara Pidana dan Perdata Banding yang Tidak Mengajukan Kasasi dan PK&#039;, is_wajib: true },
+        { id: 29, nama_laporan: &#039;Monev Lainnya (Opsional)&#039;, is_wajib: false }
+    ]);
+
+    // 4. Update PostgreSQL sequence to match MAX(id) if running in PG
+    if (knex.client.config.client === &#039;pg&#039; || knex.client.config.client === &#039;postgresql&#039;) {
+        const tablesWithId = [&#039;satkers&#039;, &#039;users&#039;, &#039;report_types&#039;];
+        for (const table of tablesWithId) {
+            await knex.raw(`SELECT setval(&#039;${table}_id_seq&#039;, (SELECT MAX(id) FROM ${table}))`);
+        }
+    }
+};</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        src/app.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>require(&#039;dotenv&#039;).config();
+const express = require(&#039;express&#039;);
+const cors = require(&#039;cors&#039;);
+const { initMinio } = require(&#039;./config/minio&#039;);
+const routes = require(&#039;./routes&#039;);
+const { errorHandler } = require(&#039;./middlewares/errorHandler&#039;);
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// Menyajikan file statis (Frontend) dari folder public
+app.use(express.static(&#039;public&#039;));
+
+const path = require(&#039;path&#039;);
+
+app.use(&#039;/api/v1&#039;, routes);
+
+// SPA Fallback untuk React Router
+app.get(&#039;*&#039;, (req, res) =&gt; {
+    res.sendFile(path.resolve(__dirname, &#039;../public&#039;, &#039;index.html&#039;));
+});
+
+app.use(errorHandler);
+
+if (process.env.NODE_ENV !== &#039;test&#039;) {
+    initMinio().then(() =&gt; {
+        app.listen(process.env.PORT, () =&gt; console.log(`API on port ${process.env.PORT}`));
+    });
+}
+module.exports = app;</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        src/config/knex.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * SATYA - Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel - Database Configuration
+ * Menggunakan Knex.js untuk Query Builder &amp; Koneksi PostgreSQL
+ */
+
+const knex = require(&#039;knex&#039;);
+require(&#039;dotenv&#039;).config();
+const config = require(&#039;../../knexfile&#039;);
+
+// Mendeteksi apakah aplikasi sedang berjalan dalam mode testing atau produksi
+const environment = process.env.NODE_ENV || &#039;development&#039;;
+
+// Inisialisasi instance Knex berdasarkan environment
+const db = knex(config[environment]);
+
+// Verifikasi Koneksi saat Startup
+if (environment !== &#039;test&#039;) {
+    db.raw(&#039;SELECT 1&#039;)
+      .then(() =&gt; console.log(&#039;✅ [Database] PostgreSQL terhubung dengan sukses.&#039;))
+      .catch((err) =&gt; {
+        console.error(&#039;❌ [Database] Gagal terhubung ke PostgreSQL:&#039;, err.message);
+      });
+}
+
+module.exports = db;</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        src/config/minio.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * SATYA - Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel - Object Storage Configuration
+ * Menggunakan MinIO untuk penyimpanan dokumen PDF/Excel secara aman
+ */
+
+const Minio = require(&#039;minio&#039;);
+require(&#039;dotenv&#039;).config();
+
+// Inisialisasi Client MinIO
+const minioClient = new Minio.Client({
+    endPoint: process.env.MINIO_ENDPOINT || &#039;127.0.0.1&#039;,
+    port: parseInt(process.env.MINIO_PORT) || 9000,
+    useSSL: process.env.MINIO_USE_SSL === &#039;true&#039;, // Set true jika sudah menggunakan HTTPS/SSL
+    accessKey: process.env.MINIO_ACCESS_KEY,
+    secretKey: process.env.MINIO_SECRET_KEY
+});
+
+// Nama Bucket dari file .env
+const BUCKET_NAME = process.env.MINIO_BUCKET_NAME || &#039;satya-documents&#039;;
+
+/**
+ * Fungsi untuk memastikan Bucket sudah tersedia di server MinIO.
+ * Dijalankan satu kali saat aplikasi startup.
+ */
+async function initMinio() {
+    try {
+        const exists = await minioClient.bucketExists(BUCKET_NAME);
+        if (exists) {
+            console.log(`✅ [MinIO] Bucket &#039;${BUCKET_NAME}&#039; tersedia.`);
+        } else {
+            await minioClient.makeBucket(BUCKET_NAME, &#039;us-east-1&#039;);
+            console.log(`🚀 [MinIO] Bucket &#039;${BUCKET_NAME}&#039; berhasil dibuat otomatis.`);
+        }
+
+        // Opsional: Set Policy ke Private agar file tidak bisa diakses publik tanpa Presigned URL
+        // Secara default, MinIO bucket baru bersifat private.
+    } catch (error) {
+        console.error(&#039;❌ [MinIO] Gagal inisialisasi MinIO:&#039;, error.message);
+        // Jangan hentikan aplikasi di mode testing
+        if (process.env.NODE_ENV !== &#039;test&#039;) {
+            process.exit(1);
+        }
+    }
+}
+
+module.exports = {
+    minioClient,
+    initMinio,
+    BUCKET_NAME
+};</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        src/config/redis.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * SATYA - Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel - Redis Configuration
+ * Digunakan sebagai backend untuk antrean BullMQ (Email &amp; Scheduler)
+ */
+
+const Redis = require(&#039;ioredis&#039;);
+require(&#039;dotenv&#039;).config();
+
+// Konfigurasi koneksi Redis
+const redisConfig = {
+    host: process.env.REDIS_HOST || &#039;127.0.0.1&#039;,
+    port: parseInt(process.env.REDIS_PORT) || 6379,
+    password: process.env.REDIS_PASSWORD || undefined,
+    
+    // Syarat wajib untuk BullMQ:
+    // Mencegah error &#039;Max retries per request&#039; yang sering terjadi pada background worker
+    maxRetriesPerRequest: null,
+    
+    // Memastikan koneksi tetap hidup
+    keepAlive: 10000,
+    
+    // Logika Reconnect jika server Redis sempat mati
+    retryStrategy(times) {
+        const delay = Math.min(times * 50, 2000);
+        return delay;
+    }
+};
+
+// Buat instance koneksi tunggal (Singleton)
+const redisConnection = new Redis(redisConfig);
+
+// Event Listener untuk memantau kesehatan koneksi
+redisConnection.on(&#039;connect&#039;, () =&gt; {
+    console.log(&#039;✅ [Redis] Berhasil terhubung ke server.&#039;);
+});
+
+redisConnection.on(&#039;error&#039;, (err) =&gt; {
+    console.error(&#039;❌ [Redis] Error koneksi:&#039;, err.message);
+    
+    // Jangan hentikan aplikasi di mode testing agar Jest tetap jalan
+    if (process.env.NODE_ENV !== &#039;test&#039;) {
+        // process.exit(1); // Opsional: Aktifkan jika aplikasi tidak boleh jalan tanpa Redis
+    }
+});
+
+module.exports = redisConnection;</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        src/config/__mocks__/minio.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * Jest Manual Mock: src/config/minio.js
+ *
+ * File ini digunakan secara otomatis oleh Jest ketika test memanggil:
+ *   jest.mock(&#039;../../src/config/minio&#039;)
+ * tanpa perlu mendefinisikan factory function inline.
+ *
+ * Single source of truth untuk semua integration test.
+ */
+module.exports = {
+    BUCKET_NAME: &#039;test-bucket&#039;,
+    initMinio: jest.fn().mockResolvedValue(true),
+    minioClient: {
+        putObject: jest.fn().mockResolvedValue(&#039;etag&#039;),
+        removeObject: jest.fn().mockResolvedValue(true),
+        presignedGetObject: jest.fn().mockResolvedValue(&#039;http://mock.presigned.url/file.pdf&#039;)
+    }
+};
+</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        src/controllers/authController.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * SATYA - Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel - Auth Controller
+ * Controller tipis: hanya menangani HTTP layer. Semua logika bisnis ada di authService.
+ */
+
+const authService = require(&#039;../services/authService&#039;);
+const { AppError } = require(&#039;../middlewares/errorHandler&#039;);
+
+/**
+ * Handle Login Pengguna
+ */
+async function login(req, res, next) {
+    try {
+        const { username, password } = req.body;
+
+        if (!username || !password) {
+            throw new AppError(&#039;Username dan password wajib diisi.&#039;, 400);
+        }
+
+        const result = await authService.loginUser(username, password);
+
+        res.status(200).json({
+            success: true,
+            message: &#039;Login berhasil. Selamat datang di SATYA.&#039;,
+            data: result
+        });
+    } catch (error) {
+        if (error.message.includes(&#039;INVALID_CREDENTIALS&#039;)) {
+            next(new AppError(&#039;Username atau password salah.&#039;, 401));
+        } else {
+            next(error);
+        }
+    }
+}
+
+/**
+ * [ADMIN] Simpan atau Update Akun User Satker
+ */
+async function saveOrUpdateUser(req, res, next) {
+    try {
+        if (req.tenant.role !== &#039;ADMIN_PT&#039;) {
+            throw new AppError(&#039;Anda tidak memiliki izin untuk mengelola akun.&#039;, 403);
+        }
+
+        const { id, ...userData } = req.body;
+
+        if (id) {
+            await authService.updateUser(id, userData);
+            res.status(200).json({ success: true, message: &#039;Akun berhasil diperbarui.&#039; });
+        } else {
+            await authService.createUser(userData);
+            res.status(201).json({ success: true, message: &#039;Akun baru berhasil dibuat.&#039; });
+        }
+    } catch (error) {
+        next(error);
+    }
+}
+
+/**
+ * [ADMIN] Ambil Semua Daftar User Satker
+ */
+async function getAllUsers(req, res, next) {
+    try {
+        if (req.tenant.role !== &#039;ADMIN_PT&#039;) {
+            throw new AppError(&#039;Akses ditolak.&#039;, 403);
+        }
+
+        const users = await authService.getAllUsers();
+
+        res.status(200).json({
+            success: true,
+            data: users
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+module.exports = {
+    login,
+    saveOrUpdateUser,
+    getAllUsers
+};</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        src/controllers/reportController.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * SATYA - Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel - Report Controller
+ * Menangani siklus hidup dokumen: Upload, Progress, Verifikasi, dan CRUD
+ */
+
+const reportService = require(&#039;../services/reportService&#039;);
+const reportRepo = require(&#039;../repositories/reportRepo&#039;);
+const { AppError } = require(&#039;../middlewares/errorHandler&#039;);
+
+// Enum yang valid untuk status verifikasi (harus sinkron dengan schema DB)
+const VALID_STATUS_VERIFIKASI = [&#039;belum_lengkap&#039;, &#039;lengkap&#039;, &#039;revisi&#039;];
+
+// Helper checkKetepatanWaktu telah dipindahkan ke Database Level SQL Query di reportRepo.js
+// guna mencegah bottleneck N+1 CPU.
+
+/**
+ * [CREATE/UPDATE] Upload atau Timpa Laporan
+ */
+async function uploadReport(req, res, next) {
+    try {
+        const { report_type_id, periode_bulan, periode_tahun } = req.body;
+        const file = req.file;
+
+        if (!file) throw new AppError(&#039;File dokumen tidak ditemukan.&#039;, 400);
+        if (!report_type_id || !periode_bulan || !periode_tahun) {
+            throw new AppError(&#039;Metadata laporan (ID, Bulan, Tahun) tidak lengkap.&#039;, 400);
+        }
+
+        const result = await reportService.uploadReportDocument(
+            req.tenant,
+            file,
+            parseInt(report_type_id),
+            parseInt(periode_bulan),
+            parseInt(periode_tahun)
+        );
+
+        res.status(201).json({
+            success: true,
+            message: &#039;Dokumen berhasil diunggah dan sistem sedang mensinkronisasi data.&#039;,
+            data: result
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+/**
+ * [READ] Ambil Progress Laporan Satker Sendiri
+ */
+async function getMyProgress(req, res, next) {
+    try {
+        const { bulan, tahun } = req.query;
+        if (!bulan || !tahun) throw new AppError(&#039;Periode bulan dan tahun wajib disertakan.&#039;, 400);
+
+        const data = await reportRepo.getSatkerProgress(req.tenant.satkerId, bulan, tahun);
+
+        // status_ketepatan_waktu sekarang sudah dihitung oleh database layer
+        res.status(200).json({
+            success: true,
+            data: data
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+/**
+ * [READ] Download / Preview Link (Presigned URL)
+ */
+async function getDownloadUrl(req, res, next) {
+    try {
+        const { id } = req.params;
+        const url = await reportService.generatePresignedUrl(id, req.tenant);
+
+        res.status(200).json({
+            success: true,
+            data: { url }
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+/**
+ * [UPDATE] Verifikasi Laporan oleh Admin PT
+ */
+async function verifyReport(req, res, next) {
+    try {
+        if (req.tenant.role !== &#039;ADMIN_PT&#039;) {
+            throw new AppError(&#039;Hanya Admin PT yang dapat melakukan verifikasi.&#039;, 403);
+        }
+
+        const { id } = req.params;
+        const { status_verifikasi, catatan_admin } = req.body;
+
+        // Validasi enum sebelum meneruskan ke service/DB
+        if (!status_verifikasi || !VALID_STATUS_VERIFIKASI.includes(status_verifikasi)) {
+            throw new AppError(
+                `Status verifikasi tidak valid. Nilai yang diperbolehkan: ${VALID_STATUS_VERIFIKASI.join(&#039;, &#039;)}.`,
+                400
+            );
+        }
+
+        await reportService.verifyAndNotify(id, status_verifikasi, catatan_admin);
+
+        res.status(200).json({
+            success: true,
+            message: &#039;Verifikasi berhasil disimpan dan notifikasi telah dikirim.&#039;
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+/**
+ * [READ] Dashboard Agregat untuk Pimpinan &amp; Admin
+ */
+async function getDashboardAgregat(req, res, next) {
+    try {
+        const { bulan, tahun } = req.query;
+        const data = await reportRepo.getRekapitulasiPimpinan(bulan, tahun);
+
+        const formattedData = data.map(satker =&gt; {
+            const totalWajib = parseInt(satker.total_wajib);
+            const totalUpload = parseInt(satker.total_upload);
+            const persentase = totalWajib === 0 ? 0 : Math.round((totalUpload / totalWajib) * 100);
+
+            const detail_laporan_formatted = satker.detail_laporan.map(dl =&gt; ({
+                ...dl,
+                status_upload: dl.submission_id ? &#039;sudah_upload&#039; : &#039;belum_upload&#039;
+                // status_ketepatan_waktu secara otomatis dikembalikan oleh knex raw query
+            }));
+
+            return {
+                ...satker,
+                detail_laporan: detail_laporan_formatted,
+                statistik: {
+                    total_wajib: totalWajib,
+                    total_upload: totalUpload,
+                    belum_upload: totalWajib - totalUpload,
+                    persentase_kepatuhan: `${persentase}%`
+                }
+            };
+        });
+
+        res.status(200).json({
+            success: true,
+            data: formattedData
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+/**
+ * [DELETE] Hapus Laporan oleh Satker
+ */
+async function deleteReport(req, res, next) {
+    try {
+        const { id } = req.params;
+        await reportService.deleteReportDocument(req.tenant, id);
+
+        res.status(200).json({
+            success: true,
+            message: &#039;Dokumen dan data laporan berhasil dihapus permanently.&#039;
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+module.exports = {
+    uploadReport,
+    getMyProgress,
+    getDownloadUrl,
+    verifyReport,
+    getDashboardAgregat,
+    deleteReport
+};</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        src/emailWorker.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * SATYA - Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel - Email Worker
+ * Mengelola antrean dan pemrosesan pengiriman email notifikasi
+ */
+
+const { Queue, Worker } = require(&#039;bullmq&#039;);
+const redisConnection = require(&#039;./config/redis&#039;);
+const { sendRevisionEmail, sendReminderEmail } = require(&#039;./services/emailService&#039;);
+
+// 1. Definisikan Nama Antrean
+const QUEUE_NAME = &#039;email-notifications&#039;;
+
+// 2. Inisialisasi Queue (Digunakan oleh Service untuk menambah tugas)
+const emailQueue = new Queue(QUEUE_NAME, {
+    connection: redisConnection
+});
+
+// 3. Inisialisasi Worker (Digunakan oleh worker-app.js untuk memproses tugas)
+const emailWorker = new Worker(
+    QUEUE_NAME,
+    async (job) =&gt; {
+        console.log(`📩 [Worker] Memproses Job ID ${job.id} dengan nama &#039;${job.name}&#039;...`);
+
+        switch (job.name) {
+            case &#039;sendRevisionEmail&#039;:
+                const { to, nama_laporan, catatan_admin } = job.data;
+                console.log(`   -&gt; Mengirim email revisi ke ${to}`);
+                await sendRevisionEmail(to, { nama_laporan, catatan_admin });
+                break;
+            
+            case &#039;sendReminderEmail&#039;:
+                const { to: reminderTo, nama_satker, deadline_text } = job.data;
+                console.log(`   -&gt; Mengirim email pengingat ke ${reminderTo}`);
+                await sendReminderEmail(reminderTo, { nama_satker, deadline_text });
+                break;
+            
+            default:
+                throw new Error(`Tipe job tidak dikenal: ${job.name}`);
+        }
+    },
+    {
+        connection: redisConnection,
+        // Membatasi jumlah tugas yang diproses secara bersamaan (concurrency)
+        concurrency: 5,
+        // Strategi percobaan ulang jika gagal
+        settings: {
+            backoff: {
+                type: &#039;exponential&#039;,
+                delay: 10000 // Coba lagi mulai dari 10 detik jika gagal
+            }
+        }
+    }
+);
+
+/**
+ * Pengaturan Global: Membersihkan job yang sudah selesai secara otomatis
+ * agar Redis tidak penuh dengan data historis
+ */
+emailWorker.on(&#039;completed&#039;, async (job) =&gt; {
+    // Opsional: Hapus job dari Redis setelah berhasil diselesaikan
+    // await job.remove();
+});
+
+module.exports = {
+    emailQueue,
+    emailWorker
+};</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        src/middlewares/errorHandler.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * SATYA - Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel - Global Error Handler
+ * Menstandarisasi respon error di seluruh API
+ */
+
+/**
+ * Custom Error Class untuk operasional error
+ */
+class AppError extends Error {
+    constructor(message, statusCode) {
+        super(message);
+        this.statusCode = statusCode;
+        this.status = `${statusCode}`.startsWith(&#039;4&#039;) ? &#039;fail&#039; : &#039;error&#039;;
+        this.isOperational = true;
+
+        Error.captureStackTrace(this, this.constructor);
+    }
+}
+
+/**
+ * Middleware Utama Penanganan Error
+ */
+const errorHandler = (err, req, res, next) =&gt; {
+    err.statusCode = err.statusCode || 500;
+    err.status = err.status || &#039;error&#039;;
+
+    // Log error untuk kebutuhan debugging di server (Internal)
+    if (process.env.NODE_ENV !== &#039;test&#039;) {
+        console.error(&#039;⚠️ [ERROR LOG]:&#039;, {
+            message: err.message,
+            stack: err.stack,
+            path: req.originalUrl
+        });
+    }
+
+    // Response ke Client
+    res.status(err.statusCode).json({
+        success: false,
+        status: err.status,
+        message: err.message || &#039;Terjadi kesalahan internal pada server.&#039;,
+        // Hanya tampilkan stack trace jika di mode development
+        ...(process.env.NODE_ENV === &#039;development&#039; &amp;&amp; { stack: err.stack })
+    });
+};
+
+/**
+ * Handler khusus untuk rute yang tidak ditemukan (404)
+ */
+const notFoundHandler = (req, res, next) =&gt; {
+    next(new AppError(`Tidak dapat menemukan ${req.originalUrl} di server ini!`, 404));
+};
+
+module.exports = {
+    AppError,
+    errorHandler,
+    notFoundHandler
+};</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        src/middlewares/tenant.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>const jwt = require(&#039;jsonwebtoken&#039;);
+const { AppError } = require(&#039;./errorHandler&#039;);
+
+const tenantContext = (req, res, next) =&gt; {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith(&#039;Bearer &#039;)) {
+        return next(new AppError(&#039;Unauthorized: Token missing&#039;, 401));
+    }
+    const token = authHeader.split(&#039; &#039;)[1];
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.tenant = { userId: decoded.id, role: decoded.role, satkerId: decoded.satkerId };
+        next();
+    } catch (err) {
+        next(new AppError(&#039;Invalid Token&#039;, 401));
+    }
+};
+module.exports = tenantContext;</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        src/repositories/reportRepo.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * SATYA - Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel - Report Repository
+ * Layer akses data untuk semua operasi laporan
+ */
+const knex = require(&#039;../config/knex&#039;);
+
+/**
+ * Helper: Menghitung deadline periode pelaporan secara Dinamis
+ */
+function getDeadlineDate(bulan, tahun) {
+    let deadlineMonth = parseInt(bulan) + 1;
+    let deadlineYear = parseInt(tahun);
+    if (deadlineMonth &gt; 12) {
+        deadlineMonth = 1;
+        deadlineYear += 1;
+    }
+    const deadlineDay = parseInt(process.env.DEADLINE_DAY) || 10;
+    // Format timestamp batas waktu upload (hingga 23:59:59 hari H)
+    return new Date(deadlineYear, deadlineMonth - 1, deadlineDay, 23, 59, 59);
+}
+
+/**
+ * [READ] Progress laporan satu satker untuk periode tertentu.
+ * Menggabungkan SEMUA jenis laporan (LEFT JOIN) sehingga yang belum upload pun tampil.
+ */
+async function getSatkerProgress(satkerId, bulan, tahun) {
+    const deadlineDate = getDeadlineDate(bulan, tahun);
+    return await knex(&#039;report_types as rt&#039;)
+        .select(
+            &#039;rt.id as report_type_id&#039;, 
+            &#039;rt.nama_laporan&#039;, 
+            &#039;rs.id as submission_id&#039;, 
+            &#039;rs.status_verifikasi&#039;, 
+            &#039;rs.catatan_admin&#039;, 
+            &#039;rs.created_at&#039;,
+            knex.raw(`
+                CASE 
+                    WHEN rs.created_at IS NULL THEN NULL
+                    WHEN rs.created_at &lt;= ? THEN &#039;Tepat Waktu&#039;
+                    ELSE &#039;Terlambat&#039;
+                END as status_ketepatan_waktu
+            `, [deadlineDate])
+        )
+        .leftJoin(&#039;report_submissions as rs&#039;, function() {
+            this.on(&#039;rt.id&#039;, &#039;=&#039;, &#039;rs.report_type_id&#039;)
+                .andOn(&#039;rs.satker_id&#039;, &#039;=&#039;, knex.raw(&#039;?&#039;, [satkerId]))
+                .andOn(&#039;rs.periode_bulan&#039;, &#039;=&#039;, knex.raw(&#039;?&#039;, [bulan]))
+                .andOn(&#039;rs.periode_tahun&#039;, &#039;=&#039;, knex.raw(&#039;?&#039;, [tahun]));
+        }).orderBy(&#039;rt.id&#039;, &#039;asc&#039;);
+}
+
+/**
+ * [READ] Rekapitulasi dashboard untuk Pimpinan dan Admin.
+ * Menggabungkan semua satker × semua jenis laporan dalam satu query.
+ */
+async function getRekapitulasiPimpinan(bulan, tahun) {
+    const deadlineDate = getDeadlineDate(bulan, tahun);
+    const res = await knex.raw(`
+        SELECT s.nama_satker,
+        COUNT(rt.id) as total_wajib,
+        COUNT(rs.id) as total_upload,
+        json_agg(json_build_object(
+            &#039;nama_laporan&#039;, rt.nama_laporan, 
+            &#039;report_type_id&#039;, rt.id, 
+            &#039;status_verifikasi&#039;, rs.status_verifikasi, 
+            &#039;submission_id&#039;, rs.id, 
+            &#039;created_at&#039;, rs.created_at,
+            &#039;status_ketepatan_waktu&#039;, CASE 
+                WHEN rs.created_at IS NULL THEN NULL
+                WHEN rs.created_at &lt;= ? THEN &#039;Tepat Waktu&#039;
+                ELSE &#039;Terlambat&#039;
+            END
+        )) as detail_laporan
+        FROM satkers s CROSS JOIN report_types rt
+        LEFT JOIN report_submissions rs ON rs.satker_id = s.id AND rs.report_type_id = rt.id AND rs.periode_bulan = ? AND rs.periode_tahun = ?
+        WHERE rt.is_wajib = true 
+        GROUP BY s.id, s.nama_satker
+        ORDER BY s.id ASC
+    `, [deadlineDate, bulan, tahun]);
+    return res.rows;
+}
+
+/**
+ * [READ] Jumlah total jenis laporan yang bersifat wajib.
+ * Digunakan oleh scheduler untuk validasi awal sebelum mengirim reminder.
+ */
+async function getTotalReportTypes() {
+    const result = await knex(&#039;report_types&#039;).where({ is_wajib: true }).count(&#039;id as total&#039;).first();
+    return parseInt(result.total);
+}
+
+/**
+ * [READ] Daftar satker yang BELUM melengkapi semua laporan wajib untuk periode tertentu.
+ * Hanya satker dengan email terdaftar yang akan mendapat reminder.
+ *
+ * @param {number} periodeBulan
+ * @param {number} periodeTahun
+ * @returns {Array&lt;{id, nama_satker, email}&gt;}
+ */
+async function findSatkersForReminder(periodeBulan, periodeTahun) {
+    const result = await knex.raw(`
+        SELECT s.id, s.nama_satker, u.email
+        FROM satkers s
+        JOIN users u ON u.satker_id = s.id
+            AND u.role = &#039;SATKER_PN&#039;
+            AND u.is_active = true
+            AND u.email IS NOT NULL
+        WHERE (
+            SELECT COUNT(*) FROM report_submissions rs
+            WHERE rs.satker_id = s.id
+              AND rs.periode_bulan = ?
+              AND rs.periode_tahun = ?
+        ) &lt; (
+            SELECT COUNT(*) FROM report_types WHERE is_wajib = true
+        )
+    `, [periodeBulan, periodeTahun]);
+    return result.rows;
+}
+
+module.exports = {
+    getSatkerProgress,
+    getRekapitulasiPimpinan,
+    getTotalReportTypes,
+    findSatkersForReminder
+};</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        src/routes/authRoutes.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * SATYA - Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel - Auth Routes
+ * Jalur akses untuk Autentikasi dan Manajemen Akun
+ */
+
+const express = require(&#039;express&#039;);
+const router = express.Router();
+const rateLimit = require(&#039;express-rate-limit&#039;);
+const authController = require(&#039;../controllers/authController&#039;);
+const tenantContext = require(&#039;../middlewares/tenant&#039;);
+
+/**
+ * Rate limiter untuk endpoint login.
+ * Membatasi percobaan login untuk mencegah brute force attack.
+ * Dinonaktifkan di mode test agar tidak mengganggu test suite.
+ */
+const loginLimiter = process.env.NODE_ENV !== &#039;test&#039;
+    ? rateLimit({
+        windowMs: 15 * 60 * 1000, // Window 15 menit
+        max: 20,                   // Maksimal 20 percobaan per IP per 15 menit
+        standardHeaders: true,
+        legacyHeaders: false,
+        message: {
+            success: false,
+            status: &#039;fail&#039;,
+            message: &#039;Terlalu banyak percobaan login dari IP ini. Silakan coba lagi setelah 15 menit.&#039;
+        }
+    })
+    : (req, res, next) =&gt; next(); // No-op di mode test
+
+/**
+ * RUTE PUBLIK
+ */
+// Endpoint untuk login (Mendapatkan Token JWT) — dilindungi rate limiter
+router.post(&#039;/login&#039;, loginLimiter, authController.login);
+
+/**
+ * RUTE TERPROTEKSI (Memerlukan Token)
+ */
+router.use(tenantContext);
+
+// [ADMIN] Ambil semua daftar user (Hanya Admin PT)
+router.get(&#039;/users&#039;, authController.getAllUsers);
+
+// [ADMIN] Simpan atau Update akun Satker (Hanya Admin PT)
+router.post(&#039;/users&#039;, authController.saveOrUpdateUser);
+
+module.exports = router;</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        src/routes/index.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * SATYA - Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel - Master Route Hub
+ * Menggabungkan seluruh modul rute ke dalam satu titik akses API v1
+ */
+
+const express = require(&#039;express&#039;);
+const router = express.Router();
+
+// Import Sub-Rute
+const authRoutes = require(&#039;./authRoutes&#039;);
+const reportRoutes = require(&#039;./reportRoutes&#039;);
+const { notFoundHandler } = require(&#039;../middlewares/errorHandler&#039;);
+
+/**
+ * Registrasi Modul Rute
+ */
+
+// Jalur Autentikasi dan Manajemen User (Login, CRUD User)
+router.use(&#039;/auth&#039;, authRoutes);
+
+// Jalur Operasional Pelaporan (Upload, Progress, Verifikasi, Dashboard)
+router.use(&#039;/reports&#039;, reportRoutes);
+
+/**
+ * Health Check Endpoint
+ * Digunakan untuk memonitor apakah API berjalan (Uptime Monitoring)
+ */
+router.get(&#039;/health&#039;, (req, res) =&gt; {
+    res.status(200).json({
+        success: true,
+        message: &#039;SATYA API PT KEPRI is healthy and operational.&#039;,
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || &#039;development&#039;
+    });
+});
+
+/**
+ * Handle rute yang tidak terdaftar (Fallback 404)
+ */
+router.all(&#039;*&#039;, notFoundHandler);
+
+module.exports = router;</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        src/routes/reportRoutes.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * SATYA - Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel - Report Routes
+ * Jalur akses untuk Manajemen Dokumen, Verifikasi, dan Dashboard
+ */
+
+const express = require(&#039;express&#039;);
+const router = express.Router();
+const multer = require(&#039;multer&#039;);
+const reportController = require(&#039;../controllers/reportController&#039;);
+const tenantContext = require(&#039;../middlewares/tenant&#039;);
+const { AppError } = require(&#039;../middlewares/errorHandler&#039;);
+
+// Konfigurasi Multer (Penyimpanan Sementara di RAM)
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 }, // Batas maksimal 10MB per file
+    fileFilter: (req, file, cb) =&gt; {
+        // Validasi tipe file: Hanya PDF dan Excel (.xlsx)
+        if (
+            file.mimetype === &#039;application/pdf&#039; ||
+            file.mimetype === &#039;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet&#039;
+        ) {
+            cb(null, true);
+        } else {
+            cb(new AppError(&#039;Format file tidak didukung. Gunakan PDF atau XLSX.&#039;, 400), false);
+        }
+    }
+});
+
+/**
+ * Wrapper Multer dengan penanganan error yang benar.
+ * Memastikan error dari fileFilter menghasilkan 400 (bukan 500).
+ */
+function uploadSingle(fieldName) {
+    return (req, res, next) =&gt; {
+        upload.single(fieldName)(req, res, (err) =&gt; {
+            if (err) {
+                // Error dari fileFilter (format tidak valid) atau MulterError (ukuran)
+                const statusCode = err.statusCode || 400;
+                return next(new AppError(err.message, statusCode));
+            }
+            next();
+        });
+    };
+}
+
+/**
+ * SEMUA RUTE DI BAWAH INI MEMERLUKAN LOGIN (JWT)
+ */
+router.use(tenantContext);
+
+// --- RUTE KHUSUS SATKER PN ---
+
+// Upload atau Timpa Laporan
+router.post(&#039;/upload&#039;, uploadSingle(&#039;dokumen_monev&#039;), reportController.uploadReport);
+
+// Ambil progress laporan milik satker sendiri
+router.get(&#039;/my-progress&#039;, reportController.getMyProgress);
+
+// Hapus laporan milik sendiri (Full CRUD - Delete)
+router.delete(&#039;/:id&#039;, reportController.deleteReport);
+
+
+// --- RUTE KHUSUS ADMIN &amp; PIMPINAN ---
+
+// Dashboard Agregat (Digunakan Admin dan Pimpinan)
+router.get(&#039;/dashboard-agregat&#039;, reportController.getDashboardAgregat);
+
+// Verifikasi Laporan (Hanya Admin PT)
+router.patch(&#039;/:id/verify&#039;, reportController.verifyReport);
+
+
+// --- RUTE UMUM (Terproteksi) ---
+
+// Mendapatkan Presigned URL untuk Preview/Download
+router.get(&#039;/:id/download&#039;, reportController.getDownloadUrl);
+
+module.exports = router;</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        src/scheduler.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * SATYA - Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel - Scheduler (Cron Job)
+ * Menjalankan tugas pengecekan dan pengiriman reminder secara terjadwal.
+ */
+const cron = require(&#039;node-cron&#039;);
+const reportRepo = require(&#039;./repositories/reportRepo&#039;);
+const { emailQueue } = require(&#039;./emailWorker&#039;); // ← Fix: path yang benar
+
+// Hari deadline dapat dikonfigurasi via env var. Default: tanggal 10 bulan berikutnya.
+const DEADLINE_DAY = parseInt(process.env.DEADLINE_DAY) || 10;
+
+console.log(`⏰ Scheduler Pengingat Otomatis diaktifkan. Deadline hari ke-${DEADLINE_DAY}.`);
+
+/**
+ * Pure function: Mengecek apakah hari ini adalah hari pengiriman reminder.
+ * Diekspor untuk keperluan unit testing tanpa mocking cron.
+ *
+ * @param {Date} today - Tanggal yang dicek
+ * @param {number} deadlineDay - Hari deadline dalam sebulan
+ * @returns {boolean}
+ */
+function isReminderDay(today, deadlineDay) {
+    const currentDay = today.getDate();
+    const targetDays = [deadlineDay - 3, deadlineDay - 1, deadlineDay];
+    return targetDays.includes(currentDay);
+}
+
+// Jadwal berjalan setiap hari jam 8:00 pagi Waktu Indonesia Barat
+cron.schedule(&#039;0 8 * * *&#039;, async () =&gt; {
+    console.log(`\n[${new Date().toISOString()}] --- Menjalankan Pengecekan Reminder Harian ---`);
+
+    const today = new Date();
+
+    if (!isReminderDay(today, DEADLINE_DAY)) {
+        console.log(&#039;Hari ini bukan jadwal pengiriman reminder. Pengecekan selesai.&#039;);
+        return;
+    }
+
+    // Tentukan periode laporan yang dicek (selalu bulan sebelumnya dari bulan berjalan)
+    const targetDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const periodeBulan = targetDate.getMonth() + 1;
+    const periodeTahun = targetDate.getFullYear();
+
+    const deadlineText = `${DEADLINE_DAY} ${targetDate.toLocaleString(&#039;id-ID&#039;, { month: &#039;long&#039; })} ${periodeTahun}`;
+    console.log(`Mengecek kelengkapan laporan untuk periode: ${periodeBulan}-${periodeTahun}. Deadline: ${deadlineText}`);
+
+    try {
+        const totalWajib = await reportRepo.getTotalReportTypes();
+        if (totalWajib === 0) {
+            console.log(&#039;Tidak ada tipe laporan yang terdaftar. Reminder tidak dijalankan.&#039;);
+            return;
+        }
+
+        const satkersToRemind = await reportRepo.findSatkersForReminder(periodeBulan, periodeTahun);
+
+        if (satkersToRemind.length === 0) {
+            console.log(&#039;✅ Semua satker telah melengkapi laporan. Tidak ada reminder yang dikirim.&#039;);
+            return;
+        }
+
+        console.log(`🚨 Ditemukan ${satkersToRemind.length} satker yang belum lengkap. Menambahkan ke antrean email...`);
+
+        // Gunakan addBulk agar semua job dikirim ke Redis dalam satu operasi (lebih efisien)
+        const jobs = satkersToRemind.map((satker) =&gt; ({
+            name: &#039;sendReminderEmail&#039;,
+            data: {
+                to: satker.email,
+                nama_satker: satker.nama_satker,
+                deadline_text: deadlineText
+            },
+            opts: {
+                // Mencegah duplikasi job jika scheduler berjalan lebih dari sekali di hari yang sama
+                jobId: `reminder-${satker.id}-${periodeBulan}-${periodeTahun}`
+            }
+        }));
+
+        await emailQueue.addBulk(jobs);
+        satkersToRemind.forEach(s =&gt; console.log(`   -&gt; Job reminder untuk ${s.nama_satker} (${s.email}) ditambahkan.`));
+
+    } catch (error) {
+        console.error(&#039;❌ Terjadi kesalahan saat menjalankan scheduler reminder:&#039;, error);
+    }
+    console.log(&#039;--- Pengecekan Reminder Harian Selesai ---&#039;);
+}, {
+    scheduled: true,
+    timezone: &#039;Asia/Jakarta&#039;
+});
+
+module.exports = { isReminderDay };</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        src/services/authService.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * SATYA - Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel - Auth Service
+ * Logika bisnis untuk Autentikasi, Enkripsi, Keamanan Token, dan Manajemen User
+ */
+
+const knex = require(&#039;../config/knex&#039;);
+const bcrypt = require(&#039;bcryptjs&#039;);
+const jwt = require(&#039;jsonwebtoken&#039;);
+const { AppError } = require(&#039;../middlewares/errorHandler&#039;);
+
+/**
+ * Validasi Login Pengguna
+ * @param {string} username
+ * @param {string} password
+ */
+async function loginUser(username, password) {
+    // 1. Cari user berdasarkan username
+    const user = await knex(&#039;users&#039;)
+        .where({ username })
+        .andWhere(&#039;is_active&#039;, true)
+        .first();
+
+    // 2. Jika user tidak ditemukan
+    if (!user) {
+        throw new AppError(&#039;INVALID_CREDENTIALS: Username tidak ditemukan atau akun nonaktif.&#039;, 401);
+    }
+
+    // 3. Verifikasi Password menggunakan Bcrypt
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch) {
+        throw new AppError(&#039;INVALID_CREDENTIALS: Password yang Anda masukkan salah.&#039;, 401);
+    }
+
+    // 4. Generate JWT Token
+    const token = generateToken(user);
+
+    // 5. Kembalikan data user (tanpa password_hash) dan token
+    return {
+        token,
+        user: {
+            id: user.id,
+            username: user.username,
+            role: user.role,
+            satkerId: user.satker_id
+        }
+    };
+}
+
+/**
+ * Membuat akun user baru (hanya dipanggil oleh Admin PT)
+ * @param {Object} userData - { username, password, role, satker_id, email }
+ */
+async function createUser({ username, password, role, satker_id, email }) {
+    if (!password || password.trim() === &#039;&#039;) {
+        throw new AppError(&#039;Password wajib diisi untuk akun baru.&#039;, 400);
+    }
+    const password_hash = await bcrypt.hash(password, 10);
+    await knex(&#039;users&#039;).insert({
+        username,
+        password_hash,
+        role: role || &#039;SATKER_PN&#039;,
+        satker_id: satker_id || null,
+        email: email || null
+    });
+}
+
+/**
+ * Memperbarui data akun user yang sudah ada
+ * @param {number} id - ID user yang akan diperbarui
+ * @param {Object} userData - { username, password, role, satker_id, email }
+ */
+async function updateUser(id, { username, password, role, satker_id, email }) {
+    const userData = {
+        username,
+        role: role || &#039;SATKER_PN&#039;,
+        satker_id: satker_id || null,
+        email: email || null
+    };
+    // Hanya hash password baru jika ada yang dikirim
+    if (password &amp;&amp; password.trim() !== &#039;&#039;) {
+        userData.password_hash = await bcrypt.hash(password, 10);
+    }
+    await knex(&#039;users&#039;).where({ id }).update(userData);
+}
+
+/**
+ * Mengambil semua daftar user Satker dan Pimpinan (tidak termasuk Admin)
+ * @returns {Array}
+ */
+async function getAllUsers() {
+    return knex(&#039;users&#039;)
+        .leftJoin(&#039;satkers&#039;, &#039;users.satker_id&#039;, &#039;satkers.id&#039;)
+        .select(
+            &#039;users.id&#039;,
+            &#039;users.username&#039;,
+            &#039;users.role&#039;,
+            &#039;users.email&#039;,
+            &#039;users.is_active&#039;,
+            &#039;satkers.nama_satker&#039;
+        )
+        .whereNot(&#039;users.role&#039;, &#039;ADMIN_PT&#039;); // Jangan tampilkan sesama admin untuk keamanan
+}
+
+/**
+ * Helper: Membuat Token JWT
+ * @param {Object} user
+ */
+function generateToken(user) {
+    const payload = {
+        id: user.id,
+        role: user.role,
+        satkerId: user.satker_id
+    };
+
+    return jwt.sign(payload, process.env.JWT_SECRET, {
+        expiresIn: process.env.JWT_EXPIRES_IN || &#039;8h&#039;
+    });
+}
+
+/**
+ * Helper: Verifikasi Token (Digunakan internal jika diperlukan)
+ */
+function verifyToken(token) {
+    try {
+        return jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+        throw new AppError(&#039;Token kedaluwarsa atau tidak valid.&#039;, 401);
+    }
+}
+
+module.exports = {
+    loginUser,
+    createUser,
+    updateUser,
+    getAllUsers,
+    generateToken,
+    verifyToken
+};</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        src/services/emailService.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * SATYA - Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel - Email Service
+ * Mengelola koneksi ke SMTP dan template pengiriman email
+ */
+const nodemailer = require(&#039;nodemailer&#039;);
+
+/**
+ * Buat transporter hanya di environment non-test.
+ * Di mode test, nodemailer tidak perlu terhubung ke server SMTP eksternal,
+ * sehingga test tidak bergantung pada koneksi internet atau kredensial SMTP.
+ */
+const transporter = process.env.NODE_ENV !== &#039;test&#039;
+    ? nodemailer.createTransport({
+        host: process.env.SMTP_HOST || &#039;smtp.gmail.com&#039;,
+        port: parseInt(process.env.SMTP_PORT) || 587,
+        secure: false,
+        auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+        },
+        // Timeout agar tidak hang jika server SMTP lambat atau tidak respond
+        connectionTimeout: 10000, // 10 detik
+        greetingTimeout: 5000,    // 5 detik
+        socketTimeout: 15000      // 15 detik per operasi
+    })
+    : null; // Null di mode test — emailWorker di-mock sehingga sendMail tidak pernah dipanggil
+
+/**
+ * Mengirim email notifikasi revisi dari Admin ke Satker
+ */
+async function sendRevisionEmail(to, data) {
+    const { nama_laporan, catatan_admin } = data;
+    const mailOptions = {
+        from: `&quot;SATYA PT KEPRI&quot; &lt;${process.env.SMTP_USER}&gt;`,
+        to: to,
+        subject: `[SATYA] Revisi Laporan: ${nama_laporan}`,
+        html: `
+            &lt;p&gt;Yth. Bapak/Ibu Penanggung Jawab,&lt;/p&gt;
+            &lt;p&gt;Laporan Anda dengan judul &lt;strong&gt;&quot;${nama_laporan}&quot;&lt;/strong&gt; memerlukan revisi.&lt;/p&gt;
+            &lt;p&gt;Catatan dari Admin:&lt;/p&gt;
+            &lt;blockquote style=&quot;border-left: 4px solid #1d4ed8; padding-left: 1rem; margin-left: 0; color: #374151;&quot;&gt;
+                &lt;em&gt;${catatan_admin || &#039;-&#039;}&lt;/em&gt;
+            &lt;/blockquote&gt;
+            &lt;p&gt;Mohon untuk segera melakukan perbaikan dan mengunggah ulang dokumen pada aplikasi SATYA.&lt;/p&gt;
+            &lt;p&gt;Terima kasih.&lt;/p&gt;
+            &lt;hr/&gt;
+            &lt;small style=&quot;color: #9ca3af;&quot;&gt;Email ini dikirim otomatis oleh Sistem SATYA - PT Kepulauan Riau&lt;/small&gt;
+        `,
+    };
+    return transporter.sendMail(mailOptions);
+}
+
+/**
+ * Mengirim email pengingat otomatis untuk satker yang belum lengkap laporannya
+ */
+async function sendReminderEmail(to, data) {
+    const { nama_satker, deadline_text } = data;
+    const mailOptions = {
+        from: `&quot;SATYA PT KEPRI&quot; &lt;${process.env.SMTP_USER}&gt;`,
+        to: to,
+        subject: `[SATYA] PENGINGAT: Batas Waktu Pelaporan ${deadline_text}`,
+        html: `
+            &lt;p&gt;Yth. Penanggung Jawab Laporan &lt;strong&gt;${nama_satker}&lt;/strong&gt;,&lt;/p&gt;
+            &lt;p&gt;Diinformasikan bahwa masih terdapat berkas laporan/monev periode berjalan yang sampai saat ini
+            &lt;strong&gt;belum diunggah&lt;/strong&gt; atau &lt;strong&gt;belum lengkap&lt;/strong&gt; ke dalam sistem monitoring SATYA.&lt;/p&gt;
+            &lt;p&gt;Batas waktu penyampaian laporan adalah &lt;strong&gt;${deadline_text}&lt;/strong&gt;.&lt;/p&gt;
+            &lt;p&gt;Mohon agar segera melakukan upload berkas dimaksud sesuai batas waktu yang telah ditentukan.
+            Apabila berkas telah disiapkan, silakan segera diunggah melalui akun satker masing-masing.&lt;/p&gt;
+            &lt;p&gt;Demikian disampaikan, atas perhatian dan kerja samanya diucapkan terima kasih.&lt;/p&gt;
+            &lt;hr/&gt;
+            &lt;small style=&quot;color: #9ca3af;&quot;&gt;Email ini dikirim otomatis oleh Sistem SATYA - PT Kepulauan Riau&lt;/small&gt;
+        `,
+    };
+    return transporter.sendMail(mailOptions);
+}
+
+module.exports = { sendRevisionEmail, sendReminderEmail };</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        src/services/reportService.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * SATYA - Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel - Report Service
+ * Logika Bisnis Utama untuk Pengelolaan Dokumen dan Alur Kerja
+ */
+
+const { minioClient, BUCKET_NAME } = require(&#039;../config/minio&#039;);
+const reportRepo = require(&#039;../repositories/reportRepo&#039;);
+const knex = require(&#039;../config/knex&#039;);
+const { AppError } = require(&#039;../middlewares/errorHandler&#039;);
+const { emailQueue } = require(&#039;../emailWorker&#039;);
+
+/**
+ * [CREATE/UPDATE] Logika Unggah Dokumen dengan Fitur Clean-up File Lama
+ */
+async function uploadReportDocument(tenant, file, reportTypeId, bulan, tahun) {
+    // 1. Cek apakah sudah ada submission sebelumnya (untuk kebutuhan UPDATE/Timpa)
+    const existing = await knex(&#039;report_submissions&#039;)
+        .where({ 
+            satker_id: tenant.satkerId, 
+            report_type_id: reportTypeId, 
+            periode_bulan: bulan, 
+            periode_tahun: tahun 
+        }).first();
+
+    // 2. Jika ada file lama, hapus fisik filenya di MinIO agar tidak jadi sampah
+    if (existing) {
+        try {
+            await minioClient.removeObject(BUCKET_NAME, existing.file_url);
+        } catch (err) {
+            console.warn(&#039;⚠️ [MinIO] Gagal menghapus file lama, mungkin sudah terhapus manual.&#039;);
+        }
+    }
+
+    // 3. Tentukan nama file unik (Path: SatkerID/Tahun/Bulan/Timestamp-NamaFile)
+    const filename = `${tenant.satkerId}/${tahun}/${bulan}/${Date.now()}-${file.originalname.replace(/\s+/g, &#039;_&#039;)}`;
+
+    // 4. Upload ke MinIO
+    await minioClient.putObject(BUCKET_NAME, filename, file.buffer, file.size, {
+        &#039;Content-Type&#039;: file.mimetype
+    });
+
+    const dataSubmission = {
+        satker_id: tenant.satkerId,
+        report_type_id: reportTypeId,
+        periode_bulan: bulan,
+        periode_tahun: tahun,
+        file_url: filename,
+        nama_file_asli: file.originalname,
+        status_verifikasi: &#039;belum_lengkap&#039;, // Reset status jika di-update
+        catatan_admin: null,
+        updated_at: knex.fn.now()
+    };
+
+    if (existing) {
+        return await knex(&#039;report_submissions&#039;).where({ id: existing.id }).update(dataSubmission);
+    } else {
+        return await knex(&#039;report_submissions&#039;).insert({ ...dataSubmission, created_at: knex.fn.now() });
+    }
+}
+
+/**
+ * [READ] Generate Tautan Aman (Presigned URL) untuk Preview
+ */
+async function generatePresignedUrl(submissionId, tenant) {
+    const submission = await knex(&#039;report_submissions&#039;).where({ id: submissionId }).first();
+    
+    if (!submission) throw new AppError(&#039;Dokumen tidak ditemukan di database.&#039;, 404);
+    
+    // Proteksi: Satker hanya boleh melihat filenya sendiri
+    if (tenant.role === &#039;SATKER_PN&#039; &amp;&amp; submission.satker_id !== tenant.satkerId) {
+        throw new AppError(&#039;Anda tidak memiliki izin mengakses dokumen ini.&#039;, 403);
+    }
+
+    // Buat URL yang berlaku hanya selama 1 jam (3600 detik)
+    return await minioClient.presignedGetObject(BUCKET_NAME, submission.file_url, 3600);
+}
+
+/**
+ * [UPDATE] Verifikasi Admin dan Trigger Notifikasi Email via BullMQ
+ */
+async function verifyAndNotify(submissionId, status, catatan) {
+    // 1. Update Status di Database
+    await knex(&#039;report_submissions&#039;).where({ id: submissionId }).update({
+        status_verifikasi: status,
+        catatan_admin: catatan,
+        updated_at: knex.fn.now()
+    });
+
+    // 2. Jika statusnya REVISI, masukkan ke antrean email
+    if (status === &#039;revisi&#039;) {
+        const detail = await knex(&#039;report_submissions as rs&#039;)
+            .join(&#039;report_types as rt&#039;, &#039;rs.report_type_id&#039;, &#039;rt.id&#039;)
+            .join(&#039;users as u&#039;, &#039;rs.satker_id&#039;, &#039;u.satker_id&#039;)
+            .select(&#039;rt.nama_laporan&#039;, &#039;u.username as satker_email&#039;) // Asumsi username/email satker
+            .where(&#039;rs.id&#039;, submissionId)
+            .first();
+
+        if (detail) {
+            await emailQueue.add(&#039;sendRevisionEmail&#039;, {
+                to: detail.satker_email,
+                nama_laporan: detail.nama_laporan,
+                catatan_admin: catatan
+            }, { attempts: 3, backoff: 5000 }); // Coba lagi 3x jika gagal
+        }
+    }
+}
+
+/**
+ * [DELETE] Hapus Dokumen Permanen (DB + MinIO)
+ */
+async function deleteReportDocument(tenant, submissionId) {
+    const submission = await knex(&#039;report_submissions&#039;).where({ id: submissionId }).first();
+    
+    if (!submission) throw new AppError(&#039;Laporan tidak ditemukan.&#039;, 404);
+    if (submission.satker_id !== tenant.satkerId) throw new AppError(&#039;Izin ditolak.&#039;, 403);
+
+    // 1. Hapus di MinIO
+    await minioClient.removeObject(BUCKET_NAME, submission.file_url);
+    
+    // 2. Hapus di Database
+    return await knex(&#039;report_submissions&#039;).where({ id: submissionId }).del();
+}
+
+module.exports = {
+    uploadReportDocument,
+    generatePresignedUrl,
+    verifyAndNotify,
+    deleteReportDocument
+};</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        src/worker-app.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * SATYA - Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel - Worker &amp; Scheduler Entry Point
+ * Jalankan file ini secara terpisah dari API utama untuk memproses tugas background.
+ * Command: node src/worker-app.js
+ */
+require(&#039;dotenv&#039;).config();
+
+// 1. Jalankan Scheduler untuk pengecekan reminder otomatis
+require(&#039;./scheduler&#039;);
+
+// 2. Mulai Worker untuk memproses antrean email dari Redis
+const { emailWorker } = require(&#039;./workers/emailWorker&#039;);
+
+console.log(&#039;🚀 Worker process started. Menunggu jobs dari Redis...&#039;);
+
+emailWorker.on(&#039;failed&#039;, (job, err) =&gt; console.error(`[WORKER FAILED] Job ${job.id} (${job.name}) gagal: ${err.message}`));
+emailWorker.on(&#039;completed&#039;, (job) =&gt; console.log(`[WORKER SUCCESS] Job ${job.id} (${job.name}) telah selesai.`));</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        src/__mocks__/emailWorker.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * Jest Manual Mock: src/emailWorker.js
+ *
+ * File ini digunakan secara otomatis oleh Jest ketika test memanggil:
+ *   jest.mock(&#039;../../src/emailWorker&#039;)
+ * tanpa perlu mendefinisikan factory function inline.
+ *
+ * Single source of truth untuk semua integration test.
+ */
+module.exports = {
+    emailQueue: { add: jest.fn().mockResolvedValue({ id: &#039;1&#039; }) },
+    emailWorker: { on: jest.fn() }
+};
+</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        tests/integration/authFlow.test.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * Integration Test: Authentication &amp; User Management Flow
+ * Menguji alur Login, CRUD User oleh Admin PT
+ */
+
+// === MOCKS (Akan otomatis menggunakan file di __mocks__) ===
+jest.mock(&#039;../../src/config/minio&#039;);
+jest.mock(&#039;../../src/emailWorker&#039;);
+
+// === DEPENDENCIES ===
+const request = require(&#039;supertest&#039;);
+const app = require(&#039;../../src/app&#039;);
+const { clearDatabase, closeDatabase } = require(&#039;../setup&#039;);
+
+describe(&#039;Authentication &amp; User Management Flow&#039;, () =&gt; {
+    let adminToken;
+    let satkerToken;
+
+    beforeAll(async () =&gt; {
+        await clearDatabase();
+    });
+
+    afterAll(async () =&gt; {
+        await closeDatabase();
+    });
+
+    // ============================================================
+    // BAGIAN 1: LOGIN
+    // ============================================================
+    describe(&#039;POST /api/v1/auth/login&#039;, () =&gt; {
+        it(&#039;harus gagal jika username/password kosong&#039;, async () =&gt; {
+            const res = await request(app)
+                .post(&#039;/api/v1/auth/login&#039;)
+                .send({});
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.success).toBe(false);
+        });
+
+        it(&#039;harus gagal dengan kredensial salah&#039;, async () =&gt; {
+            const res = await request(app)
+                .post(&#039;/api/v1/auth/login&#039;)
+                .send({ username: &#039;admin_pt&#039;, password: &#039;salah_password&#039; });
+
+            expect(res.statusCode).toBe(401);
+            expect(res.body.success).toBe(false);
+        });
+
+        it(&#039;harus berhasil login sebagai Admin PT dan mengembalikan token&#039;, async () =&gt; {
+            const res = await request(app)
+                .post(&#039;/api/v1/auth/login&#039;)
+                .send({ username: &#039;admin_pt&#039;, password: &#039;password123&#039; });
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data?.token).toBeDefined();
+            adminToken = res.body.data.token;
+        });
+
+        it(&#039;harus berhasil login sebagai Satker PN dan mengembalikan token&#039;, async () =&gt; {
+            const res = await request(app)
+                .post(&#039;/api/v1/auth/login&#039;)
+                .send({ username: &#039;pn_tpi&#039;, password: &#039;password123&#039; });
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data?.token).toBeDefined();
+            satkerToken = res.body.data.token;
+        });
+
+        it(&#039;harus berhasil login sebagai Pimpinan dan mengembalikan token&#039;, async () =&gt; {
+            const res = await request(app)
+                .post(&#039;/api/v1/auth/login&#039;)
+                .send({ username: &#039;pimpinan_pt&#039;, password: &#039;password123&#039; });
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data?.token).toBeDefined();
+        });
+    });
+
+    // ============================================================
+    // BAGIAN 2: MANAJEMEN USER (ADMIN)
+    // ============================================================
+    describe(&#039;GET /api/v1/auth/users&#039;, () =&gt; {
+        it(&#039;harus ditolak jika tidak ada token&#039;, async () =&gt; {
+            const res = await request(app).get(&#039;/api/v1/auth/users&#039;);
+            expect(res.statusCode).toBe(401);
+        });
+
+        it(&#039;harus ditolak jika role bukan Admin PT&#039;, async () =&gt; {
+            const res = await request(app)
+                .get(&#039;/api/v1/auth/users&#039;)
+                .set(&#039;Authorization&#039;, `Bearer ${satkerToken}`);
+
+            expect(res.statusCode).toBe(403);
+            expect(res.body.success).toBe(false);
+        });
+
+        it(&#039;harus berhasil mengambil daftar user sebagai Admin PT&#039;, async () =&gt; {
+            const res = await request(app)
+                .get(&#039;/api/v1/auth/users&#039;)
+                .set(&#039;Authorization&#039;, `Bearer ${adminToken}`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(Array.isArray(res.body.data)).toBe(true);
+            // Tidak boleh menampilkan akun admin lain
+            const adminAccounts = res.body.data.filter(u =&gt; u.role === &#039;ADMIN_PT&#039;);
+            expect(adminAccounts).toHaveLength(0);
+        });
+    });
+
+    describe(&#039;POST /api/v1/auth/users&#039;, () =&gt; {
+        it(&#039;harus berhasil membuat akun satker baru&#039;, async () =&gt; {
+            const uniqueUsername = `pn_karimun_${Date.now()}`;
+            const res = await request(app)
+                .post(&#039;/api/v1/auth/users&#039;)
+                .set(&#039;Authorization&#039;, `Bearer ${adminToken}`)
+                .send({
+                    username: uniqueUsername,
+                    password: &#039;testpass789&#039;,
+                    role: &#039;SATKER_PN&#039;,
+                    satker_id: 3
+                });
+
+            if (res.statusCode !== 201) console.error(&#039;[DEBUG] Create user response:&#039;, JSON.stringify(res.body));
+            expect(res.statusCode).toBe(201);
+            expect(res.body.success).toBe(true);
+        });
+
+        it(&#039;harus gagal membuat akun tanpa password&#039;, async () =&gt; {
+            const res = await request(app)
+                .post(&#039;/api/v1/auth/users&#039;)
+                .set(&#039;Authorization&#039;, `Bearer ${adminToken}`)
+                .send({
+                    username: &#039;pn_tanpa_password&#039;,
+                    role: &#039;SATKER_PN&#039;,
+                    satker_id: 4
+                });
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.success).toBe(false);
+        });
+
+        it(&#039;harus ditolak jika bukan Admin PT yang membuat user&#039;, async () =&gt; {
+            const res = await request(app)
+                .post(&#039;/api/v1/auth/users&#039;)
+                .set(&#039;Authorization&#039;, `Bearer ${satkerToken}`)
+                .send({
+                    username: &#039;user_baru&#039;,
+                    password: &#039;pass123&#039;,
+                    role: &#039;SATKER_PN&#039;
+                });
+
+            expect(res.statusCode).toBe(403);
+        });
+    });
+
+    // ============================================================
+    // BAGIAN 3: RUTE TIDAK DITEMUKAN (404)
+    // ============================================================
+    describe(&#039;Rute tidak ditemukan&#039;, () =&gt; {
+        it(&#039;harus mengembalikan 404 untuk rute yang tidak ada&#039;, async () =&gt; {
+            const res = await request(app).get(&#039;/api/v1/endpoint-tidak-ada&#039;);
+            expect(res.statusCode).toBe(404);
+        });
+    });
+
+    // ============================================================
+    // BAGIAN 4: HEALTH CHECK
+    // ============================================================
+    describe(&#039;GET /api/v1/health&#039;, () =&gt; {
+        it(&#039;harus mengembalikan status healthy&#039;, async () =&gt; {
+            const res = await request(app).get(&#039;/api/v1/health&#039;);
+            expect(res.statusCode).toBe(200);
+            expect(res.body.success).toBe(true);
+        });
+    });
+});
+</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        tests/integration/reportFlow.test.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * Integration Test: End-to-End Report Flow
+ * Menguji alur lengkap Login → Upload Laporan
+ *
+ * Mock eksternal (MinIO &amp; emailWorker) harus dideklarasikan
+ * di sini sebelum `require(&#039;../../src/app&#039;)` agar Jest hoisting bekerja.
+ */
+
+// === MOCKS (Akan otomatis menggunakan file di __mocks__) ===
+jest.mock(&#039;../../src/config/minio&#039;);
+jest.mock(&#039;../../src/emailWorker&#039;);
+
+// === DEPENDENCIES ===
+const request = require(&#039;supertest&#039;);
+const app = require(&#039;../../src/app&#039;);
+const knex = require(&#039;../../src/config/knex&#039;);
+const { clearDatabase, closeDatabase } = require(&#039;../setup&#039;);
+
+describe(&#039;End-to-End Report Flow&#039;, () =&gt; {
+    let token;
+
+    beforeAll(async () =&gt; {
+        await clearDatabase();
+    });
+
+    afterAll(async () =&gt; {
+        await closeDatabase();
+    });
+
+    it(&#039;Should login and upload report successfully&#039;, async () =&gt; {
+        // 1. Login sebagai Satker PN (yang memiliki satker_id valid)
+        const loginRes = await request(app)
+            .post(&#039;/api/v1/auth/login&#039;)
+            .send({ username: &#039;pn_tpi&#039;, password: &#039;password123&#039; });
+
+        expect(loginRes.statusCode).toBe(200);
+        token = loginRes.body.data?.token;
+        expect(token).toBeDefined();
+
+        // 2. Upload Laporan (Happy Path)
+        const res = await request(app)
+            .post(&#039;/api/v1/reports/upload&#039;)
+            .set(&#039;Authorization&#039;, `Bearer ${token}`)
+            .field(&#039;report_type_id&#039;, 1)
+            .field(&#039;periode_bulan&#039;, 4)
+            .field(&#039;periode_tahun&#039;, 2026)
+            .attach(&#039;dokumen_monev&#039;, Buffer.from(&#039;%PDF-1.4 test content&#039;), { filename: &#039;test.pdf&#039;, contentType: &#039;application/pdf&#039; });
+
+        if (res.statusCode !== 201) console.error(&#039;[DEBUG] Upload response:&#039;, JSON.stringify(res.body));
+        expect(res.statusCode).toBe(201);
+        expect(res.body.success).toBe(true);
+    });
+});</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        tests/integration/reportManagement.test.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * Integration Test: Complete Report Management Flow
+ * Menguji alur lengkap: Progress, Download URL, Dashboard, Verifikasi, Delete
+ *
+ * NOTE: Setiap test dalam file ini menggunakan token yang didapatkan dari login.
+ * Urutan test PENTING (runInBand), jadi jangan ubah urutan describe/it blocks.
+ */
+
+// === MOCKS (Akan otomatis menggunakan file di __mocks__) ===
+jest.mock(&#039;../../src/config/minio&#039;);
+jest.mock(&#039;../../src/emailWorker&#039;);
+
+// === DEPENDENCIES ===
+const request = require(&#039;supertest&#039;);
+const app = require(&#039;../../src/app&#039;);
+const { clearDatabase, closeDatabase } = require(&#039;../setup&#039;);
+
+describe(&#039;Report Management - Full CRUD Flow&#039;, () =&gt; {
+    let satkerToken;
+    let adminToken;
+    let pimpinanToken;
+    let uploadedSubmissionId;
+
+    // Setup: Login semua roles dan bersihkan database
+    beforeAll(async () =&gt; {
+        await clearDatabase();
+
+        // Login sebagai Satker
+        const satkerLogin = await request(app)
+            .post(&#039;/api/v1/auth/login&#039;)
+            .send({ username: &#039;pn_tpi&#039;, password: &#039;password123&#039; });
+        satkerToken = satkerLogin.body.data?.token;
+
+        // Login sebagai Admin PT
+        const adminLogin = await request(app)
+            .post(&#039;/api/v1/auth/login&#039;)
+            .send({ username: &#039;admin_pt&#039;, password: &#039;password123&#039; });
+        adminToken = adminLogin.body.data?.token;
+
+        // Login sebagai Pimpinan
+        const pimpinanLogin = await request(app)
+            .post(&#039;/api/v1/auth/login&#039;)
+            .send({ username: &#039;pimpinan_pt&#039;, password: &#039;password123&#039; });
+        pimpinanToken = pimpinanLogin.body.data?.token;
+
+        expect(satkerToken).toBeDefined();
+        expect(adminToken).toBeDefined();
+        expect(pimpinanToken).toBeDefined();
+    });
+
+    afterAll(async () =&gt; {
+        await closeDatabase();
+    });
+
+    // ============================================================
+    // BAGIAN 1: UPLOAD LAPORAN
+    // ============================================================
+    describe(&#039;POST /api/v1/reports/upload&#039;, () =&gt; {
+        it(&#039;harus ditolak jika tidak membawa token&#039;, async () =&gt; {
+            const res = await request(app)
+                .post(&#039;/api/v1/reports/upload&#039;)
+                .field(&#039;report_type_id&#039;, 1)
+                .field(&#039;periode_bulan&#039;, 3)
+                .field(&#039;periode_tahun&#039;, 2026);
+            expect(res.statusCode).toBe(401);
+        });
+
+        it(&#039;harus gagal jika tidak ada file yang dikirim&#039;, async () =&gt; {
+            const res = await request(app)
+                .post(&#039;/api/v1/reports/upload&#039;)
+                .set(&#039;Authorization&#039;, `Bearer ${satkerToken}`)
+                .field(&#039;report_type_id&#039;, 1)
+                .field(&#039;periode_bulan&#039;, 3)
+                .field(&#039;periode_tahun&#039;, 2026);
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.success).toBe(false);
+        });
+
+        it(&#039;harus gagal jika metadata tidak lengkap&#039;, async () =&gt; {
+            const res = await request(app)
+                .post(&#039;/api/v1/reports/upload&#039;)
+                .set(&#039;Authorization&#039;, `Bearer ${satkerToken}`)
+                .attach(&#039;dokumen_monev&#039;, Buffer.from(&#039;%PDF-1.4 test content&#039;), {
+                    filename: &#039;test.pdf&#039;,
+                    contentType: &#039;application/pdf&#039;
+                });
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.success).toBe(false);
+        });
+
+        it(&#039;harus berhasil upload laporan PDF valid&#039;, async () =&gt; {
+            const res = await request(app)
+                .post(&#039;/api/v1/reports/upload&#039;)
+                .set(&#039;Authorization&#039;, `Bearer ${satkerToken}`)
+                .field(&#039;report_type_id&#039;, 1)
+                .field(&#039;periode_bulan&#039;, 3)
+                .field(&#039;periode_tahun&#039;, 2026)
+                .attach(&#039;dokumen_monev&#039;, Buffer.from(&#039;%PDF-1.4 content here&#039;), {
+                    filename: &#039;laporan_maret.pdf&#039;,
+                    contentType: &#039;application/pdf&#039;
+                });
+
+            if (res.statusCode !== 201) console.error(&#039;[DEBUG] Upload:&#039;, JSON.stringify(res.body));
+            expect(res.statusCode).toBe(201);
+            expect(res.body.success).toBe(true);
+        });
+
+        it(&#039;harus berhasil MENIMPA (update) laporan yang sudah ada di periode yang sama&#039;, async () =&gt; {
+            const res = await request(app)
+                .post(&#039;/api/v1/reports/upload&#039;)
+                .set(&#039;Authorization&#039;, `Bearer ${satkerToken}`)
+                .field(&#039;report_type_id&#039;, 1)
+                .field(&#039;periode_bulan&#039;, 3)
+                .field(&#039;periode_tahun&#039;, 2026)
+                .attach(&#039;dokumen_monev&#039;, Buffer.from(&#039;%PDF-1.4 content updated&#039;), {
+                    filename: &#039;laporan_maret_v2.pdf&#039;,
+                    contentType: &#039;application/pdf&#039;
+                });
+
+            expect(res.statusCode).toBe(201);
+            expect(res.body.success).toBe(true);
+        });
+
+        it(&#039;harus ditolak (400) dan tidak diproses jika format file selain PDF atau XLSX diunggah&#039;, async () =&gt; {
+             const res = await request(app)
+                .post(&#039;/api/v1/reports/upload&#039;)
+                .set(&#039;Authorization&#039;, `Bearer ${satkerToken}`)
+                .field(&#039;report_type_id&#039;, 1)
+                .field(&#039;periode_bulan&#039;, 3)
+                .field(&#039;periode_tahun&#039;, 2026)
+                .attach(&#039;dokumen_monev&#039;, Buffer.from(&#039;console.log(&quot;hello error&quot;)&#039;), {
+                    filename: &#039;laporan_invalid.js&#039;,
+                    contentType: &#039;application/javascript&#039;
+                });
+
+             expect(res.statusCode).toBe(400);
+             expect(res.body.success).toBe(false);
+             expect(res.body.message).toMatch(/Format file tidak didukung/);
+        });
+    });
+
+    // ============================================================
+    // BAGIAN 2: PROGRESS LAPORAN SATKER
+    // ============================================================
+    describe(&#039;GET /api/v1/reports/my-progress&#039;, () =&gt; {
+        it(&#039;harus gagal jika tidak ada query bulan/tahun&#039;, async () =&gt; {
+            const res = await request(app)
+                .get(&#039;/api/v1/reports/my-progress&#039;)
+                .set(&#039;Authorization&#039;, `Bearer ${satkerToken}`);
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.success).toBe(false);
+        });
+
+        it(&#039;harus berhasil mengambil progress laporan satker untuk bulan tertentu&#039;, async () =&gt; {
+            const res = await request(app)
+                .get(&#039;/api/v1/reports/my-progress&#039;)
+                .set(&#039;Authorization&#039;, `Bearer ${satkerToken}`)
+                .query({ bulan: 3, tahun: 2026 });
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(Array.isArray(res.body.data)).toBe(true);
+
+            // Laporan yang sudah diupload harus ada di response
+            const laporan1 = res.body.data.find(d =&gt; d.report_type_id === 1);
+            if (laporan1) {
+                expect(laporan1).toHaveProperty(&#039;status_ketepatan_waktu&#039;);
+                uploadedSubmissionId = laporan1.submission_id || laporan1.id;
+            }
+        });
+    });
+
+    // ============================================================
+    // BAGIAN 3: DASHBOARD AGREGAT (ADMIN &amp; PIMPINAN)
+    // ============================================================
+    describe(&#039;GET /api/v1/reports/dashboard-agregat&#039;, () =&gt; {
+        it(&#039;harus berhasil diakses oleh Admin PT&#039;, async () =&gt; {
+            const res = await request(app)
+                .get(&#039;/api/v1/reports/dashboard-agregat&#039;)
+                .set(&#039;Authorization&#039;, `Bearer ${adminToken}`)
+                .query({ bulan: 3, tahun: 2026 });
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(Array.isArray(res.body.data)).toBe(true);
+
+            if (res.body.data.length &gt; 0) {
+                const satker = res.body.data[0];
+                expect(satker).toHaveProperty(&#039;statistik&#039;);
+                expect(satker.statistik).toHaveProperty(&#039;persentase_kepatuhan&#039;);
+            }
+        });
+
+        it(&#039;harus berhasil diakses oleh Pimpinan&#039;, async () =&gt; {
+            const res = await request(app)
+                .get(&#039;/api/v1/reports/dashboard-agregat&#039;)
+                .set(&#039;Authorization&#039;, `Bearer ${pimpinanToken}`)
+                .query({ bulan: 3, tahun: 2026 });
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.success).toBe(true);
+        });
+
+        it(&#039;harus berhasil diakses oleh Satker PN juga (tidak ada restriksi role di rute ini)&#039;, async () =&gt; {
+            const res = await request(app)
+                .get(&#039;/api/v1/reports/dashboard-agregat&#039;)
+                .set(&#039;Authorization&#039;, `Bearer ${satkerToken}`)
+                .query({ bulan: 3, tahun: 2026 });
+
+            expect(res.statusCode).toBe(200);
+        });
+    });
+
+    // ============================================================
+    // BAGIAN 4: DOWNLOAD / PRESIGNED URL
+    // ============================================================
+    describe(&#039;GET /api/v1/reports/:id/download&#039;, () =&gt; {
+        it(&#039;harus mengembalikan 404 untuk ID submission yang tidak ada&#039;, async () =&gt; {
+            const res = await request(app)
+                .get(&#039;/api/v1/reports/99999/download&#039;)
+                .set(&#039;Authorization&#039;, `Bearer ${satkerToken}`);
+
+            expect(res.statusCode).toBe(404);
+        });
+
+        it(&#039;harus berhasil mengembalikan presigned URL untuk file yang ada&#039;, async () =&gt; {
+            // Ambil ID dari database terlebih dahulu
+            const progressRes = await request(app)
+                .get(&#039;/api/v1/reports/my-progress&#039;)
+                .set(&#039;Authorization&#039;, `Bearer ${satkerToken}`)
+                .query({ bulan: 3, tahun: 2026 });
+
+            const submittedItem = progressRes.body.data?.find(d =&gt; d.submission_id || d.id);
+            if (!submittedItem) {
+                console.warn(&#039;[SKIP] Tidak ada data submission untuk test download&#039;);
+                return;
+            }
+
+            const id = submittedItem.submission_id || submittedItem.id;
+            const res = await request(app)
+                .get(`/api/v1/reports/${id}/download`)
+                .set(&#039;Authorization&#039;, `Bearer ${satkerToken}`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data?.url).toBe(&#039;http://mock.presigned.url/file.pdf&#039;);
+        });
+    });
+
+    // ============================================================
+    // BAGIAN 5: VERIFIKASI LAPORAN (ADMIN)
+    // ============================================================
+    describe(&#039;PATCH /api/v1/reports/:id/verify&#039;, () =&gt; {
+        let submissionId;
+
+        beforeAll(async () =&gt; {
+            // Upload satu laporan baru untuk diverifikasi
+            await request(app)
+                .post(&#039;/api/v1/reports/upload&#039;)
+                .set(&#039;Authorization&#039;, `Bearer ${satkerToken}`)
+                .field(&#039;report_type_id&#039;, 2)
+                .field(&#039;periode_bulan&#039;, 3)
+                .field(&#039;periode_tahun&#039;, 2026)
+                .attach(&#039;dokumen_monev&#039;, Buffer.from(&#039;%PDF-1.4 laporan utk verifikasi&#039;), {
+                    filename: &#039;laporan_verif.pdf&#039;,
+                    contentType: &#039;application/pdf&#039;
+                });
+
+            // Ambil ID submission yang baru dibuat
+            const progressRes = await request(app)
+                .get(&#039;/api/v1/reports/my-progress&#039;)
+                .set(&#039;Authorization&#039;, `Bearer ${satkerToken}`)
+                .query({ bulan: 3, tahun: 2026 });
+
+            const item = progressRes.body.data?.find(d =&gt; d.report_type_id === 2);
+            submissionId = item?.submission_id || item?.id;
+        });
+
+        it(&#039;harus ditolak jika bukan Admin PT yang melakukan verifikasi&#039;, async () =&gt; {
+            expect(submissionId).toBeDefined(); // Memastikan file berhasil diupload
+            const res = await request(app)
+                .patch(`/api/v1/reports/${submissionId}/verify`)
+                .set(&#039;Authorization&#039;, `Bearer ${satkerToken}`)
+                .send({ status_verifikasi: &#039;lengkap&#039;, catatan_admin: &#039;&#039; });
+
+            expect(res.statusCode).toBe(403);
+        });
+
+        it(&#039;harus berhasil memverifikasi laporan sebagai LENGKAP&#039;, async () =&gt; {
+            expect(submissionId).toBeDefined();
+            const res = await request(app)
+                .patch(`/api/v1/reports/${submissionId}/verify`)
+                .set(&#039;Authorization&#039;, `Bearer ${adminToken}`)
+                .send({ status_verifikasi: &#039;lengkap&#039;, catatan_admin: &#039;Semua berkas sudah lengkap.&#039; });
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.success).toBe(true);
+        });
+
+        it(&#039;harus berhasil memverifikasi laporan sebagai REVISI dan mengirim email&#039;, async () =&gt; {
+            expect(submissionId).toBeDefined();
+            const { emailQueue } = require(&#039;../../src/emailWorker&#039;);
+            const res = await request(app)
+                .patch(`/api/v1/reports/${submissionId}/verify`)
+                .set(&#039;Authorization&#039;, `Bearer ${adminToken}`)
+                .send({ status_verifikasi: &#039;revisi&#039;, catatan_admin: &#039;Tolong lengkapi lampiran form A.&#039; });
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.success).toBe(true);
+            // Pastikan email queue dipanggil
+            expect(emailQueue.add).toHaveBeenCalled();
+        });
+    });
+
+    // ============================================================
+    // BAGIAN 6: HAPUS LAPORAN
+    // ============================================================
+    describe(&#039;DELETE /api/v1/reports/:id&#039;, () =&gt; {
+        let deleteTargetId;
+
+        beforeAll(async () =&gt; {
+            // Upload laporan untuk di-test delete
+            await request(app)
+                .post(&#039;/api/v1/reports/upload&#039;)
+                .set(&#039;Authorization&#039;, `Bearer ${satkerToken}`)
+                .field(&#039;report_type_id&#039;, 3)
+                .field(&#039;periode_bulan&#039;, 3)
+                .field(&#039;periode_tahun&#039;, 2026)
+                .attach(&#039;dokumen_monev&#039;, Buffer.from(&#039;%PDF-1.4 utk hapus&#039;), {
+                    filename: &#039;laporan_delete.pdf&#039;,
+                    contentType: &#039;application/pdf&#039;
+                });
+
+            // Ambil ID
+            const progressRes = await request(app)
+                .get(&#039;/api/v1/reports/my-progress&#039;)
+                .set(&#039;Authorization&#039;, `Bearer ${satkerToken}`)
+                .query({ bulan: 3, tahun: 2026 });
+
+            const item = progressRes.body.data?.find(d =&gt; d.report_type_id === 3);
+            deleteTargetId = item?.submission_id || item?.id;
+        });
+
+        it(&#039;harus gagal menghapus laporan milik satker lain&#039;, async () =&gt; {
+            expect(deleteTargetId).toBeDefined();
+
+            // Login sebagai satker lain (pn_batam)
+            const batamLogin = await request(app)
+                .post(&#039;/api/v1/auth/login&#039;)
+                .send({ username: &#039;pn_batam&#039;, password: &#039;password123&#039; });
+            const batamToken = batamLogin.body.data?.token;
+
+            const res = await request(app)
+                .delete(`/api/v1/reports/${deleteTargetId}`)
+                .set(&#039;Authorization&#039;, `Bearer ${batamToken}`);
+
+            expect(res.statusCode).toBe(403);
+        });
+
+        it(&#039;harus berhasil menghapus laporan milik sendiri&#039;, async () =&gt; {
+            expect(deleteTargetId).toBeDefined();
+
+            const res = await request(app)
+                .delete(`/api/v1/reports/${deleteTargetId}`)
+                .set(&#039;Authorization&#039;, `Bearer ${satkerToken}`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.success).toBe(true);
+        });
+
+        it(&#039;harus mengembalikan 404 saat laporan sudah dihapus&#039;, async () =&gt; {
+            expect(deleteTargetId).toBeDefined();
+
+            const res = await request(app)
+                .delete(`/api/v1/reports/${deleteTargetId}`)
+                .set(&#039;Authorization&#039;, `Bearer ${satkerToken}`);
+
+            expect(res.statusCode).toBe(404);
+        });
+    });
+});
+</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        tests/setup.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * SATYA - Test Database Setup
+ * Menyediakan fungsi untuk reset database ke kondisi bersih sebelum setiap test suite.
+ *
+ * clearDatabase() melakukan TRUNCATE semua tabel dan re-seed data awal
+ * sehingga setiap test suite mendapatkan state database yang identik dan deterministic.
+ */
+const knex = require(&#039;../src/config/knex&#039;);
+const seedFn = require(&#039;../seeds/01_initial_data&#039;);
+
+/**
+ * Reset penuh: hapus semua data lalu seed ulang.
+ * Urutan TRUNCATE menghormati FK constraint (leaf table first, atau CASCADE).
+ */
+async function clearDatabase() {
+    // TRUNCATE dengan CASCADE otomatis menghapus data di tabel yang berelasi
+    await knex.raw(&#039;TRUNCATE TABLE report_submissions, users, report_types, satkers RESTART IDENTITY CASCADE&#039;);
+    // Re-seed untuk memastikan data awal (admin, satker, user, report types) selalu ada
+    await seedFn.seed(knex);
+}
+
+/**
+ * Tutup koneksi pool database setelah test suite selesai.
+ */
+async function closeDatabase() {
+    await knex.destroy();
+}
+
+module.exports = { clearDatabase, closeDatabase };</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        tests/unit/authService.test.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * Unit Test: Auth Service
+ * Menguji fungsi generateToken dan verifyToken secara terisolasi
+ * tanpa dependency ke database
+ */
+
+// Atur JWT_SECRET untuk test environment
+process.env.JWT_SECRET = &#039;test_secret_key_untuk_unit_testing&#039;;
+process.env.JWT_EXPIRES_IN = &#039;1h&#039;;
+
+const { generateToken, verifyToken } = require(&#039;../../src/services/authService&#039;);
+const jwt = require(&#039;jsonwebtoken&#039;);
+const { AppError } = require(&#039;../../src/middlewares/errorHandler&#039;);
+
+describe(&#039;Unit Test: authService&#039;, () =&gt; {
+
+    describe(&#039;generateToken()&#039;, () =&gt; {
+        const mockUser = {
+            id: 10,
+            role: &#039;SATKER_PN&#039;,
+            satker_id: 2
+        };
+
+        it(&#039;harus menghasilkan string token JWT yang valid&#039;, () =&gt; {
+            const token = generateToken(mockUser);
+            expect(typeof token).toBe(&#039;string&#039;);
+            expect(token.split(&#039;.&#039;).length).toBe(3); // JWT format: header.payload.signature
+        });
+
+        it(&#039;harus menyertakan payload yang benar di dalam token&#039;, () =&gt; {
+            const token = generateToken(mockUser);
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+            expect(decoded.id).toBe(10);
+            expect(decoded.role).toBe(&#039;SATKER_PN&#039;);
+            expect(decoded.satkerId).toBe(2);
+        });
+
+        it(&#039;harus menghasilkan token yang berbeda untuk user yang berbeda&#039;, () =&gt; {
+            const mockUser2 = { id: 20, role: &#039;ADMIN_PT&#039;, satker_id: null };
+            const token1 = generateToken(mockUser);
+            const token2 = generateToken(mockUser2);
+
+            expect(token1).not.toBe(token2);
+        });
+    });
+
+    describe(&#039;verifyToken()&#039;, () =&gt; {
+        it(&#039;harus berhasil memverifikasi token yang valid&#039;, () =&gt; {
+            const mockUser = { id: 5, role: &#039;ADMIN_PT&#039;, satker_id: null };
+            const token = generateToken(mockUser);
+            const decoded = verifyToken(token);
+
+            expect(decoded.id).toBe(5);
+            expect(decoded.role).toBe(&#039;ADMIN_PT&#039;);
+        });
+
+        it(&#039;harus melempar AppError untuk token palsu&#039;, () =&gt; {
+            expect(() =&gt; {
+                verifyToken(&#039;ini.token.palsu&#039;);
+            }).toThrow();
+        });
+
+        it(&#039;harus melempar AppError untuk token yang kadaluwarsa&#039;, () =&gt; {
+            // Buat token yang sudah expired
+            const expiredToken = jwt.sign(
+                { id: 1, role: &#039;TEST&#039; },
+                process.env.JWT_SECRET,
+                { expiresIn: &#039;0s&#039; } // langsung expired
+            );
+
+            // Tunggu sebentar agar benar-benar expired
+            expect(() =&gt; {
+                verifyToken(expiredToken);
+            }).toThrow();
+        });
+    });
+
+    describe(&#039;AppError Class&#039;, () =&gt; {
+        it(&#039;harus membuat error dengan statusCode dan status yang tepat (4xx = fail)&#039;, () =&gt; {
+            const err = new AppError(&#039;Not Found&#039;, 404);
+            expect(err.message).toBe(&#039;Not Found&#039;);
+            expect(err.statusCode).toBe(404);
+            expect(err.status).toBe(&#039;fail&#039;);
+            expect(err.isOperational).toBe(true);
+        });
+
+        it(&#039;harus membuat error dengan status &quot;error&quot; untuk 5xx&#039;, () =&gt; {
+            const err = new AppError(&#039;Internal Error&#039;, 500);
+            expect(err.statusCode).toBe(500);
+            expect(err.status).toBe(&#039;error&#039;);
+        });
+    });
+});
+</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        tests/unit/reportController.test.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * Unit Test: Report Controller - Helper Functions
+ * Menguji fungsi checkKetepatanWaktu dan logika sederhana di controller
+ * tanpa memanggil HTTP endpoints
+ */
+
+// Setup env
+process.env.JWT_SECRET = &#039;test_secret_key_untuk_unit_testing&#039;;
+
+describe(&#039;Unit Test: reportController helpers&#039;, () =&gt; {
+
+    /**
+     * checkKetepatanWaktu tidak di-export, jadi kita test perilakunya
+     * melalui endpoint my-progress yang menggunakannya.
+     * Namun kita bisa mengisolasi logikanya dengan re-implementasi ringan.
+     */
+    function checkKetepatanWaktu(createdAt, periodeBulan, periodeTahun) {
+        if (!createdAt) return null;
+
+        let deadlineMonth = periodeBulan + 1;
+        let deadlineYear = periodeTahun;
+
+        if (deadlineMonth &gt; 12) {
+            deadlineMonth = 1;
+            deadlineYear += 1;
+        }
+
+        const deadlineDate = new Date(deadlineYear, deadlineMonth - 1, 10, 23, 59, 59);
+        const uploadDate = new Date(createdAt);
+        return uploadDate &gt; deadlineDate ? &#039;Terlambat&#039; : &#039;Tepat Waktu&#039;;
+    }
+
+    describe(&#039;checkKetepatanWaktu()&#039;, () =&gt; {
+        it(&#039;harus mengembalikan null jika createdAt tidak ada&#039;, () =&gt; {
+            expect(checkKetepatanWaktu(null, 3, 2026)).toBeNull();
+            expect(checkKetepatanWaktu(undefined, 3, 2026)).toBeNull();
+        });
+
+        it(&#039;harus mengembalikan &quot;Tepat Waktu&quot; jika upload sebelum tanggal 10 bulan berikutnya&#039;, () =&gt; {
+            // Upload tanggal 5 April (untuk laporan Maret 2026)
+            const createdAt = &#039;2026-04-05T10:00:00.000Z&#039;;
+            expect(checkKetepatanWaktu(createdAt, 3, 2026)).toBe(&#039;Tepat Waktu&#039;);
+        });
+
+        it(&#039;harus mengembalikan &quot;Terlambat&quot; jika upload setelah tanggal 10 bulan berikutnya&#039;, () =&gt; {
+            // Upload tanggal 15 April (untuk laporan Maret 2026) - terlambat
+            const createdAt = &#039;2026-04-15T10:00:00.000Z&#039;;
+            expect(checkKetepatanWaktu(createdAt, 3, 2026)).toBe(&#039;Terlambat&#039;);
+        });
+
+        it(&#039;harus menangani pergantian tahun dengan benar (Desember → Januari)&#039;, () =&gt; {
+            // Upload tanggal 5 Januari 2027 (untuk laporan Desember 2026) - tepat waktu
+            const tepat = &#039;2027-01-05T10:00:00.000Z&#039;;
+            expect(checkKetepatanWaktu(tepat, 12, 2026)).toBe(&#039;Tepat Waktu&#039;);
+
+            // Upload tanggal 15 Januari 2027 (untuk laporan Desember 2026) - terlambat
+            const terlambat = &#039;2027-01-15T10:00:00.000Z&#039;;
+            expect(checkKetepatanWaktu(terlambat, 12, 2026)).toBe(&#039;Terlambat&#039;);
+        });
+
+        it(&#039;harus mengembalikan &quot;Tepat Waktu&quot; untuk upload pagi hari tanggal 10 bulan berikutnya&#039;, () =&gt; {
+            // Upload pagi tanggal 10 April (untuk laporan Maret 2026) - masih dalam batas
+            const createdAt = &#039;2026-04-10T08:00:00.000Z&#039;; // jam 8 pagi UTC pada tanggal 10
+            expect(checkKetepatanWaktu(createdAt, 3, 2026)).toBe(&#039;Tepat Waktu&#039;);
+        });
+    });
+
+    describe(&#039;Validasi logika persentase kepatuhan&#039;, () =&gt; {
+        function hitungPersentase(totalWajib, totalUpload) {
+            return totalWajib === 0 ? 0 : Math.round((totalUpload / totalWajib) * 100);
+        }
+
+        it(&#039;harus mengembalikan 0 jika tidak ada laporan wajib&#039;, () =&gt; {
+            expect(hitungPersentase(0, 0)).toBe(0);
+        });
+
+        it(&#039;harus mengembalikan 100 jika semua laporan sudah diupload&#039;, () =&gt; {
+            expect(hitungPersentase(28, 28)).toBe(100);
+        });
+
+        it(&#039;harus menghitung persentase parsial dengan benar&#039;, () =&gt; {
+            expect(hitungPersentase(28, 14)).toBe(50);
+            expect(hitungPersentase(28, 7)).toBe(25);
+        });
+
+        it(&#039;harus membulatkan persentase ke angka bulat&#039;, () =&gt; {
+            // 10/28 = 35.71... → dibulatkan ke 36
+            expect(hitungPersentase(28, 10)).toBe(36);
+        });
+    });
+});
+</code></pre>
+                </div>
+                <div style="margin-top:20px; background:#1E293B; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0F172A; color:#94A3B8; padding:10px 15px; font-family:monospace; font-size:14px; border-bottom:1px solid #334155;">
+                        tests/__mocks__/externalServices.js
+                    </div>
+                    <pre style="margin:0; padding:15px; color:#F8FAFC; overflow-x:auto; font-size:13px; line-height:1.5;"><code>/**
+ * Catatan: File ini adalah DEAD CODE dari desain awal.
+ *
+ * Mock untuk MinIO dan emailWorker kini dikelola sebagai Jest Manual Mocks
+ * yang lebih idiomatic dan merupakan single source of truth:
+ *
+ *   src/config/__mocks__/minio.js      → mock untuk MinIO
+ *   src/__mocks__/emailWorker.js       → mock untuk emailWorker
+ *
+ * Cara penggunaan di setiap file test (tanpa factory function inline):
+ *   jest.mock(&#039;../../src/config/minio&#039;);
+ *   jest.mock(&#039;../../src/emailWorker&#039;);
+ *
+ * Jest akan otomatis menggunakan file __mocks__ yang sesuai.
+ */</code></pre>
+                </div>
+</section>
+
+    <footer>
+        &copy; 2026 Developer Documentation SATYA | Pengadilan Tinggi Kepulauan Riau
+    </footer>
+</div>
+
+</body>
+</html>
