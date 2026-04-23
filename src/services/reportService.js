@@ -12,13 +12,14 @@ const { emailQueue } = require('../emailWorker');
 /**
  * [CREATE/UPDATE] Logika Unggah Dokumen dengan Fitur Clean-up File Lama
  */
-async function uploadReportDocument(tenant, file, reportTypeId, bulan, tahun) {
+async function uploadReportDocument(tenant, file, reportTypeId, periodType, periodUnit, tahun) {
     // 1. Cek apakah sudah ada submission sebelumnya (untuk kebutuhan UPDATE/Timpa)
     const existing = await knex('report_submissions')
         .where({ 
             satker_id: tenant.satkerId, 
             report_type_id: reportTypeId, 
-            periode_bulan: bulan, 
+            period_type: periodType,
+            period_unit: periodUnit, 
             periode_tahun: tahun 
         }).first();
 
@@ -31,8 +32,8 @@ async function uploadReportDocument(tenant, file, reportTypeId, bulan, tahun) {
         }
     }
 
-    // 3. Tentukan nama file unik (Path: SatkerID/Tahun/Bulan/Timestamp-NamaFile)
-    const filename = `${tenant.satkerId}/${tahun}/${bulan}/${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
+    // 3. Tentukan nama file unik (Path: SatkerID/Tahun/periodType/periodUnit/Timestamp-NamaFile)
+    const filename = `${tenant.satkerId}/${tahun}/${periodType}/${periodUnit}/${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
 
     // 4. Upload ke MinIO
     await minioClient.putObject(BUCKET_NAME, filename, file.buffer, file.size, {
@@ -42,7 +43,8 @@ async function uploadReportDocument(tenant, file, reportTypeId, bulan, tahun) {
     const dataSubmission = {
         satker_id: tenant.satkerId,
         report_type_id: reportTypeId,
-        periode_bulan: bulan,
+        period_type: periodType,
+        period_unit: periodUnit,
         periode_tahun: tahun,
         file_url: filename,
         nama_file_asli: file.originalname,
@@ -91,7 +93,7 @@ async function verifyAndNotify(submissionId, status, catatan) {
         const detail = await knex('report_submissions as rs')
             .join('report_types as rt', 'rs.report_type_id', 'rt.id')
             .join('users as u', 'rs.satker_id', 'u.satker_id')
-            .select('rt.nama_laporan', 'u.username as satker_email') // Asumsi username/email satker
+            .select('rt.nama_laporan', 'u.email as satker_email')
             .where('rs.id', submissionId)
             .first();
 

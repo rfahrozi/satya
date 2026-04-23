@@ -128,11 +128,20 @@ function verifyToken(token) {
     }
 }
 
+/**
+ * Menghapus akun user
+ * @param {number} id
+ */
+async function deleteUser(id) {
+    await knex('users').where({ id }).del();
+}
+
 module.exports = {
     loginUser,
     createUser,
     updateUser,
     getAllUsers,
+    deleteUser,
     generateToken,
     verifyToken
 };

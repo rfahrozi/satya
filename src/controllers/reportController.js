@@ -18,19 +18,23 @@ const VALID_STATUS_VERIFIKASI = ['belum_lengkap', 'lengkap', 'revisi'];
  */
 async function uploadReport(req, res, next) {
     try {
-        const { report_type_id, periode_bulan, periode_tahun } = req.body;
+        const { report_type_id, periode_bulan, periode_tahun, period_type, period_unit } = req.body;
         const file = req.file;
 
+        let pType = period_type || 'monthly';
+        let pUnit = period_unit || periode_bulan;
+
         if (!file) throw new AppError('File dokumen tidak ditemukan.', 400);
-        if (!report_type_id || !periode_bulan || !periode_tahun) {
-            throw new AppError('Metadata laporan (ID, Bulan, Tahun) tidak lengkap.', 400);
+        if (!report_type_id || !pUnit || !periode_tahun) {
+            throw new AppError('Metadata laporan (ID, Periode, Tahun) tidak lengkap.', 400);
         }
 
         const result = await reportService.uploadReportDocument(
             req.tenant,
             file,
             parseInt(report_type_id),
-            parseInt(periode_bulan),
+            pType,
+            parseInt(pUnit),
             parseInt(periode_tahun)
         );
 
@@ -49,10 +53,12 @@ async function uploadReport(req, res, next) {
  */
 async function getMyProgress(req, res, next) {
     try {
-        const { bulan, tahun } = req.query;
-        if (!bulan || !tahun) throw new AppError('Periode bulan dan tahun wajib disertakan.', 400);
+        const { bulan, tahun, period_type, period_unit } = req.query;
+        let pType = period_type || 'monthly';
+        let pUnit = period_unit || bulan;
+        if (!pUnit || !tahun) throw new AppError('Periode dan tahun wajib disertakan.', 400);
 
-        const data = await reportRepo.getSatkerProgress(req.tenant.satkerId, bulan, tahun);
+        const data = await reportRepo.getSatkerProgress(req.tenant.satkerId, pType, pUnit, tahun);
 
         // status_ketepatan_waktu sekarang sudah dihitung oleh database layer
         res.status(200).json({
@@ -117,8 +123,10 @@ async function verifyReport(req, res, next) {
  */
 async function getDashboardAgregat(req, res, next) {
     try {
-        const { bulan, tahun } = req.query;
-        const data = await reportRepo.getRekapitulasiPimpinan(bulan, tahun);
+        const { bulan, tahun, period_type, period_unit } = req.query;
+        let pType = period_type || 'monthly';
+        let pUnit = period_unit || bulan;
+        const data = await reportRepo.getRekapitulasiPimpinan(pType, pUnit, tahun);
 
         const formattedData = data.map(satker => {
             const totalWajib = parseInt(satker.total_wajib);

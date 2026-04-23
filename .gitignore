@@ -3,8 +3,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Environment files (JANGAN di-commit)
 .env
 .env.test
+.env.local
 
 coverage/
 .nyc_output/
@@ -16,3 +18,20 @@ frontend/dist/
 frontend/npm-debug.log*
 
 .DS_Store
+
+# File binary / archive
+*.rar
+*.zip
+
+# Build artifacts
+public/assets/
+
+# File test sementara
+test-results.json
+test-results2.json
+test_email.js
+src/test-email.js
+src/debug-env.js
+
+# VS Code
+.vscode/

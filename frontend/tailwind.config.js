@@ -1,29 +1,33 @@
-/** @type {import('tailwindcss').Config} */
-export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+module.exports = {
+  content: ['./src/**/*.{js,jsx,ts,tsx,html}'],
   theme: {
     extend: {
       colors: {
-        primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb', // Default Primary
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+        brand: {
+          DEFAULT: '#3b82f6',
+          2: '#6366f1',
         },
-        sidebar: '#0f172a'
+        ui: {
+          900: '#071028',
+          800: '#0f1724',
+        },
+        success: '#10b981',
+        warn: '#f59e0b',
+        danger: '#ef4444',
+      },
+      borderRadius: {
+        sm: '8px',
+        md: '12px',
+        lg: '20px',
+        pill: '9999px',
+      },
+      boxShadow: {
+        'xl-soft': '0 10px 30px rgba(2,6,23,0.45)',
       },
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-      }
+        sans: ['Inter', 'system-ui', 'Segoe UI', 'Roboto'],
+        mono: ['Roboto Mono', 'monospace'],
+      },
     },
   },
   plugins: [],

@@ -45,4 +45,10 @@ router.get('/users', authController.getAllUsers);
 // [ADMIN] Simpan atau Update akun Satker (Hanya Admin PT)
 router.post('/users', authController.saveOrUpdateUser);
 
+// [ADMIN] Hapus atau nonaktifkan akun Satker (Hanya Admin PT)
+router.delete('/users/:id', authController.deleteUser);
+
+// [ADMIN] Reset password akun (Hanya Admin PT)
+router.post('/users/:id/reset-password', authController.resetPassword);
+
 module.exports = router;

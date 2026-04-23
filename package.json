@@ -24,7 +24,8 @@
     "minio": "^7.1.1",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.1",
-    "pg": "^8.10.0"
+    "pg": "^8.10.0",
+    "node-cron": "^3.0.2"
   },
   "devDependencies": {
     "cross-env": "^7.0.3",

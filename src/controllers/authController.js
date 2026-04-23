@@ -76,8 +76,52 @@ async function getAllUsers(req, res, next) {
     }
 }
 
+/**
+ * [ADMIN] Hapus Akun User Satker
+ */
+async function deleteUser(req, res, next) {
+    try {
+        if (req.tenant.role !== 'ADMIN_PT') {
+            throw new AppError('Akses ditolak.', 403);
+        }
+
+        const { id } = req.params;
+        await authService.deleteUser(id);
+
+        res.status(200).json({
+            success: true,
+            message: 'Akun berhasil dihapus.'
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+/**
+ * [ADMIN] Reset Password User ke default (password123)
+ */
+async function resetPassword(req, res, next) {
+    try {
+        if (req.tenant.role !== 'ADMIN_PT') {
+            throw new AppError('Akses ditolak.', 403);
+        }
+
+        const { id } = req.params;
+        await authService.updateUser(id, { password: 'password123' });
+
+        res.status(200).json({
+            success: true,
+            message: 'Password berhasil direset ke password default (password123).'
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
 module.exports = {
     login,
     saveOrUpdateUser,
-    getAllUsers
+    getAllUsers,
+    deleteUser,
+    resetPassword
 };

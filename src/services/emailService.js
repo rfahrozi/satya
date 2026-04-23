@@ -13,7 +13,7 @@ const transporter = process.env.NODE_ENV !== 'test'
     ? nodemailer.createTransport({
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
         port: parseInt(process.env.SMTP_PORT) || 587,
-        secure: false,
+        secure: parseInt(process.env.SMTP_PORT) === 465, // True untuk port 465 (SSL), false untuk 587 (STARTTLS)
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS,
@@ -21,7 +21,8 @@ const transporter = process.env.NODE_ENV !== 'test'
         // Timeout agar tidak hang jika server SMTP lambat atau tidak respond
         connectionTimeout: 10000, // 10 detik
         greetingTimeout: 5000,    // 5 detik
-        socketTimeout: 15000      // 15 detik per operasi
+        socketTimeout: 15000,     // 15 detik per operasi
+        tls: { rejectUnauthorized: false }
     })
     : null; // Null di mode test — emailWorker di-mock sehingga sendMail tidak pernah dipanggil
 

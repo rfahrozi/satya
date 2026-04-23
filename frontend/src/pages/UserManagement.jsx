@@ -1,205 +1,480 @@
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Users as UsersIcon, Plus, Mail, Lock, CheckCircle, Search, MailPlus } from 'lucide-react'
-import api from '../lib/axios'
+// frontend/src/pages/UserManagement.jsx
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  UserPlus,
+  Edit3,
+  Trash2,
+  UserCheck,
+  ShieldCheck,
+  Search,
+  X,
+  Check,
+} from 'lucide-react';
+import api from '../lib/axios';
+import { useFocusTrap } from '../hooks/useFocusTrap';
+import ConfirmDialog from '../components/ConfirmDialog';
+
+/*
+  UserManagement.jsx
+  - Admin page for managing users (create, edit, deactivate/delete, reset password)
+  - Uses react-query for data fetching and mutation
+  - Assumes API endpoints (consistent with project docs):
+      GET  /api/v1/users                 -> list users (with optional ?q=)
+      POST /api/v1/users                 -> create user
+      PATCH /api/v1/users/:id            -> update user
+      DELETE /api/v1/users/:id           -> delete/deactivate user
+      POST /api/v1/users/:id/reset-password -> (optional) reset user password / send temp password
+      GET  /api/v1/satkers               -> list satkers for assignment
+  - Adjust endpoint paths if your backend uses other route prefixes.
+*/
+
+const ROLE_OPTIONS = [
+  { value: 'ADMIN_PT', label: 'Administrator (ADMIN_PT)' },
+  { value: 'PIMPINAN', label: 'Pimpinan (PIMPINAN)' },
+  { value: 'SATKER_PN', label: 'Satker (SATKER_PN)' },
+];
+
+const SATKER_OPTIONS = [
+  { id: 1, name: 'Pengadilan Negeri Tanjungpinang' },
+  { id: 2, name: 'Pengadilan Negeri Batam' },
+  { id: 3, name: 'Pengadilan Negeri Tanjung Balai Karimun' },
+  { id: 4, name: 'Pengadilan Negeri Natuna' },
+];
+
+function Badge({ children, className = '' }) {
+  return (
+    <span className={`inline-flex items-center gap-2 text-xs font-semibold px-2 py-1 rounded-full ${className}`}>
+      {children}
+    </span>
+  );
+}
 
 export default function UserManagement() {
-  const queryClient = useQueryClient()
-  const [searchTerm, setSearchTerm] = useState('')
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  
-  // State for Create User Form
-  const [formData, setFormData] = useState({
+  const queryClient = useQueryClient();
+
+  // UI state
+  const [q, setQ] = useState('');
+  const [pageSize] = useState(50); // pagination placeholder (server-side recommended)
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [mode, setMode] = useState('create'); // 'create' | 'edit'
+  const [formError, setFormError] = useState('');
+
+  // Accessible feedback & confirm
+  const [toast, setToast] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, action: null, user: null });
+
+  // Modal focus trap & escape
+  const modalRef = useFocusTrap(modalOpen);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  useEffect(() => {
+    if (!modalOpen) return;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') closeModal();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [modalOpen]);
+
+  // form state
+  const [form, setForm] = useState({
     username: '',
+    email: '',
+    role: 'SATKER_PN',
+    satker_id: '', // optional, relevant for SATKER_PN role
     password: '',
-    nama_satker: '',
-    email: ''
-  })
+    confirmPassword: '',
+    active: true,
+  });
 
-  // Fetch Users
-  const { data, isLoading } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => api.get('/auth/users'),
-  })
+  // fetch users
+  const { data: usersResp, isLoading: usersLoading, refetch: refetchUsers } = useQuery({
+    queryKey: ['users', q],
+    queryFn: async () => {
+      // server expected to return array or { data: [...] }
+      const res = await api.get(`/api/v1/auth/users${q ? `?q=${encodeURIComponent(q)}` : ''}`);
+      return res?.data ?? res;
+    },
+    keepPreviousData: true,
+  });
 
-  // Create User Mutation
+
+
+  const users = Array.isArray(usersResp) ? usersResp : (usersResp?.data ?? []);
+
+  // Mutations: create, update, delete, reset password
   const createMutation = useMutation({
-    mutationFn: (newUserData) => api.post('/auth/users', newUserData),
+    mutationFn: (payload) => api.post('/api/v1/auth/users', payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] })
-      setIsModalOpen(false)
-      setFormData({ username: '', password: '', nama_satker: '', email: '' })
-      alert("Satker berhasil didaftarkan!")
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      closeModal();
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }) => api.post(`/api/v1/auth/users`, { id, ...payload }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      closeModal();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => api.delete(`/api/v1/auth/users/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+
+  const resetPwdMutation = useMutation({
+    mutationFn: (id) => api.post(`/api/v1/auth/users/${id}/reset-password`),
+    onSuccess: () => {
+      setToast({ type: 'success', text: 'Permintaan reset password terkirim (server akan mengirim email).' });
     },
     onError: (err) => {
-      alert(err.message)
-    }
-  })
+      setToast({ type: 'error', text: err?.message || 'Gagal meminta reset password' });
+    },
+  });
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    createMutation.mutate(formData)
+  // helpers
+  function openCreate() {
+    setMode('create');
+    setForm({
+      username: '',
+      email: '',
+      role: 'SATKER_PN',
+      satker_id: '',
+      password: '',
+      confirmPassword: '',
+      active: true,
+    });
+    setFormError('');
+    setModalOpen(true);
   }
 
-  const usersList = data?.data || []
-  const filteredUsers = usersList.filter(u => 
-    u.username.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (u.satker?.nama_satker || '').toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  function openEdit(user) {
+    setMode('edit');
+    setSelectedUser(user);
+    setForm({
+      username: user.username || '',
+      email: user.email || '',
+      role: user.role || 'SATKER_PN',
+      satker_id: user.satker_id ?? '',
+      password: '',
+      confirmPassword: '',
+      active: user.active ?? true,
+    });
+    setFormError('');
+    setModalOpen(true);
+  }
+
+  function closeModal() {
+    setModalOpen(false);
+    setSelectedUser(null);
+  }
+
+  function validateForm() {
+    // basic validation rules; systems often require stronger password rules
+    if (!form.username || form.username.trim().length < 3) {
+      setFormError('Username minimal 3 karakter.');
+      return false;
+    }
+    if (!form.email || !/^\S+@\S+\.\S+$/.test(form.email)) {
+      setFormError('Masukkan alamat email yang valid.');
+      return false;
+    }
+    if (form.role === 'SATKER_PN' && !form.satker_id) {
+      setFormError('Pilih Satuan Kerja untuk role Satker.');
+      return false;
+    }
+    if (mode === 'create') {
+      if (!form.password || form.password.length < 8) {
+        setFormError('Password minimal 8 karakter.');
+        return false;
+      }
+      if (form.password !== form.confirmPassword) {
+        setFormError('Password dan konfirmasi tidak cocok.');
+        return false;
+      }
+    } else {
+      // edit mode: if password entered, validate it
+      if (form.password) {
+        if (form.password.length < 8) {
+          setFormError('Password minimal 8 karakter.');
+          return false;
+        }
+        if (form.password !== form.confirmPassword) {
+          setFormError('Password dan konfirmasi tidak cocok.');
+          return false;
+        }
+      }
+    }
+    setFormError('');
+    return true;
+  }
+
+  async function submitForm(e) {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    const payload = {
+      username: form.username.trim(),
+      email: form.email.trim(),
+      role: form.role,
+      satker_id: form.role === 'SATKER_PN' ? form.satker_id : null,
+      active: !!form.active,
+    };
+    // only send password if provided
+    if (form.password) payload.password = form.password;
+
+    try {
+      if (mode === 'create') {
+        await createMutation.mutateAsync(payload);
+        setToast({ type: 'success', text: 'Akun berhasil dibuat.' });
+      } else if (mode === 'edit' && selectedUser) {
+        await updateMutation.mutateAsync({ id: selectedUser.id, payload });
+        setToast({ type: 'success', text: 'Perubahan tersimpan.' });
+      }
+    } catch (err) {
+      setFormError(err?.response?.data?.message ?? err?.message ?? 'Gagal menyimpan pengguna.');
+    }
+  }
+
+  function confirmDelete(user) {
+    setConfirmDialog({ open: true, action: 'delete', user });
+  }
+
+  function triggerResetPassword(user) {
+    setConfirmDialog({ open: true, action: 'reset', user });
+  }
+
+  function handleConfirmAction() {
+    if (!confirmDialog.user) return;
+    if (confirmDialog.action === 'delete') {
+      deleteMutation.mutate(confirmDialog.user.id);
+    } else if (confirmDialog.action === 'reset') {
+      resetPwdMutation.mutate(confirmDialog.user.id);
+    }
+    setConfirmDialog({ open: false, action: null, user: null });
+  }
+
+  function handleCancelAction() {
+    setConfirmDialog({ open: false, action: null, user: null });
+  }
+
+  // small UI helpers
+  function RoleBadge({ role }) {
+    const map = {
+      ADMIN_PT: 'bg-violet-600 text-white',
+      PIMPINAN: 'bg-teal-600 text-white',
+      SATKER_PN: 'bg-amber-500 text-white',
+    };
+    return <Badge className={map[role] || 'bg-slate-500 text-white'}>{role}</Badge>;
+  }
 
   return (
     <div className="space-y-6">
-      
       {/* Header */}
-      <div className="card p-6 border-b-4 border-b-blue-600 bg-white">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
-               <UsersIcon size={24} />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-slate-800">Manajemen Akses & Pengguna</h2>
-              <p className="text-sm text-slate-500">Kelola akun kredensial untuk satuan kerja (Pengadilan Negeri).</p>
-            </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-white">Manajemen Pengguna</h1>
+          <p className="text-sm text-slate-400">Buat, edit, aktifkan atau nonaktifkan akun pengguna sistem.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <label htmlFor="search-user" className="sr-only">Cari username atau email</label>
+            <Search className="absolute left-3 top-2 text-slate-400" aria-hidden="true" />
+            <input
+              id="search-user"
+              placeholder="Cari username atau email..."
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="pl-10 pr-4 py-2 bg-slate-800 border border-white/6 rounded-md text-sm"
+            />
           </div>
-          
-          <button onClick={() => setIsModalOpen(true)} className="btn btn-primary gap-2">
-            <Plus size={18} /> Tambah Satker PN
+          <button onClick={openCreate} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 rounded-md text-white font-semibold">
+            <UserPlus size={16} aria-hidden="true" /> Buat Akun
           </button>
         </div>
       </div>
 
-      {/* Search Input */}
-      <div className="flex items-center relative max-w-md">
-        <Search className="w-5 h-5 text-slate-400 absolute left-3" />
-        <input 
-           type="text" 
-           placeholder="Cari berdasarkan username / institusi..." 
-           value={searchTerm}
-           onChange={e => setSearchTerm(e.target.value)}
-           className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-primary-500 outline-none"
-        />
-      </div>
-
-      {/* User Table (List) */}
-      <div className="card overflow-hidden">
-        {isLoading ? (
-          <div className="p-8 text-center text-slate-400">Memuat data pengguna...</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200 font-semibold">
-                <tr>
-                  <th className="px-6 py-4">Nama Institusi / Jabatan</th>
-                  <th className="px-6 py-4">Username Login</th>
-                  <th className="px-6 py-4">Hak Akses (Role)</th>
-                  <th className="px-6 py-4">Email Reminder Terdaftar</th>
-                  <th className="px-6 py-4">Status</th>
+      {/* Users table */}
+      <div className="bg-slate-900 border border-white/6 rounded-xl overflow-hidden">
+        <div className="p-4">
+          <table className="w-full text-sm">
+            <thead className="text-slate-400 text-xs uppercase">
+              <tr>
+                <th scope="col" className="text-left px-4 py-2">User</th>
+                <th scope="col" className="text-left px-4 py-2">Email</th>
+                <th scope="col" className="text-left px-4 py-2">Role / Satker</th>
+                <th scope="col" className="text-left px-4 py-2">Status</th>
+                <th scope="col" className="text-right px-4 py-2">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {usersLoading ? (
+                <tr><td colSpan="5" className="text-center py-6 text-slate-500">Memuat pengguna…</td></tr>
+              ) : users.length === 0 ? (
+                <tr><td colSpan="5" className="text-center py-6 text-slate-500">Tidak ada pengguna</td></tr>
+              ) : users.map(user => (
+                <tr key={user.id} className="border-t border-white/6 hover:bg-slate-800/40 transition-colors">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-md bg-gradient-to-tr from-slate-700 to-slate-600 flex items-center justify-center text-white font-bold">
+                        {String(user.username || '').slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-white">{user.username}</div>
+                        <div className="text-xs text-slate-400">{user.fullname ?? ''}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-slate-300">{user.email}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <RoleBadge role={user.role} />
+                      <div className="text-xs text-slate-400">{user.role === 'SATKER_PN' ? (user.satker_name ?? '—') : null}</div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    {user.active ? <Badge className="bg-emerald-600 text-white">Aktif</Badge> : <Badge className="bg-red-600 text-white">Nonaktif</Badge>}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="inline-flex items-center gap-2">
+                      <button title="Edit" aria-label={`Edit akun ${user.username}`} onClick={() => openEdit(user)} className="p-2 rounded-md bg-slate-800 hover:bg-slate-700">
+                        <Edit3 size={16} aria-hidden="true" />
+                      </button>
+                      <button title="Reset Password" aria-label={`Reset password akun ${user.username}`} onClick={() => triggerResetPassword(user)} className="p-2 rounded-md bg-slate-800 hover:bg-slate-700">
+                        <UserCheck size={16} aria-hidden="true" />
+                      </button>
+                      <button title="Hapus" aria-label={`Hapus akun ${user.username}`} onClick={() => confirmDelete(user)} className="p-2 rounded-md bg-red-700/20 hover:bg-red-700/30 text-red-400">
+                        <Trash2 size={16} aria-hidden="true" />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 font-bold text-slate-800">
-                      {user.satker?.nama_satker ? (
-                        <div className="flex items-center gap-2">
-                          <Landmark className="w-4 h-4 text-slate-400" />
-                          <span>{user.satker.nama_satker}</span>
-                        </div>
-                      ) : (
-                        <span className="text-slate-500 italic">Pimpinan PT / Admin PT</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 font-medium text-slate-600 font-mono text-xs">{user.username}</td>
-                    <td className="px-6 py-4">
-                       <span className={`px-2 py-1 rounded text-[0.65rem] font-bold tracking-wider uppercase
-                          ${user.role === 'ADMIN_PT' ? 'bg-purple-100 text-purple-700' :
-                            user.role === 'PIMPINAN' ? 'bg-amber-100 text-amber-700' :
-                            'bg-blue-100 text-blue-700'
-                          }
-                       `}>
-                          {user.role.replace('_', ' ')}
-                       </span>
-                    </td>
-                    <td className="px-6 py-4">
-                       {user.email ? (
-                          <span className="text-slate-600 flex items-center gap-1.5"><Mail className="w-4 h-4 text-emerald-500" /> {user.email}</span>
-                       ) : (
-                          <span className="text-slate-400 italic text-xs">-</span>
-                       )}
-                    </td>
-                    <td className="px-6 py-4 flex items-center gap-1 text-emerald-600 font-medium">
-                       <CheckCircle size={16} /> Aktif
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {filteredUsers.length === 0 && <div className="text-center py-10 text-slate-400">Tidak ada data pengguna.</div>}
-          </div>
-        )}
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* MODAL TAMBAH USER SATKER */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
-             <div className="bg-slate-50 border-b border-slate-200 p-4 flex justify-between items-center">
-               <h3 className="font-bold text-slate-800 flex items-center gap-2"><MailPlus size={18}/> Daftarkan Akun Satker PN</h3>
-               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">tutup</button>
-             </div>
-             
-             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                
-                <div className="space-y-1">
-                  <label className="text-sm font-semibold text-slate-700 ml-1">Nama Satker (Institusi)</label>
-                  <input 
-                    type="text" required placeholder="Cth: Pengadilan Negeri Batam"
-                    value={formData.nama_satker} onChange={e => setFormData({...formData, nama_satker: e.target.value})}
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                  />
-                </div>
+      {/* Create / Edit modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={closeModal}>
+          <div
+            ref={modalRef}
+            className="w-full max-w-2xl bg-slate-900 border border-white/6 rounded-2xl p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="user-modal-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 id="user-modal-title" className="text-lg font-bold text-white">{mode === 'create' ? 'Buat Akun Baru' : `Edit: ${selectedUser?.username}`}</h3>
+                <p className="text-sm text-slate-400">Isi data pengguna dan atur role / satker.</p>
+              </div>
+              <button onClick={closeModal} aria-label="Tutup dialog" className="p-2 rounded-md text-slate-400 hover:text-white">
+                <X size={18} aria-hidden="true" />
+              </button>
+            </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-sm font-semibold text-slate-700 ml-1">Username Login</label>
-                    <input 
-                      type="text" required placeholder="pn_batam_baru" 
-                      value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})}
-                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-semibold text-slate-700 ml-1">Password</label>
-                    <input 
-                      type="text" required placeholder="••••••••" 
-                      value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})}
-                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono"
-                    />
-                  </div>
-                </div>
+            <form onSubmit={submitForm} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="form-username" className="block text-xs text-slate-400 mb-1">Username</label>
+                <input id="form-username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} className="w-full p-2.5 bg-slate-800 border border-white/6 rounded-md" autoComplete="username" />
+              </div>
 
-                <div className="space-y-1">
-                  <label className="text-sm font-semibold text-slate-700 ml-1">Email Resmi (Untuk Reminder Autodeploy)</label>
-                  <input 
-                    type="email" required placeholder="pengadilan@domain.go.id"
-                    value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                  />
-                  <p className="text-[11px] text-slate-500 ml-1 mt-1">Sistem BullMQ Worker akan mengirim email ke alamat ini pada H-3 dan H-1 deadline laporan.</p>
-                </div>
+              <div>
+                <label htmlFor="form-email" className="block text-xs text-slate-400 mb-1">Email</label>
+                <input id="form-email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full p-2.5 bg-slate-800 border border-white/6 rounded-md" autoComplete="email" />
+              </div>
 
-               <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
-                 <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary">Batal</button>
-                 <button type="submit" disabled={createMutation.isPending} className="btn btn-primary">
-                    {createMutation.isPending ? 'Menyimpan...' : 'Buat Akun & Satker'}
-                 </button>
-               </div>
-             </form>
+              <div>
+                <label htmlFor="form-role" className="block text-xs text-slate-400 mb-1">Role</label>
+                <select id="form-role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full p-2.5 bg-slate-800 border border-white/6 rounded-md">
+                  {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="form-satker" className="block text-xs text-slate-400 mb-1">Satuan Kerja (opsional)</label>
+                <select id="form-satker" value={form.satker_id || ''} onChange={(e) => setForm({ ...form, satker_id: e.target.value })} className="w-full p-2.5 bg-slate-800 border border-white/6 rounded-md">
+                  <option value="">-- Pilih Satker (jika role Satker) --</option>
+                  {SATKER_OPTIONS.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="form-password" className="block text-xs text-slate-400 mb-1">{mode === 'create' ? 'Password' : 'Password (kosongkan jika tidak ingin mengubah)'}</label>
+                <input id="form-password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="w-full p-2.5 bg-slate-800 border border-white/6 rounded-md" autoComplete={mode === 'create' ? 'new-password' : 'new-password'} />
+              </div>
+
+              <div>
+                <label htmlFor="form-confirm-password" className="block text-xs text-slate-400 mb-1">Konfirmasi Password</label>
+                <input id="form-confirm-password" type="password" value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} className="w-full p-2.5 bg-slate-800 border border-white/6 rounded-md" autoComplete="new-password" />
+              </div>
+
+              <div className="md:col-span-2 flex items-center gap-4 mt-2">
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={form.active} onChange={(e) => setForm({ ...form, active: e.target.checked })} />
+                  <span className="text-sm text-slate-300">Akun aktif</span>
+                </label>
+
+                <div className="ml-auto flex items-center gap-2">
+                  <button type="button" onClick={closeModal} className="px-4 py-2 rounded-md bg-white/5">Batal</button>
+                  <button type="submit" className="px-4 py-2 rounded-md bg-blue-600 text-white font-semibold" disabled={createMutation.isLoading || updateMutation.isLoading}>
+                    {mode === 'create' ? (createMutation.isLoading ? 'Membuat…' : 'Buat Akun') : (updateMutation.isLoading ? 'Menyimpan…' : 'Simpan Perubahan')}
+                  </button>
+                </div>
+              </div>
+
+              {formError && <div role="alert" aria-live="assertive" className="md:col-span-2 text-sm text-red-400 mt-1">{formError}</div>}
+            </form>
           </div>
         </div>
       )}
 
+      {/* Accessible Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.open}
+        title={confirmDialog.action === 'delete' ? 'Hapus Akun' : 'Reset Password'}
+        message={
+          confirmDialog.action === 'delete'
+            ? `Hapus akun ${confirmDialog.user?.username}? Aksi ini tidak dapat dibatalkan.`
+            : `Kirim tautan reset password ke ${confirmDialog.user?.email}?`
+        }
+        confirmLabel={confirmDialog.action === 'delete' ? 'Ya, Hapus' : 'Ya, Kirim'}
+        cancelLabel="Batal"
+        variant={confirmDialog.action === 'delete' ? 'danger' : 'warning'}
+        onConfirm={handleConfirmAction}
+        onCancel={handleCancelAction}
+      />
+
+      {/* In-page toast (replaces window.alert) */}
+      {toast && (
+        <div
+          role={toast.type === 'error' ? 'alert' : 'status'}
+          aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
+          className={`fixed bottom-6 right-6 z-[150] px-4 py-3 rounded-xl shadow-2xl text-sm font-medium border ${
+            toast.type === 'error'
+              ? 'bg-red-950 text-red-200 border-red-700'
+              : 'bg-emerald-950 text-emerald-200 border-emerald-700'
+          }`}
+        >
+          {toast.text}
+        </div>
+      )}
     </div>
-  )
+  );
 }

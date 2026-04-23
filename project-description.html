@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deskripsi Lengkap Proyek MONEV</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background: #f5f5f5; color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; text-align: center; border-bottom: 3px solid #3498db; padding-bottom: 20px; }
+        h2 { color: #34495e; border-left: 5px solid #3498db; padding-left: 20px; }
+        h3 { color: #2980b9; }
+        pre { background: #f8f9fa; border: 1px solid #e9ecef; padding: 20px; border-radius: 8px; overflow-x: auto; font-size: 14px; }
+        .hierarchy { background: #ecf0f1; padding: 20px; border-radius: 8px; font-family: monospace; white-space: pre-wrap; }
+        .code-section { margin: 20px 0; }
+        .code-section h4 { color: #27ae60; }
+        ul { padding-left: 20px; }
+        .overview { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 40px; text-align: center; }
+        footer { text-align: center; margin-top: 50px; padding-top: 20px; border-top: 1px solid #ddd; color: #7f8c8d; }
+        .file-tree { background: #2c3e50; color: #ecf0f1; padding: 20px; border-radius: 8px; font-family: monospace; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Deskripsi Lengkap Proyek MONEV</h1>
+        
+        <div class="overview">
+            <h2>🎯 Overview Proyek</h2>
+            <p><strong>MONEV</strong> adalah sistem <strong>Monitoring dan Evaluasi</strong> berbasis web full-stack yang dirancang untuk PT. Kepri (kemungkinan terkait pemerintahan/pemerintahan daerah).</p>
+            <p>Fitur utama: Multi-tenant (Satker Portal), Dashboard, User Management, Upload laporan, Email notifikasi otomatis, BullMQ job queue, PostgreSQL DB, MinIO object storage, Redis cache/queue.</p>
+            <p><strong>Tech Stack:</strong> Node.js/Express + React/Vite + PostgreSQL + Docker + TailwindCSS + Jest Testing</p>
+        </div>
+
+        <h2>📁 Hirarki File Lengkap Proyek</h2>
+        <div class="file-tree">
+c:/My Project/monev/
+├── .dockerignore
+├── .gitignore
+├── docker-compose.prod.yml
+├── jest.config.js
+├── knexfile.js
+├── package-lock.json
+├── package.json (Backend Node.js API)
+├── setup_simpel_project.py
+├── test_email.js
+├── test-results.json
+├── coverage/
+├── docker/
+│   ├── docker-compose.dev.yml
+│   ├── Dockerfile.dev
+│   ├── Dockerfile.prod
+│   └── entrypoint.sh
+├── frontend/ (React + Vite + Tailwind)
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── tailwind.config.js
+│   ├── src/
+│   │   ├── App.jsx
+│   │   ├── main.jsx
+│   │   ├── pages/Dashboard.jsx
+│   │   ├── pages/Login.jsx
+│   │   ├── pages/SatkerPortal.jsx
+│   │   └── pages/UserManagement.jsx
+│   └── tests/
+├── migrations/ (Knex DB migrations)
+├── seeds/
+├── src/ (Backend core)
+│   ├── app.js (Main Express app)
+│   ├── routes/
+│   ├── controllers/
+│   ├── services/
+│   └── config/ (knex, minio, redis)
+├── public/ (Build assets)
+├── tests/ (Backend tests)
+└── ... (lainnya)
+        </div>
+
+        <h2>📋 Penjelasan Hirarki File</h2>
+        
+        <h3>Root Level</h3>
+        <ul>
+            <li><strong>package.json</strong>: Backend dependencies (Express, Knex, BullMQ, MinIO, Redis)</li>
+            <li><strong>knexfile.js</strong>: Konfigurasi PostgreSQL DB</li>
+            <li><strong>docker-compose.prod.yml</strong>: Deployment production</li>
+        </ul>
+
+        <h3>frontend/</h3>
+        <ul>
+            <li>React SPA dengan Vite, TailwindCSS, React Query</li>
+            <li>Pages: Dashboard, SatkerPortal, Login, UserManagement</li>
+            <li>State management: TanStack Query</li>
+        </ul>
+
+        <h3>src/ (Backend)</h3>
+        <ul>
+            <li><strong>app.js</strong>: Express server dengan API routes + static frontend</li>
+            <li>Multi-tenant middleware</li>
+            <li>Email service + Job queue (BullMQ)</li>
+        </ul>
+
+        <h3>Database</h3>
+        <ul>
+            <li>PostgreSQL dengan Knex.js migrations</li>
+            <li>Multi-tenant schema</li>
+            <li>Dynamic periods & deadlines</li>
+        </ul>
+
+        <h2>💻 Kode File Utama</h2>
+
+        <div class="code-section">
+            <h4>Backend package.json</h4>
+            <pre><code>{`{
+  "name": "satya-backend",
+  "version": "1.0.0",
+  "scripts": {
+    "start:api": "node src/app.js",
+    "start:worker": "node src/worker-app.js",
+    "dev:api": "nodemon src/app.js",
+    "migrate:make": "knex migrate:make",
+    "migrate:latest": "knex migrate:latest",
+    "test": "cross-env NODE_ENV=test jest --runInBand --coverage"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "bullmq": "^5.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "knex": "^2.4.2",
+    "minio": "^7.1.1",
+    "nodemailer": "^6.9.1",
+    "pg": "^8.10.0"
+  }
+}`}</code></pre>
+        </div>
+
+        <div class="code-section">
+            <h4>Frontend package.json</h4>
+            <pre><code>{`{
+  "name": "frontend",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.99.1",
+    "axios": "^1.15.0",
+    "react": "^19.2.4",
+    "react-router-dom": "^7.14.1",
+    "lucide-react": "^1.8.0"
+  }
+}`}</code></pre>
+        </div>
+
+        <div class="code-section">
+            <h4>src/app.js (Main Server)</h4>
+            <pre><code>{`require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const routes = require('./routes');
+const { errorHandler } = require('./middlewares/errorHandler');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
+
+app.use('/api/v1', routes);
+
+// SPA Fallback untuk React Router
+app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, '../public', 'index.html'));
+});
+
+app.use(errorHandler);
+
+app.listen(process.env.PORT, () => console.log(\`API on port \${process.env.PORT}\`));`}</code></pre>
+        </div>
+
+        <div class="code-section">
+            <h4>knexfile.js (DB Config)</h4>
+            <pre><code>{`require('dotenv').config();
+const path = require('path');
+
+module.exports = {
+  development: {
+    client: 'pg',
+    connection: {
+      host: process.env.DB_HOST || '127.0.0.1',
+      port: process.env.DB_PORT || 5432,
+      user: process.env.DB_USER || 'satya_admin',
+      database: process.env.DB_NAME || 'satya_db',
+    },
+    migrations: { directory: path.join(__dirname, 'migrations') }
+  },
+  test: { ... }
+};`}</code></pre>
+        </div>
+
+        <div class="code-section">
+            <h4>frontend/src/main.jsx (React Entry)</h4>
+            <pre><code>{`import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import App from './App.jsx'
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000,
+    },
+  },
+})
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <QueryClientProvider client={queryClient}>
+    <App />
+  </QueryClientProvider>
+)`}</code></pre>
+        </div>
+
+        <div class="code-section">
+            <h4>docker/Dockerfile.dev</h4>
+            <pre><code>{`FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+COPY docker/entrypoint.sh /app/docker/entrypoint.sh
+EXPOSE 3000`}</code></pre>
+        </div>
+
+        <div class="code-section">
+            <h4>Frontend README.md</h4>
+            <pre><code>{`# React + Vite
+React SPA dengan Vite HMR, TailwindCSS, React Query untuk data fetching.
+Plugins: @vitejs/plugin-react, TailwindCSS.`}</code></pre>
+        </div>
+
+        <h2>🚀 Cara Menjalankan</h2>
+        <pre><code># Development
+docker-compose -f docker/docker-compose.dev.yml up
+
+# Backend only
+npm run dev:api
+
+# Migrations
+npm run migrate:latest
+
+# Tests
+npm test
+npm run test --prefix frontend</code></pre>
+
+        <h2>📈 Fitur Sistem</h2>
+        <ul>
+            <li>Multi-tenant (Satker isolation)</li>
+            <li>Dashboard monitoring laporan</li>
+            <li>Upload dokumen ke MinIO</li>
+            <li>Email reminder otomatis (cron + BullMQ)</li>
+            <li>Full test coverage (Jest)</li>
+            <li>Docker ready untuk dev/prod</li>
+        </ul>
+
+        <footer>
+            <p>Dibuat dengan ❤️ untuk PT. Kepri | Semua kode source tersedia di direktori proyek</p>
+            <p>Total ~100 files: Full-stack production-ready MONEV system</p>
+        </footer>
+    </div>
+</body>
+</html>

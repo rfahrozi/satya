@@ -1,0 +1,50 @@
+# Multi-stage Dockerfile for production
+# Stage 1: Builder (frontend + migrate)
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install all deps (for build/migrate)
+RUN npm ci --only=production=false
+
+# Copy source
+COPY . .
+
+# Build frontend
+RUN cd frontend && npm ci && npm run build
+
+# Migrations run at entrypoint
+
+# Stage 2: Runtime (backend prod)
+FROM node:20-alpine AS runtime
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install prod deps only
+RUN npm ci --only=production
+
+# Copy built public (frontend)
+COPY --from=builder /app/public ./public
+COPY docker/entrypoint.sh ./docker/entrypoint.sh
+
+# Copy app source (without frontend/node_modules)
+COPY src ./src
+COPY knexfile.js ./
+COPY migrations ./migrations
+COPY seeds ./seeds
+
+# Create non-root user and install netcat for entrypoint wait_for script
+RUN apk add --no-cache netcat-openbsd
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S satya -u 1001
+USER satya
+
+EXPOSE 3000
+
+CMD ["npm", "start:api"]

@@ -144,7 +144,7 @@ body{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--n900);
     <div class="hero-meta">
       <span class="hm-item">🏛️ PT Kepulauan Riau</span>
       <span class="hm-item">📋 28 Jenis Laporan</span>
-      <span class="hm-item">🏢 5 Satuan Kerja</span>
+      <span class="hm-item">🏢 4 Satuan Kerja</span>
       <span class="hm-item">🔄 4 Tipe Periode</span>
       <span class="hm-item">📬 Reminder Otomatis</span>
     </div>
@@ -467,7 +467,7 @@ body{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--n900);
     <div id="stats-section">
       <!-- Stat Cards -->
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:22px">
-        <div class="card" style="padding:20px;position:relative;overflow:hidden"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--p),var(--acc))"></div><div style="font-size:1.4rem;margin-bottom:10px">🏢</div><div style="font-size:1.9rem;font-weight:800;color:#fff;letter-spacing:-.04em;line-height:1;margin-bottom:5px">5</div><div style="font-size:.7rem;color:var(--n500);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Satuan Kerja</div></div>
+        <div class="card" style="padding:20px;position:relative;overflow:hidden"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--p),var(--acc))"></div><div style="font-size:1.4rem;margin-bottom:10px">🏢</div><div style="font-size:1.9rem;font-weight:800;color:#fff;letter-spacing:-.04em;line-height:1;margin-bottom:5px">4</div><div style="font-size:.7rem;color:var(--n500);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Satuan Kerja</div></div>
         <div class="card" style="padding:20px;position:relative;overflow:hidden"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--ok),#34d399)"></div><div style="font-size:1.4rem;margin-bottom:10px">📋</div><div style="font-size:1.9rem;font-weight:800;color:#fff;letter-spacing:-.04em;line-height:1;margin-bottom:5px">28</div><div style="font-size:.7rem;color:var(--n500);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Jenis Laporan</div></div>
         <div class="card" style="padding:20px;position:relative;overflow:hidden"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--warn),#fbbf24)"></div><div style="font-size:1.4rem;margin-bottom:10px">📤</div><div style="font-size:1.9rem;font-weight:800;color:#fff;letter-spacing:-.04em;line-height:1;margin-bottom:5px" id="statUploaded">118</div><div style="font-size:.7rem;color:var(--n500);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Total Upload Bulan Ini</div></div>
         <div class="card" style="padding:20px;position:relative;overflow:hidden"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--acc2),#818cf8)"></div><div style="font-size:1.4rem;margin-bottom:10px">⏱️</div><div style="font-size:1.9rem;font-weight:800;color:#fff;letter-spacing:-.04em;line-height:1;margin-bottom:5px">84%</div><div style="font-size:.7rem;color:var(--n500);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Kepatuhan Rata-Rata</div></div>
@@ -766,9 +766,8 @@ function filterByStatus(status, btn) {
 const SATKERS = [
   {name:'PN Tanjungpinang',pct:96,color:'linear-gradient(90deg,#10b981,#34d399)'},
   {name:'PN Batam',pct:89,color:'linear-gradient(90deg,#3b82f6,#0ea5e9)'},
-  {name:'PN Ranai',pct:75,color:'linear-gradient(90deg,#f59e0b,#fbbf24)'},
+  {name:'PN Tanjung Balai Karimun',pct:75,color:'linear-gradient(90deg,#f59e0b,#fbbf24)'},
   {name:'PN Natuna',pct:82,color:'linear-gradient(90deg,#6366f1,#818cf8)'},
-  {name:'PN Daik Lingga',pct:68,color:'linear-gradient(90deg,#ef4444,#f87171)'},
 ];
 
 function renderSatkerBars() {

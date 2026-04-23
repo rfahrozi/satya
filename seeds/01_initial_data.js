@@ -9,11 +9,10 @@ exports.seed = async function(knex) {
 
     // 1. Data Satker (Pengadilan Negeri)
     await knex('satkers').insert([
-        { id: 1, nama_satker: 'PN Tanjung Pinang' },
-        { id: 2, nama_satker: 'PN Batam' },
-        { id: 3, nama_satker: 'PN Karimun' },
-        { id: 4, nama_satker: 'PN Natuna' },
-        { id: 5, nama_satker: 'PN Ranai' }
+        { id: 1, nama_satker: 'Pengadilan Negeri Tanjungpinang' },
+        { id: 2, nama_satker: 'Pengadilan Negeri Batam' },
+        { id: 3, nama_satker: 'Pengadilan Negeri Tanjung Balai Karimun' },
+        { id: 4, nama_satker: 'Pengadilan Negeri Natuna' }
     ]);
 
     // 2. Data Akun Pengguna (Default Password: password123)

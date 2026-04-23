@@ -55,23 +55,31 @@ export default function Login() {
             <p className="text-sm text-slate-500 mt-1">Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 text-sm p-3 rounded-lg flex items-start gap-2 animate-fade-in">
-                <AlertCircle className="w-5 h-5 shrink-0" />
+              <div
+                role="alert"
+                aria-live="assertive"
+                id="login-error"
+                className="bg-red-50 border border-red-200 text-red-600 text-sm p-3 rounded-lg flex items-start gap-2 animate-fade-in"
+              >
+                <AlertCircle className="w-5 h-5 shrink-0" aria-hidden="true" />
                 <span>{error}</span>
               </div>
             )}
 
             <div className="space-y-1">
-              <label className="text-sm font-semibold text-slate-700 ml-1">Username / Kode Satker</label>
+              <label htmlFor="username" className="text-sm font-semibold text-slate-700 ml-1">Username / Kode Satker</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400" aria-hidden="true">
                   <User size={18} />
                 </div>
                 <input 
+                  id="username"
                   type="text"
                   required
+                  autoComplete="username"
+                  aria-describedby={error ? 'login-error' : undefined}
                   value={formData.username}
                   onChange={e => setFormData({...formData, username: e.target.value})}
                   className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all outline-none text-slate-700 placeholder-slate-400"
@@ -81,14 +89,17 @@ export default function Login() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-sm font-semibold text-slate-700 ml-1">Password</label>
+              <label htmlFor="password" className="text-sm font-semibold text-slate-700 ml-1">Password</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400" aria-hidden="true">
                   <Lock size={18} />
                 </div>
                 <input 
+                  id="password"
                   type="password"
                   required
+                  autoComplete="current-password"
+                  aria-describedby={error ? 'login-error' : undefined}
                   value={formData.password}
                   onChange={e => setFormData({...formData, password: e.target.value})}
                   className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all outline-none text-slate-700 placeholder-slate-400"
@@ -100,10 +111,14 @@ export default function Login() {
             <button 
               type="submit" 
               disabled={isLoading}
+              aria-busy={isLoading}
               className="w-full relative group overflow-hidden bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-medium py-3 rounded-xl shadow-lg shadow-blue-500/30 transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-2"
             >
               <div className="flex items-center justify-center gap-2 relative z-10">
-                {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Masuk Sistem'}
+                {isLoading
+                  ? <><Loader2 className="animate-spin w-5 h-5" aria-hidden="true" /><span>Sedang masuk...</span></>
+                  : 'Masuk Sistem'
+                }
               </div>
             </button>
           </form>

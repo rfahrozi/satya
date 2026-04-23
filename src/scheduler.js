@@ -51,7 +51,7 @@ cron.schedule('0 8 * * *', async () => {
             return;
         }
 
-        const satkersToRemind = await reportRepo.findSatkersForReminder(periodeBulan, periodeTahun);
+        const satkersToRemind = await reportRepo.findSatkersForReminder('monthly', periodeBulan, periodeTahun);
 
         if (satkersToRemind.length === 0) {
             console.log('✅ Semua satker telah melengkapi laporan. Tidak ada reminder yang dikirim.');

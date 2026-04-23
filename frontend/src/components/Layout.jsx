@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { Outlet, useNavigate, Link, useLocation } from 'react-router-dom'
-import { LogOut, Home, Users, Landmark, FileText } from 'lucide-react'
+import { LogOut, Home, Users, Landmark, FileText, Menu, X } from 'lucide-react'
 
 export default function Layout() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   
   const userStr = localStorage.getItem('satya_user')
   const user = userStr ? JSON.parse(userStr) : null
@@ -18,8 +20,11 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
+      {/* Skip-to-content link (A11y) */}
+      <a href="#main-content" className="skip-link">Lewati ke konten utama</a>
+
       {/* Top Navbar */}
-      <nav className="glass-header border-b border-slate-200">
+      <nav className="glass-header border-b border-slate-200" aria-label="Navigasi utama">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             
@@ -39,33 +44,36 @@ export default function Layout() {
                 {(user.role === 'ADMIN_PT' || user.role === 'PIMPINAN') && (
                   <Link 
                     to="/dashboard" 
+                    aria-current={location.pathname === '/dashboard' ? 'page' : undefined}
                     className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium text-sm transition-colors ${location.pathname === '/dashboard' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
                   >
-                    <Home size={18} /> Dashboard
+                    <Home size={18} aria-hidden="true" /> Dashboard
                   </Link>
                 )}
 
                 {user.role === 'ADMIN_PT' && (
                   <Link 
                     to="/users" 
+                    aria-current={location.pathname === '/users' ? 'page' : undefined}
                     className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium text-sm transition-colors ${location.pathname === '/users' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
                   >
-                    <Users size={18} /> Manajemen User
+                    <Users size={18} aria-hidden="true" /> Manajemen User
                   </Link>
                 )}
 
                 {user.role === 'SATKER_PN' && (
                   <Link 
                     to="/portal" 
+                    aria-current={location.pathname === '/portal' ? 'page' : undefined}
                     className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium text-sm transition-colors ${location.pathname === '/portal' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
                   >
-                    <FileText size={18} /> Portal Laporan
+                    <FileText size={18} aria-hidden="true" /> Portal Laporan
                   </Link>
                 )}
               </div>
 
               {/* User Menu */}
-              <div className="flex items-center gap-4 pl-4 border-l border-slate-200">
+              <div className="flex items-center gap-2 sm:gap-4 pl-2 sm:pl-4 border-l border-slate-200">
                 <div className="text-right hidden sm:block">
                   <p className="text-sm font-semibold text-slate-800">{user.username}</p>
                 </div>
@@ -73,19 +81,72 @@ export default function Layout() {
                 <button 
                   onClick={handleLogout}
                   className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                  title="Keluar / Logout"
+                  aria-label="Keluar dari sistem"
                 >
-                  <LogOut size={20} />
+                  <LogOut size={20} aria-hidden="true" />
+                </button>
+
+                {/* Mobile Menu Toggle */}
+                <button
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  aria-expanded={mobileMenuOpen}
+                  aria-controls="mobile-nav"
+                  aria-label="Toggle navigasi mobile"
+                  className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  {mobileMenuOpen ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
                 </button>
               </div>
 
             </div>
           </div>
         </div>
+
+        {/* Mobile Navigation Dropdown */}
+        {mobileMenuOpen && (
+          <div id="mobile-nav" className="md:hidden bg-white border-t border-slate-200 shadow-lg px-4 pt-2 pb-4 space-y-2">
+            {(user.role === 'ADMIN_PT' || user.role === 'PIMPINAN') && (
+              <Link 
+                to="/dashboard" 
+                onClick={() => setMobileMenuOpen(false)}
+                aria-current={location.pathname === '/dashboard' ? 'page' : undefined}
+                className={`flex items-center gap-2 px-3 py-3 rounded-md font-medium text-sm transition-colors ${location.pathname === '/dashboard' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
+              >
+                <Home size={18} aria-hidden="true" /> Dashboard
+              </Link>
+            )}
+
+            {user.role === 'ADMIN_PT' && (
+              <Link 
+                to="/users" 
+                onClick={() => setMobileMenuOpen(false)}
+                aria-current={location.pathname === '/users' ? 'page' : undefined}
+                className={`flex items-center gap-2 px-3 py-3 rounded-md font-medium text-sm transition-colors ${location.pathname === '/users' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
+              >
+                <Users size={18} aria-hidden="true" /> Manajemen User
+              </Link>
+            )}
+
+            {user.role === 'SATKER_PN' && (
+              <Link 
+                to="/portal" 
+                onClick={() => setMobileMenuOpen(false)}
+                aria-current={location.pathname === '/portal' ? 'page' : undefined}
+                className={`flex items-center gap-2 px-3 py-3 rounded-md font-medium text-sm transition-colors ${location.pathname === '/portal' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
+              >
+                <FileText size={18} aria-hidden="true" /> Portal Laporan
+              </Link>
+            )}
+            
+            <div className="pt-2 mt-2 border-t border-slate-100 sm:hidden">
+              <p className="text-sm font-semibold text-slate-800 px-3">{user.username}</p>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 animate-fade-in">
+      <main id="main-content" className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 animate-fade-in" tabIndex={-1}>
         <Outlet />
       </main>
 

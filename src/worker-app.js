@@ -9,7 +9,7 @@ require('dotenv').config();
 require('./scheduler');
 
 // 2. Mulai Worker untuk memproses antrean email dari Redis
-const { emailWorker } = require('./workers/emailWorker');
+const { emailWorker } = require('./emailWorker');
 
 console.log('🚀 Worker process started. Menunggu jobs dari Redis...');
 

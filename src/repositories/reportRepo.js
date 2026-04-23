@@ -5,26 +5,30 @@
 const knex = require('../config/knex');
 
 /**
- * Helper: Menghitung deadline periode pelaporan secara Dinamis
+ * Helper: Menghitung Tahun/Bulan target untuk batas waktu upload
  */
-function getDeadlineDate(bulan, tahun) {
-    let deadlineMonth = parseInt(bulan) + 1;
-    let deadlineYear = parseInt(tahun);
-    if (deadlineMonth > 12) {
-        deadlineMonth = 1;
-        deadlineYear += 1;
+function getBaseDeadlineMonthYear(periodType, periodUnit, tahun) {
+    let m = 1;
+    let y = parseInt(tahun);
+    if (periodType === 'monthly') m = parseInt(periodUnit) + 1;
+    else if (periodType === 'quarterly') m = (parseInt(periodUnit) * 3) + 1;
+    else if (periodType === 'semesterly') m = (parseInt(periodUnit) * 6) + 1;
+    else if (periodType === 'annually') m = 13;
+
+    if (m > 12) {
+        m = m - 12;
+        y += 1;
     }
-    const deadlineDay = parseInt(process.env.DEADLINE_DAY) || 10;
-    // Format timestamp batas waktu upload (hingga 23:59:59 hari H)
-    return new Date(deadlineYear, deadlineMonth - 1, deadlineDay, 23, 59, 59);
+    return { m, y };
 }
 
 /**
  * [READ] Progress laporan satu satker untuk periode tertentu.
  * Menggabungkan SEMUA jenis laporan (LEFT JOIN) sehingga yang belum upload pun tampil.
  */
-async function getSatkerProgress(satkerId, bulan, tahun) {
-    const deadlineDate = getDeadlineDate(bulan, tahun);
+async function getSatkerProgress(satkerId, periodType, periodUnit, tahun) {
+    const { m, y } = getBaseDeadlineMonthYear(periodType, periodUnit, tahun);
+    
     return await knex('report_types as rt')
         .select(
             'rt.id as report_type_id', 
@@ -36,15 +40,20 @@ async function getSatkerProgress(satkerId, bulan, tahun) {
             knex.raw(`
                 CASE 
                     WHEN rs.created_at IS NULL THEN NULL
-                    WHEN rs.created_at <= ? THEN 'Tepat Waktu'
+                    WHEN rs.created_at <= make_timestamp(?, ?, COALESCE(dc.day_of_period, 10), 23, 59, 59) THEN 'Tepat Waktu'
                     ELSE 'Terlambat'
                 END as status_ketepatan_waktu
-            `, [deadlineDate])
+            `, [y, m])
         )
+        .leftJoin('deadline_configs as dc', function() {
+            this.on('dc.report_type_id', '=', 'rt.id')
+                .andOn('dc.period_type', '=', knex.raw('?', [periodType]));
+        })
         .leftJoin('report_submissions as rs', function() {
             this.on('rt.id', '=', 'rs.report_type_id')
                 .andOn('rs.satker_id', '=', knex.raw('?', [satkerId]))
-                .andOn('rs.periode_bulan', '=', knex.raw('?', [bulan]))
+                .andOn('rs.period_type', '=', knex.raw('?', [periodType]))
+                .andOn('rs.period_unit', '=', knex.raw('?', [periodUnit]))
                 .andOn('rs.periode_tahun', '=', knex.raw('?', [tahun]));
         }).orderBy('rt.id', 'asc');
 }
@@ -53,8 +62,8 @@ async function getSatkerProgress(satkerId, bulan, tahun) {
  * [READ] Rekapitulasi dashboard untuk Pimpinan dan Admin.
  * Menggabungkan semua satker × semua jenis laporan dalam satu query.
  */
-async function getRekapitulasiPimpinan(bulan, tahun) {
-    const deadlineDate = getDeadlineDate(bulan, tahun);
+async function getRekapitulasiPimpinan(periodType, periodUnit, tahun) {
+    const { m, y } = getBaseDeadlineMonthYear(periodType, periodUnit, tahun);
     const res = await knex.raw(`
         SELECT s.nama_satker,
         COUNT(rt.id) as total_wajib,
@@ -67,16 +76,17 @@ async function getRekapitulasiPimpinan(bulan, tahun) {
             'created_at', rs.created_at,
             'status_ketepatan_waktu', CASE 
                 WHEN rs.created_at IS NULL THEN NULL
-                WHEN rs.created_at <= ? THEN 'Tepat Waktu'
+                WHEN rs.created_at <= make_timestamp(?, ?, COALESCE(dc.day_of_period, 10), 23, 59, 59) THEN 'Tepat Waktu'
                 ELSE 'Terlambat'
             END
         )) as detail_laporan
         FROM satkers s CROSS JOIN report_types rt
-        LEFT JOIN report_submissions rs ON rs.satker_id = s.id AND rs.report_type_id = rt.id AND rs.periode_bulan = ? AND rs.periode_tahun = ?
+        LEFT JOIN deadline_configs dc ON dc.report_type_id = rt.id AND dc.period_type = ?
+        LEFT JOIN report_submissions rs ON rs.satker_id = s.id AND rs.report_type_id = rt.id AND rs.period_type = ? AND rs.period_unit = ? AND rs.periode_tahun = ?
         WHERE rt.is_wajib = true 
         GROUP BY s.id, s.nama_satker
         ORDER BY s.id ASC
-    `, [deadlineDate, bulan, tahun]);
+    `, [y, m, periodType, periodType, periodUnit, tahun]);
     return res.rows;
 }
 
@@ -93,11 +103,12 @@ async function getTotalReportTypes() {
  * [READ] Daftar satker yang BELUM melengkapi semua laporan wajib untuk periode tertentu.
  * Hanya satker dengan email terdaftar yang akan mendapat reminder.
  *
- * @param {number} periodeBulan
+ * @param {string} periodType 
+ * @param {number} periodUnit
  * @param {number} periodeTahun
  * @returns {Array<{id, nama_satker, email}>}
  */
-async function findSatkersForReminder(periodeBulan, periodeTahun) {
+async function findSatkersForReminder(periodType, periodUnit, periodeTahun) {
     const result = await knex.raw(`
         SELECT s.id, s.nama_satker, u.email
         FROM satkers s
@@ -108,12 +119,13 @@ async function findSatkersForReminder(periodeBulan, periodeTahun) {
         WHERE (
             SELECT COUNT(*) FROM report_submissions rs
             WHERE rs.satker_id = s.id
-              AND rs.periode_bulan = ?
+              AND rs.period_type = ?
+              AND rs.period_unit = ?
               AND rs.periode_tahun = ?
         ) < (
             SELECT COUNT(*) FROM report_types WHERE is_wajib = true
         )
-    `, [periodeBulan, periodeTahun]);
+    `, [periodType, periodUnit, periodeTahun]);
     return result.rows;
 }
 
