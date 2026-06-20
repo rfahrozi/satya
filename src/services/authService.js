@@ -136,6 +136,71 @@ async function deleteUser(id) {
     await knex('users').where({ id }).del();
 }
 
+const crypto = require('crypto');
+const { emailQueue } = require('../emailWorker');
+
+/**
+ * Handle proses Lupa Password
+ */
+async function forgotPassword(usernameOrEmail) {
+    const user = await knex('users')
+        .where('username', usernameOrEmail)
+        .orWhere('email', usernameOrEmail)
+        .first();
+
+    if (!user) {
+        throw new AppError('Pengguna dengan username atau email tersebut tidak ditemukan.', 404);
+    }
+
+    if (!user.email) {
+        throw new AppError('Akun ini belum memiliki alamat email yang terdaftar. Harap hubungi Admin PT.', 400);
+    }
+
+    // Buat token random
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetExpires = Date.now() + 3600000; // Berlaku 1 jam
+
+    await knex('users')
+        .where({ id: user.id })
+        .update({
+            reset_password_token: resetToken,
+            reset_password_expires: resetExpires
+        });
+
+    // Kirim antrean email (Worker akan memprosesnya di background)
+    await emailQueue.add('sendPasswordResetEmail', {
+        to: user.email,
+        username: user.username,
+        token: resetToken
+    });
+
+    return { message: 'Tautan reset kata sandi telah dikirim ke email Anda.' };
+}
+
+/**
+ * Handle proses Reset Password menggunakan Token
+ */
+async function resetPasswordWithToken(token, newPassword) {
+    const user = await knex('users')
+        .where('reset_password_token', token)
+        .andWhere('reset_password_expires', '>', Date.now())
+        .first();
+
+    if (!user) {
+        throw new AppError('Tautan reset password tidak valid atau sudah kadaluarsa.', 400);
+    }
+
+    const password_hash = await bcrypt.hash(newPassword, 10);
+
+    await knex('users')
+        .where({ id: user.id })
+        .update({
+            password_hash,
+            reset_password_token: null,
+            reset_password_expires: null
+        });
+}
+
 module.exports = {
     loginUser,
     createUser,
@@ -143,5 +208,7 @@ module.exports = {
     getAllUsers,
     deleteUser,
     generateToken,
-    verifyToken
+    verifyToken,
+    forgotPassword,
+    resetPasswordWithToken
 };

@@ -34,6 +34,12 @@ const loginLimiter = process.env.NODE_ENV !== 'test'
 // Endpoint untuk login (Mendapatkan Token JWT) — dilindungi rate limiter
 router.post('/login', loginLimiter, authController.login);
 
+// Endpoint Lupa Password (Minta link reset)
+router.post('/forgot-password', authController.forgotPassword);
+
+// Endpoint Reset Password (Menggunakan token)
+router.post('/reset-password', authController.resetPasswordWithToken);
+
 /**
  * RUTE TERPROTEKSI (Memerlukan Token)
  */

@@ -118,10 +118,57 @@ async function resetPassword(req, res, next) {
     }
 }
 
+/**
+ * [PUBLIC] Minta reset password (Kirim link ke email)
+ */
+async function forgotPassword(req, res, next) {
+    try {
+        const { username } = req.body;
+        if (!username) {
+            throw new AppError('Username wajib diisi.', 400);
+        }
+
+        const result = await authService.forgotPassword(username);
+        res.status(200).json({
+            success: true,
+            message: result.message
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+/**
+ * [PUBLIC] Reset password menggunakan token dari email
+ */
+async function resetPasswordWithToken(req, res, next) {
+    try {
+        const { token, newPassword } = req.body;
+        if (!token || !newPassword) {
+            throw new AppError('Token dan Password Baru wajib diisi.', 400);
+        }
+        
+        if (newPassword.length < 6) {
+            throw new AppError('Password harus minimal 6 karakter.', 400);
+        }
+
+        await authService.resetPasswordWithToken(token, newPassword);
+        
+        res.status(200).json({
+            success: true,
+            message: 'Password Anda berhasil diubah. Silakan login menggunakan password baru.'
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
 module.exports = {
     login,
     saveOrUpdateUser,
     getAllUsers,
     deleteUser,
-    resetPassword
+    resetPassword,
+    forgotPassword,
+    resetPasswordWithToken
 };

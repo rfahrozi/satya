@@ -6,6 +6,8 @@ import Dashboard from './pages/Dashboard'
 import SatkerPortal from './pages/SatkerPortal'
 import UserManagement from './pages/UserManagement'
 import MasterData from './pages/MasterData'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import Layout from './components/Layout'
 
 /**
@@ -37,6 +39,8 @@ function App() {
         
         {/* Unprotected Auth route */}
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Protected Dashboard/API Routes wrapped in App Shell Layout */}
         <Route element={<Layout />}>

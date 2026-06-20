@@ -106,6 +106,15 @@ export default function Login() {
                   placeholder="••••••••"
                 />
               </div>
+              <div className="flex justify-end mt-1">
+                <button 
+                  type="button" 
+                  onClick={() => navigate('/forgot-password')}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                >
+                  Lupa Password?
+                </button>
+              </div>
             </div>
 
             <button 

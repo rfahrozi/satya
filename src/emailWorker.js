@@ -34,6 +34,13 @@ const emailWorker = new Worker(
                 await sendReminderEmail(reminderTo, { nama_satker, deadline_text });
                 break;
             
+            case 'sendPasswordResetEmail':
+                const { to: resetTo, username, token } = job.data;
+                const { sendPasswordResetEmail } = require('./services/emailService');
+                console.log(`   -> Mengirim email reset password ke ${resetTo}`);
+                await sendPasswordResetEmail(resetTo, { username, token });
+                break;
+            
             default:
                 throw new Error(`Tipe job tidak dikenal: ${job.name}`);
         }
