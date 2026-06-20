@@ -20,8 +20,10 @@ exports.seed = async function(knex) {
     await knex('users').insert([
         { id: 1, username: 'admin_pt', password_hash: defaultPassword, role: 'ADMIN_PT', satker_id: null, email: 'admin@pt.go.id' },
         { id: 2, username: 'pimpinan_pt', password_hash: defaultPassword, role: 'PIMPINAN', satker_id: null, email: 'pimpinan@pt.go.id' },
-        { id: 3, username: 'pn_tpi', password_hash: defaultPassword, role: 'SATKER_PN', satker_id: 1, email: 'pn_tpi@pt.go.id' },
-        { id: 4, username: 'pn_batam', password_hash: defaultPassword, role: 'SATKER_PN', satker_id: 2, email: 'pn_batam@pt.go.id' }
+        { id: 3, username: 'pn_tpi', password_hash: defaultPassword, role: 'SATKER_PN', satker_id: 1, email: 'pn_tpi@contoh.com' },
+        { id: 4, username: 'pn_batam', password_hash: defaultPassword, role: 'SATKER_PN', satker_id: 2, email: 'pn_batam@contoh.com' },
+        { id: 5, username: 'pn_tbk', password_hash: defaultPassword, role: 'SATKER_PN', satker_id: 3, email: 'pn_tbk@contoh.com' },
+        { id: 6, username: 'pn_natuna', password_hash: defaultPassword, role: 'SATKER_PN', satker_id: 4, email: 'pn_natuna@contoh.com' }
     ]);
 
     // 3. Data Jenis Laporan Wajib
