@@ -83,18 +83,23 @@ const Landing = () => {
   const workflows = [
     {
       step: "01",
-      title: "Unggah Dokumen",
-      description: "Satker mengunggah dokumen laporan melalui portal yang aman dan terisolasi."
+      title: "Penetapan Daftar Laporan",
+      description: "Admin PT Kepulauan Riau menetapkan daftar 28 jenis laporan wajib (MONEV) beserta periode dan tenggat waktunya."
     },
     {
       step: "02",
-      title: "Verifikasi Admin",
-      description: "Admin PT melakukan verifikasi dokumen dan memberikan catatan jika diperlukan revisi."
+      title: "Pengunggahan oleh Satker",
+      description: "Pengadilan Negeri se-wilayah hukum Kepri mengunggah dokumen laporan secara mandiri melalui portal tersendiri."
     },
     {
       step: "03",
-      title: "Monitoring Pimpinan",
-      description: "Pimpinan memantau progres kepatuhan dan hasil evaluasi kinerja melalui dashboard."
+      title: "Verifikasi & Notifikasi Admin",
+      description: "Admin PT memeriksa kelengkapan file. Sistem mengirimkan notifikasi otomatis kepada Satker jika diperlukan revisi."
+    },
+    {
+      step: "04",
+      title: "Monitoring Pimpinan (AMPUH)",
+      description: "Ketua PT Kepri memantau real-time capaian kepatuhan seluruh Pengadilan Negeri melalui Dashboard Heatmap interaktif."
     }
   ];
 

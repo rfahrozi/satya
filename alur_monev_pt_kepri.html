@@ -1084,6 +1084,35 @@
         sedangkan Ketua Pengadilan Tinggi Kepulauan Riau berperan sebagai pemantau utama hasil monitoring.
       </div>
     </section>
+
+    <section class="section" id="teknologi">
+      <div class="section-head">
+        <div class="icon">🚀</div>
+        <div>
+          <h2>Keandalan Infrastruktur & Keamanan (Update Terkini)</h2>
+          <div class="section-sub">Teknologi modern di balik keandalan sistem MONEV SATYA</div>
+        </div>
+      </div>
+
+      <p>
+        Dalam versi produksinya, MONEV SATYA (v1.0.0) telah mengadopsi arsitektur yang dirancang khusus untuk memenuhi standar keamanan tinggi, pengiriman notifikasi yang handal, dan keandalan data secara Enterprise.
+      </p>
+
+      <div class="grid-3">
+        <div class="card">
+          <h4>🔒 Keamanan Zero Trust (Docker)</h4>
+          <p>Seluruh basis data (PostgreSQL), antrean memori (Redis), dan penyimpanan dokumen (MinIO) diisolasi 100% di dalam <em>private network</em> Docker. Tidak ada port yang diekspos ke publik VPS, mencegah segala bentuk peretasan dari luar secara absolut.</p>
+        </div>
+        <div class="card">
+          <h4>📧 Pengiriman Email via Brevo API</h4>
+          <p>Mengingat ketatnya aturan <em>firewall</em> VPS yang sering memblokir port SMTP standar, SATYA kini terintegrasi langsung dengan <strong>Brevo HTTP API</strong>. Hal ini menjamin email notifikasi peringatan/revisi kepada Satker pasti terkirim dengan latensi sangat rendah.</p>
+        </div>
+        <div class="card">
+          <h4>🗄️ MinIO Object Storage Proxy</h4>
+          <p>Dokumen sensitif pengadilan tidak lagi dapat diakses langsung via URL publik. File disimpan dalam <em>bucket</em> MinIO yang diamankan, dan hanya bisa diunduh melalui jalur <em>Secure Stream Proxy</em> oleh pengguna yang telah tervalidasi oleh sistem.</p>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="footer">
