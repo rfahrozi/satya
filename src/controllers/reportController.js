@@ -71,16 +71,18 @@ async function getMyProgress(req, res, next) {
 }
 
 /**
- * [READ] Download / Preview Link (Presigned URL)
+ * [READ] Download / Preview Link (Presigned URL Proxy)
  */
 async function getDownloadUrl(req, res, next) {
     try {
         const { id } = req.params;
         const url = await reportService.generatePresignedUrl(id, req.tenant);
+        const BASE_PATH = process.env.BASE_PATH || '/satya';
+        const proxyUrl = `${BASE_PATH}/api/v1/reports/proxy?url=${encodeURIComponent(url)}`;
 
         res.status(200).json({
             success: true,
-            data: { url }
+            data: { url: proxyUrl }
         });
     } catch (error) {
         next(error);
@@ -88,19 +90,53 @@ async function getDownloadUrl(req, res, next) {
 }
 
 /**
- * [READ] Download / Preview Link untuk versi Riwayat (Presigned URL)
+ * [READ] Download / Preview Link untuk versi Riwayat (Presigned URL Proxy)
  */
 async function downloadHistoryFile(req, res, next) {
     try {
         const { id } = req.params;
         const url = await reportService.generatePresignedUrlForHistory(id, req.tenant);
+        const BASE_PATH = process.env.BASE_PATH || '/satya';
+        const proxyUrl = `${BASE_PATH}/api/v1/reports/proxy?url=${encodeURIComponent(url)}`;
 
         res.status(200).json({
             success: true,
-            data: { url }
+            data: { url: proxyUrl }
         });
     } catch (error) {
         next(error);
+    }
+}
+
+/**
+ * [READ] Proxy endpoint for streaming MinIO presigned URLs to external browsers
+ */
+async function proxyMinioFile(req, res, next) {
+    try {
+        const targetUrl = req.query.url;
+        if (!targetUrl) throw new AppError('URL tidak valid.', 400);
+
+        const axios = require('axios');
+        const response = await axios({
+            method: 'get',
+            url: targetUrl,
+            responseType: 'stream'
+        });
+
+        // Teruskan header Content-Type dan Content-Disposition dari MinIO
+        res.setHeader('Content-Type', response.headers['content-type'] || 'application/octet-stream');
+        if (response.headers['content-disposition']) {
+            res.setHeader('Content-Disposition', response.headers['content-disposition']);
+        }
+
+        response.data.pipe(res);
+    } catch (error) {
+        if (error.response && error.response.status === 404) {
+            res.status(404).send('File tidak ditemukan di object storage.');
+        } else {
+            console.error('Proxy Error:', error.message);
+            res.status(500).send('Gagal mengunduh file.');
+        }
     }
 }
 
@@ -457,6 +493,7 @@ module.exports = {
     getMyProgress,
     getDownloadUrl,
     downloadHistoryFile,
+    proxyMinioFile,
     verifyReport,
     getDashboardAgregat,
     getDashboardHeatmap,

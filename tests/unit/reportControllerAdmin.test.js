@@ -235,7 +235,8 @@ describe('Unit Test: reportController - Admin Endpoints', () => {
             reportService.generatePresignedUrl.mockResolvedValue('http://mock.url/file.pdf');
             await reportController.getDownloadUrl(mockReq, mockRes, mockNext);
             expect(mockRes.status).toHaveBeenCalledWith(200);
-            expect(mockRes.json.mock.calls[0][0].data.url).toBe('http://mock.url/file.pdf');
+            expect(mockRes.json.mock.calls[0][0].data.url).toContain('/api/v1/reports/proxy?url=');
+            expect(mockRes.json.mock.calls[0][0].data.url).toContain(encodeURIComponent('http://mock.url/file.pdf'));
         });
 
         it('harus meneruskan error ke next', async () => {

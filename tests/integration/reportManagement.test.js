@@ -246,7 +246,8 @@ describe('Report Management - Full CRUD Flow', () => {
 
             expect(res.statusCode).toBe(200);
             expect(res.body.success).toBe(true);
-            expect(res.body.data?.url).toBe('http://mock.presigned.url/file.pdf');
+            expect(res.body.data?.url).toContain('/api/v1/reports/proxy?url=');
+            expect(res.body.data?.url).toContain(encodeURIComponent('http://mock.presigned.url/file.pdf'));
         });
     });
 

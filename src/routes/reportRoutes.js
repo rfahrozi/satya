@@ -78,6 +78,9 @@ router.get('/queue-status', reportController.getQueueStatus);
 
 // --- RUTE DENGAN PARAMETER :id (harus setelah rute statis) ---
 
+// Proxy untuk download file MinIO
+router.get('/proxy', reportController.proxyMinioFile);
+
 // Mendapatkan histori revisi dokumen (Feature B)
 router.get('/:id/history', reportController.getSubmissionHistory);
 

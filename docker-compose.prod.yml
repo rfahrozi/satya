@@ -8,7 +8,7 @@ services:
     container_name: monev_app
     restart: unless-stopped
     ports:
-      - "3004:3000"
+      - "127.0.0.1:3004:3000"
     env_file:
       - .env
     depends_on:
@@ -59,8 +59,7 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
-    ports:
-      - "5432:5432"
+    # Port removed to prevent host conflict. Accessible internally via monev-net
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -77,8 +76,7 @@ services:
     restart: unless-stopped
     networks:
       - monev-net
-    ports:
-      - "6379:6379"
+    # Port removed to prevent host conflict. Accessible internally via monev-net
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -95,9 +93,7 @@ services:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
     command: server /data --console-address ":9001"
-    ports:
-      - "9000:9000"
-      - "9001:9001"
+    # Port removed to prevent host conflict. Accessible internally via monev-net
     volumes:
       - minio_data:/data
     healthcheck:
