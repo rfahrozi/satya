@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Deskripsi Lengkap Proyek MONEV</title>
+  <title>Deskripsi Lengkap Proyek MONEV SATYA</title>
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -71,12 +71,23 @@
     }
 
     .overview {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
       color: white;
       padding: 30px;
       border-radius: 10px;
       margin-bottom: 40px;
       text-align: center;
+    }
+
+    .update-badge {
+      background-color: #f1c40f;
+      color: #2c3e50;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: bold;
+      vertical-align: middle;
+      margin-left: 10px;
     }
 
     footer {
@@ -100,252 +111,75 @@
 
 <body>
   <div class="container">
-    <h1>📊 Deskripsi Lengkap Proyek MONEV</h1>
+    <h1>📊 Deskripsi Lengkap Proyek MONEV SATYA</h1>
     <div class="overview">
-      <h2>🎯 Overview Proyek</h2>
-      <p><strong>MONEV</strong> adalah sistem <strong>Monitoring dan Evaluasi</strong> berbasis web full-stack yang
-        dirancang untuk PT. Kepri (kemungkinan terkait pemerintahan/pemerintahan daerah).</p>
-      <p>Fitur utama: Multi-tenant (Satker Portal), Dashboard, User Management, Upload laporan, Email notifikasi
-        otomatis, BullMQ job queue, PostgreSQL DB, MinIO object storage, Redis cache/queue.</p>
-      <p><strong>Tech Stack:</strong> Node.js/Express + React/Vite + PostgreSQL + Docker + TailwindCSS + Jest Testing
-      </p>
+      <h2>🎯 Overview Proyek (Production Ready)</h2>
+      <p><strong>SATYA (Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel)</strong> adalah sistem <strong>Monitoring dan Evaluasi</strong> berbasis web full-stack yang dirancang khusus untuk Pengadilan Tinggi Kepulauan Riau (PT Kepri).</p>
+      <p>Aplikasi ini memungkinkan pimpinan untuk memantau kepatuhan Satuan Kerja (Satker) Pengadilan Negeri di wilayah Kepri secara real-time, dilengkapi dengan fitur unggah laporan, verifikasi, rekapitulasi heatmap, hingga notifikasi email otomatis.</p>
+      <p><strong>Tech Stack:</strong> Node.js/Express + React/Vite + PostgreSQL + MinIO + Redis + Docker + Nginx</p>
     </div>
+
+    <h2>📈 Fitur Sistem Utama <span class="update-badge">V1.0.0</span></h2>
+    <ul>
+      <li><strong>Multi-tenant (Satker Isolation):</strong> Setiap Satker memiliki ruang kerja yang terisolasi dan aman.</li>
+      <li><strong>Dashboard Pimpinan & Heatmap:</strong> Visualisasi persentase kepatuhan (Hijau, Kuning, Merah) secara langsung.</li>
+      <li><strong>Object Storage Berkeamanan Tinggi (MinIO):</strong> Penyimpanan dokumen aman menggunakan proxy stream internal untuk menghindari public exposure.</li>
+      <li><strong>Sistem Antrean Email (BullMQ) & Brevo API:</strong> Notifikasi dan pengingat dikirim menggunakan antrean Redis dan Brevo API untuk menembus firewall VPS yang memblokir port SMTP.</li>
+      <li><strong>Arsitektur Nginx Reverse Proxy:</strong> Routing base_path dinamis (`/satya`) untuk hidup berdampingan dengan proyek lain di VPS Ubuntu tanpa bentrok.</li>
+      <li><strong>Keamanan Zero Trust:</strong> Database, Redis, dan MinIO beroperasi 100% di dalam internal network Docker tanpa mapping port ke host.</li>
+      <li><strong>Landing Page Modern:</strong> UI/UX elegan dengan animasi menggunakan `framer-motion` dan TailwindCSS.</li>
+    </ul>
 
     <h2>📁 Hirarki File Lengkap Proyek</h2>
     <div class="file-tree">
-      c:/My Project/monev/
-      ├── .dockerignore
-      ├── .gitignore
-      ├── docker-compose.prod.yml
-      ├── jest.config.js
-      ├── knexfile.js
-      ├── package-lock.json
+      c:/My Project/satya/
+      ├── docker-compose.prod.yml (Zero-Trust Port Mapping)
+      ├── docker-compose.yml
       ├── package.json (Backend Node.js API)
-      ├── setup_simpel_project.py
-      ├── test_email.js
-      ├── test-results.json
-      ├── coverage/
+      ├── test_email.js (Testing Brevo API)
       ├── docker/
-      │ ├── docker-compose.dev.yml
-      │ ├── Dockerfile.dev
-      │ ├── Dockerfile.prod
-      │ └── entrypoint.sh
-      ├── frontend/ (React + Vite + Tailwind)
-      │ ├── package.json
-      │ ├── vite.config.js
-      │ ├── tailwind.config.js
+      ├── frontend/ (React + Vite + Tailwind + Framer Motion)
+      │ ├── vite.config.js (Base Path: /satya)
       │ ├── src/
-      │ │ ├── App.jsx
-      │ │ ├── main.jsx
-      │ │ ├── pages/Dashboard.jsx
-      │ │ ├── pages/Login.jsx
-      │ │ ├── pages/SatkerPortal.jsx
-      │ │ └── pages/UserManagement.jsx
-      │ └── tests/
-      ├── migrations/ (Knex DB migrations)
-      ├── seeds/
+      │ │ ├── components/ (Reused UI)
+      │ │ ├── pages/
+      │ │ │ ├── Landing.jsx (Animated Intro)
+      │ │ │ ├── Dashboard.jsx
+      │ │ │ ├── SatkerPortal.jsx
+      │ │ │ └── AdminPanel.jsx
       ├── src/ (Backend core)
-      │ ├── app.js (Main Express app)
-      │ ├── routes/
-      │ ├── controllers/
+      │ ├── app.js (Dynamic Routing /satya)
+      │ ├── emailWorker.js (BullMQ Queue)
       │ ├── services/
-      │ └── config/ (knex, minio, redis)
-      ├── public/ (Build assets)
-      ├── tests/ (Backend tests)
-      └── ... (lainnya)
+      │ │ ├── emailService.js (Brevo API Axios Integration)
+      │ │ └── reportService.js (MinIO Presigned URLs proxy)
+      └── tests/ (160+ Test Cases Passed)
     </div>
 
-    <h2>📋 Penjelasan Hirarki File</h2>
+    <h2>📋 Penjelasan Arsitektur Baru</h2>
 
-    <h3>Root Level</h3>
-    <ul>
-      <li><strong>package.json</strong>: Backend dependencies (Express, Knex, BullMQ, MinIO, Redis)</li>
-      <li><strong>knexfile.js</strong>: Konfigurasi PostgreSQL DB</li>
-      <li><strong>docker-compose.prod.yml</strong>: Deployment production</li>
-    </ul>
+    <h3>1. Proxy MinIO & Keamanan Docker</h3>
+    <p>Demi keamanan, port MinIO tidak diekspos ke publik VPS. Sebagai gantinya, aplikasi Node.js akan mem-<em>proxy</em> file tersebut langsung ke pengguna. Frontend akan memanggil `/api/v1/reports/proxy?url=...` dan Node.js akan mengalirkannya secara aman (Stream).</p>
 
-    <h3>frontend/</h3>
-    <ul>
-      <li>React SPA dengan Vite, TailwindCSS, React Query</li>
-      <li>Pages: Dashboard, SatkerPortal, Login, UserManagement</li>
-      <li>State management: TanStack Query</li>
-    </ul>
+    <h3>2. Nginx & Base Path `/satya`</h3>
+    <p>Proyek diatur agar tidak mengganggu sistem lain di server (seperti ELID). Nginx akan me-<em>reverse proxy</em> trafik `/satya/` menuju Node.js. Node.js telah dikonfigurasi untuk menyesuaikan `process.env.BASE_PATH` agar tidak terjadi 404 Not Found.</p>
 
-    <h3>src/ (Backend)</h3>
-    <ul>
-      <li><strong>app.js</strong>: Express server dengan API routes + static frontend</li>
-      <li>Multi-tenant middleware</li>
-      <li>Email service + Job queue (BullMQ)</li>
-    </ul>
+    <h3>3. Integrasi Brevo API</h3>
+    <p>Mengingat provider VPS sering memblokir port SMTP standar, layanan pengiriman email telah beralih menggunakan API HTTP POST ke Brevo. Jika `BREVO_API_KEY` tersedia, sistem otomatis memutus SMTP dan menggunakan HTTP.</p>
 
-    <h3>Database</h3>
-    <ul>
-      <li>PostgreSQL dengan Knex.js migrations</li>
-      <li>Multi-tenant schema</li>
-      <li>Dynamic periods & deadlines</li>
-    </ul>
+    <h2>🚀 Cara Menjalankan (Deployment)</h2>
+    <pre><code># 1. Pastikan File .env sudah ada (dengan BREVO_API_KEY)
 
-    <h2>💻 Kode File Utama</h2>
+# 2. Build dan Jalankan Container
+docker-compose -f docker-compose.prod.yml up -d --build
 
-    <div class="code-section">
-      <h4>Backend package.json</h4>
-      <pre><code>{`{
-  "name": "satya-backend",
-  "version": "1.0.0",
-  "scripts": {
-    "start:api": "node src/app.js",
-    "start:worker": "node src/worker-app.js",
-    "dev:api": "nodemon src/app.js",
-    "migrate:make": "knex migrate:make",
-    "migrate:latest": "knex migrate:latest",
-    "test": "cross-env NODE_ENV=test jest --runInBand --coverage"
-  },
-  "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "bullmq": "^5.0.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.0.3",
-    "express": "^4.18.2",
-    "knex": "^2.4.2",
-    "minio": "^7.1.1",
-    "nodemailer": "^6.9.1",
-    "pg": "^8.10.0"
-  }
-}`}</code></pre>
-    </div>
-
-    <div class="code-section">
-      <h4>Frontend package.json</h4>
-      <pre><code>{`{
-  "name": "frontend",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "test": "jest"
-  },
-  "dependencies": {
-    "@tanstack/react-query": "^5.99.1",
-    "axios": "^1.15.0",
-    "react": "^19.2.4",
-    "react-router-dom": "^7.14.1",
-    "lucide-react": "^1.8.0"
-  }
-}`}</code></pre>
-    </div>
-
-    <div class="code-section">
-      <h4>src/app.js (Main Server)</h4>
-      <pre><code>{`require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const routes = require('./routes');
-const { errorHandler } = require('./middlewares/errorHandler');
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-app.use(express.static('public'));
-
-app.use('/api/v1', routes);
-
-// SPA Fallback untuk React Router
-app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../public', 'index.html'));
-});
-
-app.use(errorHandler);
-
-app.listen(process.env.PORT, () => console.log(\`API on port \${process.env.PORT}\`));`}</code></pre>
-    </div>
-
-    <div class="code-section">
-      <h4>knexfile.js (DB Config)</h4>
-      <pre><code>{`require('dotenv').config();
-const path = require('path');
-
-module.exports = {
-  development: {
-    client: 'pg',
-    connection: {
-      host: process.env.DB_HOST || '127.0.0.1',
-      port: process.env.DB_PORT || 5432,
-      user: process.env.DB_USER || 'satya_admin',
-      database: process.env.DB_NAME || 'satya_db',
-    },
-    migrations: { directory: path.join(__dirname, 'migrations') }
-  },
-  test: { ... }
-};`}</code></pre>
-    </div>
-
-    <div class="code-section">
-      <h4>frontend/src/main.jsx (React Entry)</h4>
-      <pre><code>{`import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import App from './App.jsx'
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000,
-    },
-  },
-})
-
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <QueryClientProvider client={queryClient}>
-    <App />
-  </QueryClientProvider>
-)`}</code></pre>
-    </div>
-
-    <div class="code-section">
-      <h4>docker/Dockerfile.dev</h4>
-      <pre><code>{`FROM node:20-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-COPY docker/entrypoint.sh /app/docker/entrypoint.sh
-EXPOSE 3000`}</code></pre>
-    </div>
-
-    <div class="code-section">
-      <h4>Frontend README.md</h4>
-      <pre><code>{`# React + Vite
-React SPA dengan Vite HMR, TailwindCSS, React Query untuk data fetching.
-Plugins: @vitejs/plugin-react, TailwindCSS.`}</code></pre>
-    </div>
-
-    <h2>🚀 Cara Menjalankan</h2>
-    <pre><code># Development
-docker-compose -f docker/docker-compose.dev.yml up
-
-# Backend only
-npm run dev:api
-
-# Migrations
-npm run migrate:latest
-
-# Tests
-npm test
-npm run test --prefix frontend</code></pre>
-
-    <h2>📈 Fitur Sistem</h2>
-    <ul>
-      <li>Multi-tenant (Satker isolation)</li>
-      <li>Dashboard monitoring laporan</li>
-      <li>Upload dokumen ke MinIO</li>
-      <li>Email reminder otomatis (cron + BullMQ)</li>
-      <li>Full test coverage (Jest)</li>
-      <li>Docker ready untuk dev/prod</li>
-    </ul>
+# 3. Inisialisasi Database (Hanya Sekali)
+docker exec -it monev_app npm run migrate:latest
+docker exec -it monev_app npm run seed:run</code></pre>
 
     <footer>
-      <p>Dibuat dengan ❤️ untuk PT. Kepri | Semua kode source tersedia di direktori proyek</p>
-      <p>Total ~100 files: Full-stack production-ready MONEV system</p>
+      <p>Dibuat dengan ❤️ untuk PT. Kepulauan Riau | Semua kode source tersedia di direktori proyek</p>
+      <p>MONEV SATYA - Siap di-deploy ke Production</p>
     </footer>
   </div>
 </body>

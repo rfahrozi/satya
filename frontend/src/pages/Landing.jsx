@@ -61,22 +61,22 @@ const Landing = () => {
     {
       icon: <FileCheck className="w-6 h-6 text-emerald-400" />,
       title: "Monitoring Terpusat",
-      description: "Pantau kepatuhan pengiriman laporan secara real-time dari seluruh Satuan Kerja di bawah naungan Pengadilan Tinggi."
+      description: "Pantau kepatuhan pengiriman laporan secara real-time dari seluruh Satuan Kerja Pengadilan Negeri secara komprehensif."
     },
     {
       icon: <BellRing className="w-6 h-6 text-blue-400" />,
       title: "Notifikasi Otomatis",
-      description: "Sistem pengingat otomatis memastikan tidak ada laporan yang terlewat dari tenggat waktu yang telah ditentukan."
+      description: "Sistem pengingat (BullMQ) berkinerja tinggi yang dikirim secara handal menggunakan protokol API terkini untuk menjamin email terkirim."
     },
     {
       icon: <BarChart3 className="w-6 h-6 text-purple-400" />,
-      title: "Visualisasi Data",
-      description: "Dashboard interaktif dengan grafik dan heatmap untuk mempermudah pimpinan dalam mengambil keputusan strategis."
+      title: "Visualisasi & Heatmap",
+      description: "Dashboard interaktif dengan grafik dan heatmap (Zona Hijau, Kuning, Merah) untuk mempermudah pimpinan dalam evaluasi."
     },
     {
       icon: <ShieldCheck className="w-6 h-6 text-rose-400" />,
-      title: "Keamanan Terjamin",
-      description: "Isolasi data antar Satker dan enkripsi tingkat tinggi menjamin keamanan dokumen dan informasi sensitif."
+      title: "Keamanan Zero Trust",
+      description: "Arsitektur cloud dengan Object Storage (MinIO) terisolasi dan proxy stream internal menjamin keamanan dokumen absolut."
     }
   ];
 
@@ -203,9 +203,9 @@ const Landing = () => {
           </motion.div>
           
           <motion.h1 variants={fadeUp} className="text-5xl sm:text-6xl md:text-8xl font-extrabold tracking-tighter text-white mb-8 leading-[1.1]">
-            Evolusi Manajemen <br className="hidden sm:block" />
+            Evolusi Manajemen & <br className="hidden sm:block" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-blue-500">
-              Laporan Pengadilan
+              Tata Kelola Yudisial
             </span>
           </motion.h1>
           
