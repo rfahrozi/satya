@@ -14,8 +14,12 @@ import axios from 'axios'
  * without sending refresh token from localStorage and adapt storage logic accordingly.
  */
 
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || '' // set to API base if needed
-const REFRESH_URL = process.env.REACT_APP_AUTH_REFRESH_ENDPOINT || '/auth/refresh' // adapt if different
+/**
+ * Konfigurasi Axios Base URL
+ * Menggunakan VITE_API_URL dari .env jika ada, atau default ke '/satya/api/v1'.
+ */
+const BASE_URL = (import.meta.env && import.meta.env.VITE_API_URL) ? import.meta.env.VITE_API_URL : '/satya/api/v1';
+const REFRESH_URL = (import.meta.env && import.meta.env.VITE_AUTH_REFRESH_ENDPOINT) ? import.meta.env.VITE_AUTH_REFRESH_ENDPOINT : '/auth/refresh'
 
 const instance = axios.create({
   baseURL: BASE_URL,

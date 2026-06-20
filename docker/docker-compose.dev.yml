@@ -3,16 +3,16 @@ version: '3.8'
 services:
   app:
     build:
-      context: .
+      context: ..
       dockerfile: docker/Dockerfile.dev
     container_name: monev_app_dev
     ports:
-      - "3000:3000"
+      - "3005:3000"
     volumes:
-      - .:/app
+      - ..:/app
       - backend_node_modules:/app/node_modules
     env_file:
-      - .env
+      - ../.env
     depends_on:
       db:
         condition: service_healthy
@@ -31,14 +31,14 @@ services:
 
   worker:
     build:
-      context: .
+      context: ..
       dockerfile: docker/Dockerfile.dev
     container_name: monev_worker_dev
     volumes:
-      - .:/app
+      - ..:/app
       - backend_node_modules:/app/node_modules
     env_file:
-      - .env
+      - ../.env
     depends_on:
       db:
         condition: service_healthy
@@ -58,7 +58,7 @@ services:
       POSTGRES_PASSWORD: secure_password_here
       POSTGRES_DB: satya_db
     ports:
-      - "5432:5432"
+      - "5440:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

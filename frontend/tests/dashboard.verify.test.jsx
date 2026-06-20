@@ -55,7 +55,7 @@ describe('Dashboard verify flow', () => {
     global.alert = jest.fn()
     // GET dashboard-agregat returns the sample Dashboard payload
     api.get.mockImplementation((url) => {
-      if (url.startsWith('/reports/dashboard-agregat')) {
+      if (url.includes('/dashboard-agregat')) {
         return Promise.resolve({ data: sampleDashboard.data })
       }
       // default fallback for download endpoint etc.
@@ -71,7 +71,7 @@ describe('Dashboard verify flow', () => {
     renderWithClient(<Dashboard />)
 
     // Wait for the satker card to appear
-    await waitFor(() => expect(screen.getByText('PN Tanjungpinang')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getAllByText('PN Tanjungpinang')[0]).toBeInTheDocument())
 
     // There should be a Verify button; click it
     const verifyBtn = screen.getByRole('button', { name: /verifikasi/i })
@@ -82,8 +82,9 @@ describe('Dashboard verify flow', () => {
     await waitFor(() => expect(screen.getByText(/Keputusan Verifikasi/i)).toBeInTheDocument())
 
     // Select status 'revisi' in the verification modal
+    // Find the verification select specifically (has "-- Pilih status --" option)
     const selects = screen.getAllByRole('combobox')
-    const select = selects[2]
+    const select = selects.find(s => s.querySelector('option[value=""]'))
     fireEvent.change(select, { target: { value: 'revisi' } })
 
     // Fill catatan (shown only after selecting revisi)
@@ -104,6 +105,7 @@ describe('Dashboard verify flow', () => {
       expect(body).toEqual({
         status_verifikasi: 'revisi',
         catatan_admin: 'Perbaiki format tabel pada halaman 2',
+        nilai_angka: null,
       })
     })
   })

@@ -24,13 +24,14 @@ async function uploadReportDocument(tenant, file, reportTypeId, periodType, peri
         }).first();
 
     // 2. Jika ada file lama, hapus fisik filenya di MinIO agar tidak jadi sampah
-    if (existing) {
-        try {
-            await minioClient.removeObject(BUCKET_NAME, existing.file_url);
-        } catch (err) {
-            console.warn('⚠️ [MinIO] Gagal menghapus file lama, mungkin sudah terhapus manual.');
-        }
-    }
+    // [UPDATE FEATURE B]: We now keep the old files in MinIO for Audit Trail purposes.
+    // if (existing) {
+    //     try {
+    //         await minioClient.removeObject(BUCKET_NAME, existing.file_url);
+    //     } catch (err) {
+    //         console.warn('⚠️ [MinIO] Gagal menghapus file lama, mungkin sudah terhapus manual.');
+    //     }
+    // }
 
     // 3. Tentukan nama file unik (Path: SatkerID/Tahun/periodType/periodUnit/Timestamp-NamaFile)
     const filename = `${tenant.satkerId}/${tahun}/${periodType}/${periodUnit}/${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
@@ -53,11 +54,26 @@ async function uploadReportDocument(tenant, file, reportTypeId, periodType, peri
         updated_at: knex.fn.now()
     };
 
+    let submissionId;
     if (existing) {
-        return await knex('report_submissions').where({ id: existing.id }).update(dataSubmission);
+        await knex('report_submissions').where({ id: existing.id }).update(dataSubmission);
+        submissionId = existing.id;
     } else {
-        return await knex('report_submissions').insert({ ...dataSubmission, created_at: knex.fn.now() });
+        const [insertedId] = await knex('report_submissions').insert({ ...dataSubmission, created_at: knex.fn.now() }).returning('id');
+        submissionId = typeof insertedId === 'object' ? insertedId.id : insertedId;
     }
+
+    // [UPDATE FEATURE B]: Log to report_revision_logs
+    await knex('report_revision_logs').insert({
+        submission_id: submissionId,
+        action_type: existing ? 'REUPLOAD' : 'UPLOAD',
+        file_url: filename,
+        actor: tenant.role,
+        created_at: knex.fn.now(),
+        updated_at: knex.fn.now()
+    });
+
+    return submissionId;
 }
 
 /**
@@ -78,29 +94,87 @@ async function generatePresignedUrl(submissionId, tenant) {
 }
 
 /**
+ * [READ] Generate Tautan Aman (Presigned URL) untuk Riwayat Dokumen
+ */
+async function generatePresignedUrlForHistory(historyId, tenant) {
+    const logEntry = await knex('report_revision_logs').where({ id: historyId }).first();
+    
+    if (!logEntry) throw new AppError('Riwayat dokumen tidak ditemukan.', 404);
+    if (!logEntry.file_url) throw new AppError('File dokumen tidak tersedia pada riwayat ini.', 404);
+    
+    // Proteksi: Pastikan Satker hanya mengakses laporannya sendiri
+    if (tenant.role === 'SATKER_PN') {
+        const submission = await knex('report_submissions').where({ id: logEntry.submission_id }).first();
+        if (submission && submission.satker_id !== tenant.satkerId) {
+            throw new AppError('Anda tidak memiliki izin mengakses dokumen ini.', 403);
+        }
+    }
+
+    // Buat URL yang berlaku hanya selama 1 jam (3600 detik)
+    return await minioClient.presignedGetObject(BUCKET_NAME, logEntry.file_url, 3600);
+}
+
+/**
  * [UPDATE] Verifikasi Admin dan Trigger Notifikasi Email via BullMQ
  */
-async function verifyAndNotify(submissionId, status, catatan) {
+async function verifyAndNotify(tenant, submissionId, status, catatan, score) {
     // 1. Update Status di Database
     await knex('report_submissions').where({ id: submissionId }).update({
         status_verifikasi: status,
         catatan_admin: catatan,
+        nilai_angka: score !== undefined ? score : null,
         updated_at: knex.fn.now()
     });
 
-    // 2. Jika statusnya REVISI, masukkan ke antrean email
+    // [UPDATE FEATURE B]: Log to report_revision_logs
+    const actionType = status === 'lengkap' ? 'VERIFY_OK' : (status === 'revisi' ? 'VERIFY_REVISI' : 'VERIFY_LAINNYA');
+
+    // fetch the file_url and satker_id to log which version was verified and send notification
+    const submission = await knex('report_submissions as rs')
+        .join('report_types as rt', 'rs.report_type_id', 'rt.id')
+        .where('rs.id', submissionId)
+        .select('rs.file_url', 'rs.satker_id', 'rt.nama_laporan')
+        .first();
+
+    await knex('report_revision_logs').insert({
+        submission_id: submissionId,
+        action_type: actionType,
+        catatan: catatan,
+        file_url: submission ? submission.file_url : null,
+        actor: tenant.role,
+        created_at: knex.fn.now(),
+        updated_at: knex.fn.now()
+    });
+
+    // 2. Tulis notifikasi in-app
+    if (submission && submission.satker_id) {
+        let title = status === 'lengkap' ? 'Laporan Diterima' : 'Revisi Laporan';
+        let msg = status === 'lengkap' 
+            ? `Laporan ${submission.nama_laporan} telah diverifikasi dan disetujui.` 
+            : `Laporan ${submission.nama_laporan} perlu direvisi: ${catatan}`;
+        if (score !== undefined && score !== null) msg += ` (Nilai: ${score})`;
+
+        await knex('in_app_notifications').insert({
+            satker_id: submission.satker_id,
+            title: title,
+            message: msg,
+            is_read: false,
+            created_at: knex.fn.now(),
+            updated_at: knex.fn.now()
+        });
+    }
+
+    // 3. Jika statusnya REVISI, masukkan ke antrean email
     if (status === 'revisi') {
-        const detail = await knex('report_submissions as rs')
-            .join('report_types as rt', 'rs.report_type_id', 'rt.id')
-            .join('users as u', 'rs.satker_id', 'u.satker_id')
-            .select('rt.nama_laporan', 'u.email as satker_email')
-            .where('rs.id', submissionId)
+        const detail = await knex('users')
+            .where('satker_id', submission.satker_id)
+            .select('email as satker_email')
             .first();
 
-        if (detail) {
+        if (detail && detail.satker_email) {
             await emailQueue.add('sendRevisionEmail', {
                 to: detail.satker_email,
-                nama_laporan: detail.nama_laporan,
+                nama_laporan: submission.nama_laporan,
                 catatan_admin: catatan
             }, { attempts: 3, backoff: 5000 }); // Coba lagi 3x jika gagal
         }
@@ -126,6 +200,7 @@ async function deleteReportDocument(tenant, submissionId) {
 module.exports = {
     uploadReportDocument,
     generatePresignedUrl,
+    generatePresignedUrlForHistory,
     verifyAndNotify,
     deleteReportDocument
 };

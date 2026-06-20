@@ -1,0 +1,63 @@
+const knex = require('../config/knex');
+
+async function getMyNotifications(req, res, next) {
+    try {
+        const satkerId = req.tenant.satkerId;
+        if (!satkerId) {
+            return res.status(200).json({ success: true, data: [] });
+        }
+
+        const notifs = await knex('in_app_notifications')
+            .where('satker_id', satkerId)
+            .orderBy('created_at', 'desc')
+            .limit(20);
+
+        res.status(200).json({
+            success: true,
+            data: notifs
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+async function markAsRead(req, res, next) {
+    try {
+        const satkerId = req.tenant.satkerId;
+        const { id } = req.params;
+
+        await knex('in_app_notifications')
+            .where({ id, satker_id: satkerId })
+            .update({ is_read: true, updated_at: knex.fn.now() });
+
+        res.status(200).json({
+            success: true,
+            message: 'Notifikasi ditandai dibaca'
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+async function markAllAsRead(req, res, next) {
+    try {
+        const satkerId = req.tenant.satkerId;
+
+        await knex('in_app_notifications')
+            .where({ satker_id: satkerId, is_read: false })
+            .update({ is_read: true, updated_at: knex.fn.now() });
+
+        res.status(200).json({
+            success: true,
+            message: 'Semua notifikasi ditandai dibaca'
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+module.exports = {
+    getMyNotifications,
+    markAsRead,
+    markAllAsRead
+};

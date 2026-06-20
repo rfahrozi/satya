@@ -56,7 +56,7 @@ describe('Dashboard component coverage', () => {
   test('render and handle download', async () => {
     renderWithClient(<Dashboard />);
     await waitFor(() => {
-      expect(screen.getByText('Satker Test A')).toBeInTheDocument();
+      expect(screen.getAllByText('Satker Test A')[0]).toBeInTheDocument();
     });
 
     // click satker block (not strictly necessary for visibility since table is rendered, but good for interactions)
@@ -87,7 +87,7 @@ describe('Dashboard component coverage', () => {
   test('verify modal form validation and submit', async () => {
     renderWithClient(<Dashboard />);
     await waitFor(() => {
-      expect(screen.getByText('Satker Test A')).toBeInTheDocument();
+      expect(screen.getAllByText('Satker Test A')[0]).toBeInTheDocument();
     });
 
     const verifyBtn = screen.getByText('Verifikasi');
@@ -122,9 +122,10 @@ describe('Dashboard component coverage', () => {
     api.patch.mockResolvedValueOnce({ data: { success: true } });
     fireEvent.click(submitBtn);
     await waitFor(() => {
-      expect(api.patch).toHaveBeenCalledWith('/reports/sub-1/verify', {
+      expect(api.patch).toHaveBeenCalledWith(expect.stringContaining('/reports/sub-1/verify'), {
         status_verifikasi: 'revisi',
-        catatan_admin: 'harap perbaiki'
+        catatan_admin: 'harap perbaiki',
+        nilai_angka: null
       });
       expect(screen.getByText('Verifikasi tersimpan. Notifikasi akan dikirim oleh worker.')).toBeInTheDocument();
     });

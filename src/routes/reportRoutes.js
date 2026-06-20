@@ -57,22 +57,40 @@ router.post('/upload', uploadSingle('dokumen_monev'), reportController.uploadRep
 // Ambil progress laporan milik satker sendiri
 router.get('/my-progress', reportController.getMyProgress);
 
-// Hapus laporan milik sendiri (Full CRUD - Delete)
-router.delete('/:id', reportController.deleteReport);
-
 
 // --- RUTE KHUSUS ADMIN & PIMPINAN ---
 
 // Dashboard Agregat (Digunakan Admin dan Pimpinan)
 router.get('/dashboard-agregat', reportController.getDashboardAgregat);
 
+// Dashboard Heatmap Kepatuhan 12 Bulan (Admin & Pimpinan)
+router.get('/dashboard-heatmap', reportController.getDashboardHeatmap);
+
+// Export data agregat ke Excel
+router.get('/export-agregat', reportController.exportDashboardAgregat);
+
+// Admin Stats: Antrian verifikasi, loop revisi, ketepatan waktu, aktivitas terbaru
+router.get('/admin-stats', reportController.getAdminStats);
+
+// Queue Status: Status job BullMQ email (waiting, active, failed)
+router.get('/queue-status', reportController.getQueueStatus);
+
+
+// --- RUTE DENGAN PARAMETER :id (harus setelah rute statis) ---
+
+// Mendapatkan histori revisi dokumen (Feature B)
+router.get('/:id/history', reportController.getSubmissionHistory);
+
 // Verifikasi Laporan (Hanya Admin PT)
 router.patch('/:id/verify', reportController.verifyReport);
 
-
-// --- RUTE UMUM (Terproteksi) ---
-
-// Mendapatkan Presigned URL untuk Preview/Download
+// Mendapatkan Presigned URL untuk Preview/Download versi terbaru
 router.get('/:id/download', reportController.getDownloadUrl);
+
+// Mendapatkan Presigned URL untuk Preview/Download versi riwayat
+router.get('/history/:id/download', reportController.downloadHistoryFile);
+
+// Hapus laporan milik sendiri (Full CRUD - Delete)
+router.delete('/:id', reportController.deleteReport);
 
 module.exports = router;

@@ -8,10 +8,12 @@ import {
   Trash2,
   X,
   Clock,
+  History,
 } from 'lucide-react';
 import api from '../lib/axios';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import ConfirmDialog from '../components/ConfirmDialog';
+import HistoryModal from '../components/HistoryModal';
 
 /**
  * SatkerPortal.jsx
@@ -56,6 +58,20 @@ export default function SatkerPortal() {
 
   // feedback / status
   const [toastMsg, setToastMsg] = useState(null);
+
+  // History modal state
+  const [selectedHistoryId, setSelectedHistoryId] = useState(null);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+
+  const openHistory = (submissionId) => {
+    setSelectedHistoryId(submissionId);
+    setIsHistoryModalOpen(true);
+  };
+
+  const closeHistory = () => {
+    setIsHistoryModalOpen(false);
+    setSelectedHistoryId(null);
+  };
 
   // Accessible confirm dialog (replaces window.confirm)
   const [confirmDialog, setConfirmDialog] = useState({ open: false, submissionId: null, reportName: '' });
@@ -337,11 +353,24 @@ export default function SatkerPortal() {
                     ) : (
                       <span className="text-xs text-gray-400">-</span>
                     )}
+                    {r.nilai_angka !== null && r.nilai_angka !== undefined && (
+                      <span className="px-2 py-1 rounded text-xs font-bold bg-emerald-50 text-emerald-700">
+                        Nilai: {r.nilai_angka}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2">
                     {uploaded && (
                       <>
+                        <button
+                          onClick={() => openHistory(r.submission_id)}
+                          title="Riwayat"
+                          aria-label={`Riwayat laporan ${r.nama_laporan}`}
+                          className="p-2 rounded-md bg-slate-800 hover:bg-slate-700 text-blue-400"
+                        >
+                          <History size={16} aria-hidden="true" />
+                        </button>
                         <button
                           onClick={() => handleDownload(r.submission_id)}
                           title="Unduh"
@@ -490,6 +519,14 @@ export default function SatkerPortal() {
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
       />
+
+      {/* History modal */}
+      {isHistoryModalOpen && selectedHistoryId && (
+        <HistoryModal
+          submissionId={selectedHistoryId}
+          onClose={closeHistory}
+        />
+      )}
 
     </div>
   );

@@ -1,9 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import SatkerPortal from './pages/SatkerPortal'
 import UserManagement from './pages/UserManagement'
+import MasterData from './pages/MasterData'
 import Layout from './components/Layout'
 
 /**
@@ -29,9 +31,9 @@ function ProtectedRoute({ children, allowedRoles }) {
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/satya">
       <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Landing />} />
         
         {/* Unprotected Auth route */}
         <Route path="/login" element={<Login />} />
@@ -53,6 +55,15 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['ADMIN_PT']}>
                 <UserManagement />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/master" 
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN_PT']}>
+                <MasterData />
               </ProtectedRoute>
             } 
           />

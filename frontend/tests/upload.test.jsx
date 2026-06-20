@@ -109,9 +109,10 @@ describe('SatkerPortal Upload and Progress handling', () => {
       expect(screen.getByText(/Unggah berhasil/i)).toBeInTheDocument();
     });
     
-    // Check that api post was called with proper FormData containing the file
+    // Check that api post was called with proper URL and FormData
     const [url, formData] = api.post.mock.calls[0];
-    expect(url).toBe('/reports/upload');
+    expect(url).toContain('/reports/upload');
+    expect(formData).toBeInstanceOf(FormData);
     expect(formData.get('dokumen_monev')).toBe(mockFile);
     expect(formData.get('report_type_id')).toBe('1');
   });

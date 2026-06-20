@@ -18,10 +18,10 @@ exports.seed = async function(knex) {
     // 2. Data Akun Pengguna (Default Password: password123)
     const defaultPassword = await bcrypt.hash('password123', 10);
     await knex('users').insert([
-        { id: 1, username: 'admin_pt', password_hash: defaultPassword, role: 'ADMIN_PT', satker_id: null },
-        { id: 2, username: 'pimpinan_pt', password_hash: defaultPassword, role: 'PIMPINAN', satker_id: null },
-        { id: 3, username: 'pn_tpi', password_hash: defaultPassword, role: 'SATKER_PN', satker_id: 1 },
-        { id: 4, username: 'pn_batam', password_hash: defaultPassword, role: 'SATKER_PN', satker_id: 2 }
+        { id: 1, username: 'admin_pt', password_hash: defaultPassword, role: 'ADMIN_PT', satker_id: null, email: 'admin@pt.go.id' },
+        { id: 2, username: 'pimpinan_pt', password_hash: defaultPassword, role: 'PIMPINAN', satker_id: null, email: 'pimpinan@pt.go.id' },
+        { id: 3, username: 'pn_tpi', password_hash: defaultPassword, role: 'SATKER_PN', satker_id: 1, email: 'pn_tpi@pt.go.id' },
+        { id: 4, username: 'pn_batam', password_hash: defaultPassword, role: 'SATKER_PN', satker_id: 2, email: 'pn_batam@pt.go.id' }
     ]);
 
     // 3. Data Jenis Laporan Wajib

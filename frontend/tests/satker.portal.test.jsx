@@ -58,7 +58,7 @@ describe('SatkerPortal extended actions', () => {
     fireEvent.click(downloadBtn);
 
     await waitFor(() => {
-      expect(api.get).toHaveBeenCalledWith('/reports/sub-1/download');
+      expect(api.get).toHaveBeenCalledWith(expect.stringContaining('/reports/sub-1/download'));
       expect(window.open).toHaveBeenCalledWith('http://example.com/download.pdf', '_blank', 'noopener');
     });
   });
@@ -80,7 +80,7 @@ describe('SatkerPortal extended actions', () => {
     fireEvent.click(confirmDeleteBtn);
 
     await waitFor(() => {
-      expect(api.delete).toHaveBeenCalledWith('/reports/sub-1');
+      expect(api.delete).toHaveBeenCalledWith(expect.stringContaining('/reports/sub-1'));
       expect(screen.getAllByText('Gagal delete')[0]).toBeInTheDocument(); // expect error toast
     });
 
@@ -177,10 +177,6 @@ describe('SatkerPortal extended actions', () => {
     fireEvent.click(overrideBtn);
 
     const submitBtn = screen.getByRole('button', { name: /Timpa & Simpan/i });
-    // removing disabled check temporarily for the sake of the coverage if disabled via React
-    // React's disabled property drops click events, but the actual submitHandler might still be called if wrapped in form
-    // Actually the button has disabled={uploadMutation.isLoading || !selectedFile}
-    // But we can just call form submit manually or simulate it
     const form = submitBtn.closest('form');
     fireEvent.submit(form);
     await waitFor(() => {

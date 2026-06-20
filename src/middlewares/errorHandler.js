@@ -21,6 +21,12 @@ class AppError extends Error {
  * Middleware Utama Penanganan Error
  */
 const errorHandler = (err, req, res, next) => {
+    // Tangani error multer secara spesifik
+    if (err.name === 'MulterError' && err.message === 'File too large') {
+        err.statusCode = 400;
+        err.message = 'Ukuran file tidak boleh melebihi 5MB';
+    }
+
     err.statusCode = err.statusCode || 500;
     err.status = err.status || 'error';
 

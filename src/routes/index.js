@@ -21,6 +21,14 @@ router.use('/auth', authRoutes);
 // Jalur Operasional Pelaporan (Upload, Progress, Verifikasi, Dashboard)
 router.use('/reports', reportRoutes);
 
+// Jalur Manajemen Data Master
+const masterRoutes = require('./masterRoutes');
+router.use('/master', masterRoutes);
+
+// Jalur Notifikasi
+const notificationRoutes = require('./notificationRoutes');
+router.use('/notifications', notificationRoutes);
+
 /**
  * Health Check Endpoint
  * Digunakan untuk memonitor apakah API berjalan (Uptime Monitoring)

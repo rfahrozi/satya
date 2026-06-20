@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Outlet, useNavigate, Link, useLocation } from 'react-router-dom'
-import { LogOut, Home, Users, Landmark, FileText, Menu, X } from 'lucide-react'
+import { LogOut, Home, Users, Landmark, FileText, Menu, X, Database } from 'lucide-react'
+import NotificationBell from './NotificationBell'
 
 export default function Layout() {
   const navigate = useNavigate()
@@ -52,13 +53,22 @@ export default function Layout() {
                 )}
 
                 {user.role === 'ADMIN_PT' && (
-                  <Link 
-                    to="/users" 
-                    aria-current={location.pathname === '/users' ? 'page' : undefined}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium text-sm transition-colors ${location.pathname === '/users' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
-                  >
-                    <Users size={18} aria-hidden="true" /> Manajemen User
-                  </Link>
+                  <>
+                    <Link 
+                      to="/users" 
+                      aria-current={location.pathname === '/users' ? 'page' : undefined}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium text-sm transition-colors ${location.pathname === '/users' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
+                    >
+                      <Users size={18} aria-hidden="true" /> Manajemen User
+                    </Link>
+                    <Link 
+                      to="/master" 
+                      aria-current={location.pathname === '/master' ? 'page' : undefined}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium text-sm transition-colors ${location.pathname === '/master' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
+                    >
+                      <Database size={18} aria-hidden="true" /> Master Data
+                    </Link>
+                  </>
                 )}
 
                 {user.role === 'SATKER_PN' && (
@@ -77,6 +87,8 @@ export default function Layout() {
                 <div className="text-right hidden sm:block">
                   <p className="text-sm font-semibold text-slate-800">{user.username}</p>
                 </div>
+
+                {user.role === 'SATKER_PN' && <NotificationBell />}
                 
                 <button 
                   onClick={handleLogout}
@@ -117,14 +129,24 @@ export default function Layout() {
             )}
 
             {user.role === 'ADMIN_PT' && (
-              <Link 
-                to="/users" 
-                onClick={() => setMobileMenuOpen(false)}
-                aria-current={location.pathname === '/users' ? 'page' : undefined}
-                className={`flex items-center gap-2 px-3 py-3 rounded-md font-medium text-sm transition-colors ${location.pathname === '/users' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
-              >
-                <Users size={18} aria-hidden="true" /> Manajemen User
-              </Link>
+              <>
+                <Link 
+                  to="/users" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-current={location.pathname === '/users' ? 'page' : undefined}
+                  className={`flex items-center gap-2 px-3 py-3 rounded-md font-medium text-sm transition-colors ${location.pathname === '/users' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
+                >
+                  <Users size={18} aria-hidden="true" /> Manajemen User
+                </Link>
+                <Link 
+                  to="/master" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-current={location.pathname === '/master' ? 'page' : undefined}
+                  className={`flex items-center gap-2 px-3 py-3 rounded-md font-medium text-sm transition-colors ${location.pathname === '/master' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
+                >
+                  <Database size={18} aria-hidden="true" /> Master Data
+                </Link>
+              </>
             )}
 
             {user.role === 'SATKER_PN' && (

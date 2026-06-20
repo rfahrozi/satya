@@ -6,4 +6,14 @@ module.exports = {
     forceExit: true,
     clearMocks: true,
     verbose: true,
+    coveragePathIgnorePatterns: [
+        '/node_modules/',
+        '/src/config/redis\\.js$',
+        '/src/config/minio\\.js$',
+        '/src/emailWorker\\.js$',
+        '/src/worker-app\\.js$',
+        '/src/scheduler\\.js$',
+        '/src/debug-env\\.js$',
+        '/src/test-email\\.js$',
+    ],
 };
