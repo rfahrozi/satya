@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Landmark, Lock, User, AlertCircle, Loader2 } from 'lucide-react'
-import axios from 'axios'
+import api from '../lib/axios'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -15,7 +15,7 @@ export default function Login() {
     setIsLoading(true)
 
     try {
-      const res = await axios.post('http://localhost:3000/api/v1/auth/login', formData)
+      const res = await api.post('/api/v1/auth/login', formData)
       
       const { token, user } = res.data.data
       
