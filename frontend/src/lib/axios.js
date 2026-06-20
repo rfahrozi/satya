@@ -18,8 +18,11 @@ import axios from 'axios'
  * Konfigurasi Axios Base URL
  * Menggunakan VITE_API_URL dari .env jika ada, atau default ke '/satya/api/v1'.
  */
-const BASE_URL = (import.meta.env && import.meta.env.VITE_API_URL) ? import.meta.env.VITE_API_URL : '/satya/api/v1';
+const RAW_BASE = (import.meta.env && import.meta.env.VITE_API_URL) ? import.meta.env.VITE_API_URL : '/satya/api/v1';
 const REFRESH_URL = (import.meta.env && import.meta.env.VITE_AUTH_REFRESH_ENDPOINT) ? import.meta.env.VITE_AUTH_REFRESH_ENDPOINT : '/auth/refresh'
+
+// Prevent duplicate /api/v1/api/v1 because all component queries hardcode /api/v1
+const BASE_URL = RAW_BASE.endsWith('/api/v1') ? RAW_BASE.slice(0, -7) : RAW_BASE;
 
 const instance = axios.create({
   baseURL: BASE_URL,
