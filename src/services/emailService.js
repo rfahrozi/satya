@@ -3,28 +3,65 @@
  * Mengelola koneksi ke SMTP dan template pengiriman email
  */
 const nodemailer = require('nodemailer');
+const axios = require('axios');
 
 /**
  * Buat transporter hanya di environment non-test.
- * Di mode test, nodemailer tidak perlu terhubung ke server SMTP eksternal,
- * sehingga test tidak bergantung pada koneksi internet atau kredensial SMTP.
+ * Di mode test, nodemailer tidak perlu terhubung ke server SMTP eksternal.
  */
 const transporter = process.env.NODE_ENV !== 'test'
     ? nodemailer.createTransport({
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
         port: parseInt(process.env.SMTP_PORT) || 587,
-        secure: parseInt(process.env.SMTP_PORT) === 465, // True untuk port 465 (SSL), false untuk 587 (STARTTLS)
+        secure: parseInt(process.env.SMTP_PORT) === 465,
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS,
         },
-        // Timeout agar tidak hang jika server SMTP lambat atau tidak respond
-        connectionTimeout: 10000, // 10 detik
-        greetingTimeout: 5000,    // 5 detik
-        socketTimeout: 15000,     // 15 detik per operasi
+        connectionTimeout: 10000,
+        greetingTimeout: 5000,
+        socketTimeout: 15000,
         tls: { rejectUnauthorized: false }
     })
-    : null; // Null di mode test — emailWorker di-mock sehingga sendMail tidak pernah dipanggil
+    : null;
+
+/**
+ * Helper untuk mengirim email.
+ * Jika terdapat BREVO_API_KEY di .env, sistem akan otomatis menggunakan Brevo API (via HTTP).
+ * Jika tidak ada, sistem akan fallback ke SMTP klasik menggunakan Nodemailer.
+ */
+async function sendEmailCore(mailOptions) {
+    if (process.env.NODE_ENV === 'test') return;
+
+    if (process.env.BREVO_API_KEY) {
+        const payload = {
+            sender: {
+                name: "SATYA PT KEPRI",
+                email: process.env.SMTP_USER || "noreply@pt-kepri.go.id"
+            },
+            to: [{ email: mailOptions.to }],
+            subject: mailOptions.subject,
+            htmlContent: mailOptions.html
+        };
+
+        try {
+            const response = await axios.post('https://api.brevo.com/v3/smtp/email', payload, {
+                headers: {
+                    'api-key': process.env.BREVO_API_KEY,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('⚠️ [Brevo API Error]', error.response?.data || error.message);
+            throw new Error('Gagal mengirim email melalui Brevo API');
+        }
+    } else {
+        if (!transporter) return;
+        return transporter.sendMail(mailOptions);
+    }
+}
 
 /**
  * Mengirim email notifikasi revisi dari Admin ke Satker
@@ -32,7 +69,7 @@ const transporter = process.env.NODE_ENV !== 'test'
 async function sendRevisionEmail(to, data) {
     const { nama_laporan, catatan_admin } = data;
     const mailOptions = {
-        from: `"SATYA PT KEPRI" <${process.env.SMTP_USER}>`,
+        from: `"SATYA PT KEPRI" <${process.env.SMTP_USER || 'noreply@pt-kepri.go.id'}>`,
         to: to,
         subject: `[SATYA] Revisi Laporan: ${nama_laporan}`,
         html: `
@@ -48,7 +85,7 @@ async function sendRevisionEmail(to, data) {
             <small style="color: #9ca3af;">Email ini dikirim otomatis oleh Sistem SATYA - PT Kepulauan Riau</small>
         `,
     };
-    return transporter.sendMail(mailOptions);
+    return sendEmailCore(mailOptions);
 }
 
 /**
@@ -57,7 +94,7 @@ async function sendRevisionEmail(to, data) {
 async function sendReminderEmail(to, data) {
     const { nama_satker, deadline_text } = data;
     const mailOptions = {
-        from: `"SATYA PT KEPRI" <${process.env.SMTP_USER}>`,
+        from: `"SATYA PT KEPRI" <${process.env.SMTP_USER || 'noreply@pt-kepri.go.id'}>`,
         to: to,
         subject: `[SATYA] PENGINGAT: Batas Waktu Pelaporan ${deadline_text}`,
         html: `
@@ -72,7 +109,7 @@ async function sendReminderEmail(to, data) {
             <small style="color: #9ca3af;">Email ini dikirim otomatis oleh Sistem SATYA - PT Kepulauan Riau</small>
         `,
     };
-    return transporter.sendMail(mailOptions);
+    return sendEmailCore(mailOptions);
 }
 
 module.exports = { sendRevisionEmail, sendReminderEmail };
