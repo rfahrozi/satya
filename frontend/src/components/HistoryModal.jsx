@@ -26,9 +26,9 @@ export default function HistoryModal({ submissionId, onClose }) {
     enabled: !!submissionId,
   });
 
-  const handleDownloadHistory = async (historyId) => {
+  const handleDownloadHistory = async (historyId, type = 'pdf') => {
     try {
-      const res = await api.get(`/api/v1/reports/history/${historyId}/download`);
+      const res = await api.get(`/api/v1/reports/history/${historyId}/download?type=${type}`);
       const url = res?.data?.url ?? res?.url ?? res?.data?.data?.url;
       if (url) {
         window.open(url, '_blank');
@@ -44,7 +44,7 @@ export default function HistoryModal({ submissionId, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-200 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
       onClick={onClose}
     >
       <div
@@ -120,12 +120,20 @@ export default function HistoryModal({ submissionId, onClose }) {
                         </div>
                       )}
                       {(item.action_type === 'UPLOAD' || item.action_type === 'REUPLOAD') && (
-                        <button
-                          onClick={() => handleDownloadHistory(item.id)}
-                          className="mt-3 flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 rounded text-xs font-medium transition-colors"
-                        >
-                          <Download size={14} /> Unduh Dokumen Versi Ini
-                        </button>
+                        <div className="flex items-center gap-2 mt-3">
+                          <button
+                            onClick={() => handleDownloadHistory(item.id, 'pdf')}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded text-xs font-medium transition-colors"
+                          >
+                            <Download size={14} /> Unduh PDF
+                          </button>
+                          <button
+                            onClick={() => handleDownloadHistory(item.id, 'excel')}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/40 text-green-400 rounded text-xs font-medium transition-colors"
+                          >
+                            <Download size={14} /> Unduh Excel
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>

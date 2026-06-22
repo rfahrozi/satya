@@ -140,9 +140,9 @@ describe('Dashboard HeatmapKepatuhan Component', () => {
     await waitFor(() => {
       expect(screen.getByText('Patuh')).toBeInTheDocument();
     });
-    expect(screen.getByText('Perlu Perhatian')).toBeInTheDocument();
+    expect(screen.getByText('Perhatian')).toBeInTheDocument();
     expect(screen.getByText('Rendah')).toBeInTheDocument();
-    expect(screen.getByText('Belum Ada')).toBeInTheDocument();
+    expect(screen.getByText('Kosong')).toBeInTheDocument();
   });
 
   test('menampilkan rata tahunan per satker', async () => {
@@ -191,7 +191,7 @@ describe('Dashboard HeatmapKepatuhan Component', () => {
 
     renderDashboard();
     await waitFor(() => {
-      expect(screen.getByText(/tidak ada data satker untuk tahun/i)).toBeInTheDocument();
+      expect(screen.getByText(/tidak ada data tren untuk tahun/i)).toBeInTheDocument();
     });
   });
 
@@ -217,9 +217,11 @@ describe('Dashboard HeatmapKepatuhan Component', () => {
     fireEvent.mouseEnter(janCells[0].parentElement);
 
     await waitFor(() => {
-      expect(screen.getByText('85% patuh')).toBeInTheDocument();
+      expect(screen.getByText((content, element) => {
+        return element.textContent === '85% kepatuhan';
+      })).toBeInTheDocument();
     });
-    expect(screen.getByText('75% tepat waktu')).toBeInTheDocument();
+    expect(screen.getByText(/75% selesai tepat waktu/i)).toBeInTheDocument();
   });
 
   test('Pimpinan juga bisa melihat heatmap', async () => {

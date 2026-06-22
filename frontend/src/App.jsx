@@ -8,6 +8,7 @@ import UserManagement from './pages/UserManagement'
 import MasterData from './pages/MasterData'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
+import Informasi from './pages/Informasi'
 import Layout from './components/Layout'
 
 /**
@@ -59,6 +60,15 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['ADMIN_PT']}>
                 <UserManagement />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/informasi" 
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN_PT', 'PIMPINAN']}>
+                <Informasi />
               </ProtectedRoute>
             } 
           />

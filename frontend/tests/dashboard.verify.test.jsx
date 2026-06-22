@@ -73,8 +73,10 @@ describe('Dashboard verify flow', () => {
     // Wait for the satker card to appear
     await waitFor(() => expect(screen.getAllByText('PN Tanjungpinang')[0]).toBeInTheDocument())
 
+    fireEvent.click(screen.getAllByText('PN Tanjungpinang')[0])
+
     // There should be a Verify button; click it
-    const verifyBtn = screen.getByRole('button', { name: /verifikasi/i })
+    const verifyBtn = await screen.findByRole('button', { name: /verifikasi/i })
     expect(verifyBtn).toBeInTheDocument()
     fireEvent.click(verifyBtn)
 
@@ -88,7 +90,7 @@ describe('Dashboard verify flow', () => {
     fireEvent.change(select, { target: { value: 'revisi' } })
 
     // Fill catatan (shown only after selecting revisi)
-    const textarea = await screen.findByPlaceholderText(/Jelaskan perbaikan yang dibutuhkan/i)
+    const textarea = await screen.findByPlaceholderText(/Jelaskan secara detail bagian mana yang perlu diperbaiki oleh satker/i)
     fireEvent.change(textarea, { target: { value: 'Perbaiki format tabel pada halaman 2' } })
 
     // Submit form

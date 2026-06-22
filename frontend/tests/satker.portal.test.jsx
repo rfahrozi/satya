@@ -54,7 +54,7 @@ describe('SatkerPortal extended actions', () => {
       expect(screen.getByText('Laporan Test Download & Delete')).toBeInTheDocument();
     });
 
-    const downloadBtn = screen.getByTitle('Unduh');
+    const downloadBtn = screen.getByTitle('Unduh PDF');
     fireEvent.click(downloadBtn);
 
     await waitFor(() => {
@@ -75,8 +75,8 @@ describe('SatkerPortal extended actions', () => {
     api.delete.mockRejectedValueOnce(new Error('Gagal delete'));
     fireEvent.click(deleteBtn);
     
-    // Tunggu dialog konfirmasi muncul dan klik 'Ya, Hapus'
-    const confirmDeleteBtn = await screen.findByRole('button', { name: 'Ya, Hapus' });
+    // Tunggu dialog konfirmasi muncul dan klik 'Ya, Hapus Dokumen'
+    const confirmDeleteBtn = await screen.findByRole('button', { name: 'Ya, Hapus Dokumen' });
     fireEvent.click(confirmDeleteBtn);
 
     await waitFor(() => {
@@ -88,7 +88,7 @@ describe('SatkerPortal extended actions', () => {
     api.delete.mockResolvedValueOnce({ data: { success: true } });
     fireEvent.click(deleteBtn);
     
-    const confirmDeleteBtn2 = await screen.findByRole('button', { name: 'Ya, Hapus' });
+    const confirmDeleteBtn2 = await screen.findByRole('button', { name: 'Ya, Hapus Dokumen' });
     fireEvent.click(confirmDeleteBtn2);
 
     await waitFor(() => {
@@ -103,14 +103,14 @@ describe('SatkerPortal extended actions', () => {
     });
 
     // open modal
-    const overrideBtn = screen.getByRole('button', { name: /Timpa Berkas/i });
+    const overrideBtn = screen.getByRole('button', { name: /Perbarui/i });
     fireEvent.click(overrideBtn);
     
     await waitFor(() => {
-      expect(screen.getByText('Tarik & lepas file di sini, atau klik untuk memilih')).toBeInTheDocument();
+      expect(screen.getByText('Dokumen PDF')).toBeInTheDocument();
     });
 
-    const dropZone = screen.getByText('Tarik & lepas file di sini, atau klik untuk memilih').parentElement;
+    const dropZone = screen.getByText('Dokumen PDF').parentElement;
 
     // test drag and drop
     fireEvent.dragOver(dropZone);
@@ -173,24 +173,32 @@ describe('SatkerPortal extended actions', () => {
       expect(screen.getByText('Laporan Test Download & Delete')).toBeInTheDocument();
     });
 
-    const overrideBtn = screen.getByRole('button', { name: /Timpa Berkas/i });
+    const overrideBtn = screen.getByRole('button', { name: /Perbarui/i });
     fireEvent.click(overrideBtn);
 
     const submitBtn = screen.getByRole('button', { name: /Timpa & Simpan/i });
     const form = submitBtn.closest('form');
     fireEvent.submit(form);
     await waitFor(() => {
-      expect(screen.getAllByText('Pilih file terlebih dahulu.')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Pilih file PDF dan Excel terlebih dahulu.')[0]).toBeInTheDocument();
     });
 
-    // close modal
-    fireEvent.click(screen.getByText('Batal'));
+  });
 
-    // 3. download catch branch
-    api.get.mockRejectedValueOnce(new Error('Test fetch URL error'));
-    fireEvent.click(screen.getByTitle('Unduh'));
+  test('covers missing edge cases in download interactions', async () => {
+    api.get.mockImplementation((url) => {
+      if (url.includes('/reports/my-progress')) return Promise.resolve({ data: mockReportsWithSubmission.data });
+      return Promise.reject(new Error('Test fetch URL error'));
+    });
+    
+    renderWithClient(<SatkerPortal />);
     await waitFor(() => {
-      expect(screen.getAllByText('Test fetch URL error')[0]).toBeInTheDocument();
+      expect(screen.getByText('Laporan Test Download & Delete')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTitle('Unduh PDF'));
+    await waitFor(() => {
+      expect(api.get).toHaveBeenCalledWith(expect.stringContaining('download?type=pdf'));
     });
   });
 });

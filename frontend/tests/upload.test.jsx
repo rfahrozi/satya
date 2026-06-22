@@ -71,19 +71,22 @@ describe('SatkerPortal Upload and Progress handling', () => {
 
     // 4. Modal should appear
     await waitFor(() => {
-      expect(screen.getByText('Tarik & lepas file di sini, atau klik untuk memilih')).toBeInTheDocument();
+      expect(screen.getByText('Dokumen PDF')).toBeInTheDocument();
     });
 
-    // 5. Select a mock file
-    const fileInput = document.querySelector('input[type="file"]');
-    const mockFile = new File(['dummy content'], 'report.pdf', { type: 'application/pdf' });
+    // 5. Select a mock PDF file
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    const mockPdf = new File(['dummy content'], 'report.pdf', { type: 'application/pdf' });
+    const mockExcel = new File(['dummy excel content'], 'data.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     
     // Using fireEvent.change to simulate file selection
-    fireEvent.change(fileInput, { target: { files: [mockFile] } });
+    fireEvent.change(fileInputs[0], { target: { files: [mockPdf] } });
+    fireEvent.change(fileInputs[1], { target: { files: [mockExcel] } });
 
     // File name should appear
     await waitFor(() => {
       expect(screen.getByText('report.pdf')).toBeInTheDocument();
+      expect(screen.getByText('data.xlsx')).toBeInTheDocument();
     });
 
     // 6. Mock the POST API to simulate progress, then resolve
@@ -96,7 +99,7 @@ describe('SatkerPortal Upload and Progress handling', () => {
     });
 
     // 7. Click the submit button inside the modal
-    const submitBtn = screen.getByRole('button', { name: /Unggah & Simpan/i });
+    const submitBtn = screen.getByRole('button', { name: /Unggah Dokumen/i });
     fireEvent.click(submitBtn);
 
     // 8. Assertions
@@ -113,7 +116,8 @@ describe('SatkerPortal Upload and Progress handling', () => {
     const [url, formData] = api.post.mock.calls[0];
     expect(url).toContain('/reports/upload');
     expect(formData).toBeInstanceOf(FormData);
-    expect(formData.get('dokumen_monev')).toBe(mockFile);
+    expect(formData.get('dokumen_monev')).toBe(mockPdf);
+    expect(formData.get('dokumen_excel')).toBe(mockExcel);
     expect(formData.get('report_type_id')).toBe('1');
   });
 });

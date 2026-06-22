@@ -12,7 +12,7 @@ const { emailQueue } = require('../emailWorker');
 /**
  * [CREATE/UPDATE] Logika Unggah Dokumen dengan Fitur Clean-up File Lama
  */
-async function uploadReportDocument(tenant, file, reportTypeId, periodType, periodUnit, tahun) {
+async function uploadReportDocument(tenant, file, fileExcel, reportTypeId, periodType, periodUnit, tahun) {
     // 1. Cek apakah sudah ada submission sebelumnya (untuk kebutuhan UPDATE/Timpa)
     const existing = await knex('report_submissions')
         .where({ 
@@ -25,20 +25,18 @@ async function uploadReportDocument(tenant, file, reportTypeId, periodType, peri
 
     // 2. Jika ada file lama, hapus fisik filenya di MinIO agar tidak jadi sampah
     // [UPDATE FEATURE B]: We now keep the old files in MinIO for Audit Trail purposes.
-    // if (existing) {
-    //     try {
-    //         await minioClient.removeObject(BUCKET_NAME, existing.file_url);
-    //     } catch (err) {
-    //         console.warn('⚠️ [MinIO] Gagal menghapus file lama, mungkin sudah terhapus manual.');
-    //     }
-    // }
+    // if (existing) { ... }
 
     // 3. Tentukan nama file unik (Path: SatkerID/Tahun/periodType/periodUnit/Timestamp-NamaFile)
     const filename = `${tenant.satkerId}/${tahun}/${periodType}/${periodUnit}/${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
+    const excelFilename = `${tenant.satkerId}/${tahun}/${periodType}/${periodUnit}/${Date.now()}-excel-${fileExcel.originalname.replace(/\s+/g, '_')}`;
 
     // 4. Upload ke MinIO
     await minioClient.putObject(BUCKET_NAME, filename, file.buffer, file.size, {
         'Content-Type': file.mimetype
+    });
+    await minioClient.putObject(BUCKET_NAME, excelFilename, fileExcel.buffer, fileExcel.size, {
+        'Content-Type': fileExcel.mimetype
     });
 
     const dataSubmission = {
@@ -49,6 +47,8 @@ async function uploadReportDocument(tenant, file, reportTypeId, periodType, peri
         periode_tahun: tahun,
         file_url: filename,
         nama_file_asli: file.originalname,
+        excel_file_url: excelFilename,
+        nama_excel_file_asli: fileExcel.originalname,
         status_verifikasi: 'belum_lengkap', // Reset status jika di-update
         catatan_admin: null,
         updated_at: knex.fn.now()
@@ -68,6 +68,7 @@ async function uploadReportDocument(tenant, file, reportTypeId, periodType, peri
         submission_id: submissionId,
         action_type: existing ? 'REUPLOAD' : 'UPLOAD',
         file_url: filename,
+        excel_file_url: excelFilename,
         actor: tenant.role,
         created_at: knex.fn.now(),
         updated_at: knex.fn.now()
@@ -79,7 +80,7 @@ async function uploadReportDocument(tenant, file, reportTypeId, periodType, peri
 /**
  * [READ] Generate Tautan Aman (Presigned URL) untuk Preview
  */
-async function generatePresignedUrl(submissionId, tenant) {
+async function generatePresignedUrl(submissionId, tenant, type = 'pdf') {
     const submission = await knex('report_submissions').where({ id: submissionId }).first();
     
     if (!submission) throw new AppError('Dokumen tidak ditemukan di database.', 404);
@@ -89,18 +90,22 @@ async function generatePresignedUrl(submissionId, tenant) {
         throw new AppError('Anda tidak memiliki izin mengakses dokumen ini.', 403);
     }
 
+    const fileUrl = type === 'excel' ? submission.excel_file_url : submission.file_url;
+    if (!fileUrl) throw new AppError('File tidak ditemukan.', 404);
+
     // Buat URL yang berlaku hanya selama 1 jam (3600 detik)
-    return await minioClient.presignedGetObject(BUCKET_NAME, submission.file_url, 3600);
+    return await minioClient.presignedGetObject(BUCKET_NAME, fileUrl, 3600);
 }
 
 /**
  * [READ] Generate Tautan Aman (Presigned URL) untuk Riwayat Dokumen
  */
-async function generatePresignedUrlForHistory(historyId, tenant) {
+async function generatePresignedUrlForHistory(historyId, tenant, type = 'pdf') {
     const logEntry = await knex('report_revision_logs').where({ id: historyId }).first();
     
     if (!logEntry) throw new AppError('Riwayat dokumen tidak ditemukan.', 404);
-    if (!logEntry.file_url) throw new AppError('File dokumen tidak tersedia pada riwayat ini.', 404);
+    const fileUrl = type === 'excel' ? logEntry.excel_file_url : logEntry.file_url;
+    if (!fileUrl) throw new AppError('File dokumen tidak tersedia pada riwayat ini.', 404);
     
     // Proteksi: Pastikan Satker hanya mengakses laporannya sendiri
     if (tenant.role === 'SATKER_PN') {
@@ -111,7 +116,7 @@ async function generatePresignedUrlForHistory(historyId, tenant) {
     }
 
     // Buat URL yang berlaku hanya selama 1 jam (3600 detik)
-    return await minioClient.presignedGetObject(BUCKET_NAME, logEntry.file_url, 3600);
+    return await minioClient.presignedGetObject(BUCKET_NAME, fileUrl, 3600);
 }
 
 /**

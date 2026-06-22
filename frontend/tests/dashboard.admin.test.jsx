@@ -127,12 +127,6 @@ describe('Dashboard Admin Panels', () => {
     await waitFor(() => {
       expect(screen.getByText('Email Queue')).toBeInTheDocument();
     });
-
-    // Aktivitas Terbaru
-    expect(screen.getByText('Aktivitas Terbaru')).toBeInTheDocument();
-    expect(screen.getByText('mengunggah')).toBeInTheDocument();
-    expect(screen.getByText('disetujui Admin ✓')).toBeInTheDocument();
-    expect(screen.getByText('diminta revisi oleh Admin')).toBeInTheDocument();
   });
 
   test('verify modal Escape key closes it', async () => {
@@ -142,8 +136,10 @@ describe('Dashboard Admin Panels', () => {
       expect(screen.getAllByText('PN Batam')[0]).toBeInTheDocument();
     });
 
+    fireEvent.click(screen.getAllByText('PN Batam')[0]);
+
     // Click Verifikasi button
-    const verifyBtn = screen.getByText('Verifikasi');
+    const verifyBtn = await screen.findByText('Verifikasi');
     fireEvent.click(verifyBtn);
 
     await waitFor(() => {
@@ -158,15 +154,17 @@ describe('Dashboard Admin Panels', () => {
     });
   });
 
-  test('shows "Belum Upload" for reports without submission', async () => {
+  test('shows "Belum diunggah" for reports without submission', async () => {
     renderWithClient(<Dashboard />);
 
     await waitFor(() => {
       expect(screen.getAllByText('PN Batam')[0]).toBeInTheDocument();
     });
 
-    // The report without submission should show "Belum Upload"
-    expect(screen.getByText('Belum Upload')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByText('PN Batam')[0]);
+
+    // The report without submission should show "Belum diunggah"
+    expect(await screen.findByText('Belum diunggah')).toBeInTheDocument();
   });
 
   test('refresh queue button calls refetch', async () => {
@@ -209,38 +207,6 @@ describe('Dashboard Admin Panels', () => {
     expect(screen.queryByText('Verifikasi')).not.toBeInTheDocument();
   });
 
-  test('relTime helper handles various time ranges', async () => {
-    // Patch aktivitas with various timestamps
-    const nowMs = Date.now();
-    const customStats = {
-      ...mockAdminStats,
-      aktivitas_terbaru: [
-        { id: 1, nama_satker: 'PN A', nama_laporan: 'L1', status_verifikasi: 'lengkap', tipe_aksi: 'upload', updated_at: new Date(nowMs - 30 * 1000).toISOString() }, // 30 sec ago
-        { id: 2, nama_satker: 'PN B', nama_laporan: 'L2', status_verifikasi: 'lengkap', tipe_aksi: 'verified_ok', updated_at: new Date(nowMs - 300 * 1000).toISOString() }, // 5 min ago
-        { id: 3, nama_satker: 'PN C', nama_laporan: 'L3', status_verifikasi: 'revisi', tipe_aksi: 'verified_revisi', updated_at: new Date(nowMs - 7200 * 1000).toISOString() }, // 2 hr ago
-        { id: 4, nama_satker: 'PN D', nama_laporan: 'L4', status_verifikasi: 'lengkap', tipe_aksi: 'upload', updated_at: null }, // null
-      ],
-    };
-
-    api.get.mockImplementation((url) => {
-      if (url.includes('/dashboard-agregat')) return Promise.resolve({ data: mockDashboardData });
-      if (url.includes('/admin-stats')) return Promise.resolve({ data: { data: customStats } });
-      if (url.includes('/queue-status')) return Promise.resolve({ data: { data: mockQueueStatus } });
-      return Promise.resolve({ data: [] });
-    });
-
-    renderWithClient(<Dashboard />);
-
-    await waitFor(() => {
-      expect(screen.getAllByText('PN Batam')[0]).toBeInTheDocument();
-    });
-
-    // Verify relative times are rendered
-    await waitFor(() => {
-      expect(screen.getByText('Aktivitas Terbaru')).toBeInTheDocument();
-    });
-  });
-
   test('handles empty admin stats gracefully', async () => {
     const emptyStats = {
       antrian_verifikasi: { jumlah: 0, items: [] },
@@ -264,16 +230,13 @@ describe('Dashboard Admin Panels', () => {
 
     // Empty antrian
     await waitFor(() => {
-      expect(screen.getByText('Semua laporan sudah ditinjau')).toBeInTheDocument();
+      expect(screen.getByText('Semua laporan telah ditinjau')).toBeInTheDocument();
     });
 
     // Empty revisi
-    expect(screen.getByText('Tidak ada laporan dalam status revisi')).toBeInTheDocument();
+    expect(screen.getByText('Aman, tidak ada revisi tertahan lama.')).toBeInTheDocument();
 
     // No ketepatan data
-    expect(screen.getByText('Belum ada data upload periode ini')).toBeInTheDocument();
-
-    // Empty aktivitas
-    expect(screen.getByText('Belum ada aktivitas tercatat')).toBeInTheDocument();
+    expect(screen.getByText('Belum ada data periode ini')).toBeInTheDocument();
   });
 });

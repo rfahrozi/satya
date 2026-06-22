@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Outlet, useNavigate, Link, useLocation } from 'react-router-dom'
-import { LogOut, Home, Users, Landmark, FileText, Menu, X, Database } from 'lucide-react'
+import { LogOut, Home, Users, Landmark, FileText, Menu, X, Database, Info } from 'lucide-react'
 import NotificationBell from './NotificationBell'
 
 export default function Layout() {
@@ -67,6 +67,13 @@ export default function Layout() {
                       className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium text-sm transition-colors ${location.pathname === '/master' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
                     >
                       <Database size={18} aria-hidden="true" /> Master Data
+                    </Link>
+                    <Link 
+                      to="/informasi" 
+                      aria-current={location.pathname === '/informasi' ? 'page' : undefined}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium text-sm transition-colors ${location.pathname === '/informasi' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
+                    >
+                      <Info size={18} aria-hidden="true" /> Informasi
                     </Link>
                   </>
                 )}
@@ -145,6 +152,14 @@ export default function Layout() {
                   className={`flex items-center gap-2 px-3 py-3 rounded-md font-medium text-sm transition-colors ${location.pathname === '/master' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
                 >
                   <Database size={18} aria-hidden="true" /> Master Data
+                </Link>
+                <Link 
+                  to="/informasi" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-current={location.pathname === '/informasi' ? 'page' : undefined}
+                  className={`flex items-center gap-2 px-3 py-3 rounded-md font-medium text-sm transition-colors ${location.pathname === '/informasi' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
+                >
+                  <Info size={18} aria-hidden="true" /> Informasi
                 </Link>
               </>
             )}

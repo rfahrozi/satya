@@ -190,21 +190,27 @@ describe('Unit Test: reportController - Admin Endpoints', () => {
     describe('uploadReport()', () => {
         it('harus menolak jika tidak ada file', async () => {
             mockReq.body = { report_type_id: 1, periode_bulan: 3, periode_tahun: 2026 };
-            mockReq.file = null;
+            mockReq.files = null;
             await reportController.uploadReport(mockReq, mockRes, mockNext);
             expect(mockNext).toHaveBeenCalledWith(expect.any(AppError));
         });
 
         it('harus menolak jika metadata tidak lengkap', async () => {
             mockReq.body = {};
-            mockReq.file = { originalname: 'test.pdf', buffer: Buffer.from('test'), size: 100, mimetype: 'application/pdf' };
+            mockReq.files = {
+                dokumen_monev: [{ originalname: 'test.pdf', buffer: Buffer.from('test'), size: 100, mimetype: 'application/pdf' }],
+                dokumen_excel: [{ originalname: 'test.xlsx', buffer: Buffer.from('test'), size: 100, mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }]
+            };
             await reportController.uploadReport(mockReq, mockRes, mockNext);
             expect(mockNext).toHaveBeenCalledWith(expect.any(AppError));
         });
 
         it('harus berhasil upload file', async () => {
             mockReq.body = { report_type_id: '1', periode_bulan: '3', periode_tahun: '2026' };
-            mockReq.file = { originalname: 'test.pdf', buffer: Buffer.from('test'), size: 100, mimetype: 'application/pdf' };
+            mockReq.files = {
+                dokumen_monev: [{ originalname: 'test.pdf', buffer: Buffer.from('test'), size: 100, mimetype: 'application/pdf' }],
+                dokumen_excel: [{ originalname: 'test.xlsx', buffer: Buffer.from('test'), size: 100, mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }]
+            };
             reportService.uploadReportDocument.mockResolvedValue({ id: 1 });
             await reportController.uploadReport(mockReq, mockRes, mockNext);
             expect(mockRes.status).toHaveBeenCalledWith(201);
@@ -260,6 +266,77 @@ describe('Unit Test: reportController - Admin Endpoints', () => {
             reportService.deleteReportDocument.mockRejectedValue(new AppError('Not found', 404));
             await reportController.deleteReport(mockReq, mockRes, mockNext);
             expect(mockNext).toHaveBeenCalledWith(expect.any(AppError));
+        });
+    });
+
+    describe('downloadHistoryFile()', () => {
+        it('harus mengembalikan presigned URL untuk history', async () => {
+            mockReq.params.id = '1';
+            reportService.generatePresignedUrlForHistory.mockResolvedValue('http://mock.url/hist.pdf');
+            await reportController.downloadHistoryFile(mockReq, mockRes, mockNext);
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json.mock.calls[0][0].data.url).toContain(encodeURIComponent('http://mock.url/hist.pdf'));
+        });
+        it('harus meneruskan error ke next', async () => {
+            reportService.generatePresignedUrlForHistory.mockRejectedValue(new AppError('Error'));
+            await reportController.downloadHistoryFile(mockReq, mockRes, mockNext);
+            expect(mockNext).toHaveBeenCalledWith(expect.any(AppError));
+        });
+    });
+
+    describe('proxyMinioFile()', () => {
+        it('harus mengembalikan error jika URL tidak valid', async () => {
+            mockReq.query.url = '';
+            mockRes.send = jest.fn();
+            await reportController.proxyMinioFile(mockReq, mockRes, mockNext);
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.send).toHaveBeenCalledWith('Gagal mengunduh file.');
+        });
+    });
+
+    describe('exportDashboardAgregat()', () => {
+        it('harus mengembalikan file excel', async () => {
+            mockRes.setHeader = jest.fn();
+            mockRes.end = jest.fn();
+            mockRes.write = jest.fn(); // Mock stream write for exceljs
+            mockRes.on = jest.fn();    // Mock stream events
+            reportRepo.getRekapitulasiPimpinan.mockResolvedValue([{
+                nama_satker: 'PN Test', total_wajib: '28', total_upload: '20', rata_rata_nilai: '85.5'
+            }]);
+            
+            await reportController.exportDashboardAgregat(mockReq, mockRes, mockNext);
+            
+            expect(mockRes.setHeader).toHaveBeenCalledWith('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            expect(mockRes.end).toHaveBeenCalled();
+        });
+    });
+
+    describe('getDashboardHeatmap()', () => {
+        it('harus mengembalikan data heatmap', async () => {
+            mockReq.query.tahun = '2026';
+            reportRepo.getHeatmapKepatuhan.mockResolvedValue([{
+                satker_id: 1, nama_satker: 'PN Test', bulan: 1, total_wajib: 28, total_upload: 20, persen: 71, persen_tepat_waktu: 80
+            }]);
+            
+            await reportController.getDashboardHeatmap(mockReq, mockRes, mockNext);
+            
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            const response = mockRes.json.mock.calls[0][0];
+            expect(response.success).toBe(true);
+            expect(response.data[0].nama_satker).toBe('PN Test');
+            expect(response.data[0].sel).toHaveLength(1);
+        });
+    });
+
+    describe('getSubmissionHistory()', () => {
+        it('harus mengembalikan history', async () => {
+            mockReq.params.id = '1';
+            reportRepo.getSubmissionHistory.mockResolvedValue([{ id: 1, status: 'lengkap' }]);
+            
+            await reportController.getSubmissionHistory(mockReq, mockRes, mockNext);
+            
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json.mock.calls[0][0].data).toHaveLength(1);
         });
     });
 });

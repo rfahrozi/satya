@@ -31,9 +31,9 @@ const upload = multer({
  * Wrapper Multer dengan penanganan error yang benar.
  * Memastikan error dari fileFilter menghasilkan 400 (bukan 500).
  */
-function uploadSingle(fieldName) {
+function uploadMultiple(fields) {
     return (req, res, next) => {
-        upload.single(fieldName)(req, res, (err) => {
+        upload.fields(fields)(req, res, (err) => {
             if (err) {
                 // Error dari fileFilter (format tidak valid) atau MulterError (ukuran)
                 const statusCode = err.statusCode || 400;
@@ -52,7 +52,7 @@ router.use(tenantContext);
 // --- RUTE KHUSUS SATKER PN ---
 
 // Upload atau Timpa Laporan
-router.post('/upload', uploadSingle('dokumen_monev'), reportController.uploadReport);
+router.post('/upload', uploadMultiple([{ name: 'dokumen_monev', maxCount: 1 }, { name: 'dokumen_excel', maxCount: 1 }]), reportController.uploadReport);
 
 // Ambil progress laporan milik satker sendiri
 router.get('/my-progress', reportController.getMyProgress);

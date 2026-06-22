@@ -33,6 +33,7 @@ async function getSatkerProgress(satkerId, periodType, periodUnit, tahun) {
         .select(
             'rt.id as report_type_id', 
             'rt.nama_laporan', 
+            'rt.is_wajib',
             'rs.id as submission_id', 
             'rs.status_verifikasi', 
             'rs.catatan_admin', 
@@ -43,8 +44,9 @@ async function getSatkerProgress(satkerId, periodType, periodUnit, tahun) {
                     WHEN rs.created_at IS NULL THEN NULL
                     WHEN rs.created_at <= make_timestamp(?, ?, COALESCE(dc.day_of_period, 10), 23, 59, 59) THEN 'Tepat Waktu'
                     ELSE 'Terlambat'
-                END as status_ketepatan_waktu
-            `, [y, m])
+                END as status_ketepatan_waktu,
+                make_timestamp(?, ?, COALESCE(dc.day_of_period, 10), 23, 59, 59) as deadline_date
+            `, [y, m, y, m])
         )
         .leftJoin('deadline_configs as dc', function() {
             this.on('dc.report_type_id', '=', 'rt.id')

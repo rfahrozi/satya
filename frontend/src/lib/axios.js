@@ -132,6 +132,11 @@ instance.interceptors.response.use(
       return Promise.reject(error)
     }
 
+    // Do not attempt refresh if the request was for login
+    if (originalRequest.url && originalRequest.url.includes('/auth/login')) {
+      return Promise.reject(error)
+    }
+
     // On 401: attempt refresh
     if (status === 401) {
       try {

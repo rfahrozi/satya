@@ -100,7 +100,8 @@ describe('Report Management - Full CRUD Flow', () => {
                 .attach('dokumen_monev', Buffer.from('%PDF-1.4 content here'), {
                     filename: 'laporan_maret.pdf',
                     contentType: 'application/pdf'
-                });
+                })
+                .attach('dokumen_excel', Buffer.from('excel content'), { filename: 'test.xlsx', contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
             if (res.statusCode !== 201) console.error('[DEBUG] Upload:', JSON.stringify(res.body));
             expect(res.statusCode).toBe(201);
@@ -117,7 +118,8 @@ describe('Report Management - Full CRUD Flow', () => {
                 .attach('dokumen_monev', Buffer.from('%PDF-1.4 content updated'), {
                     filename: 'laporan_maret_v2.pdf',
                     contentType: 'application/pdf'
-                });
+                })
+                .attach('dokumen_excel', Buffer.from('excel content updated'), { filename: 'test2.xlsx', contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
             expect(res.statusCode).toBe(201);
             expect(res.body.success).toBe(true);
@@ -268,7 +270,8 @@ describe('Report Management - Full CRUD Flow', () => {
                 .attach('dokumen_monev', Buffer.from('%PDF-1.4 laporan utk verifikasi'), {
                     filename: 'laporan_verif.pdf',
                     contentType: 'application/pdf'
-                });
+                })
+                .attach('dokumen_excel', Buffer.from('excel verif'), { filename: 'verif.xlsx', contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
             // Ambil ID submission yang baru dibuat
             const progressRes = await request(app)
@@ -333,7 +336,8 @@ describe('Report Management - Full CRUD Flow', () => {
                 .attach('dokumen_monev', Buffer.from('%PDF-1.4 utk hapus'), {
                     filename: 'laporan_delete.pdf',
                     contentType: 'application/pdf'
-                });
+                })
+                .attach('dokumen_excel', Buffer.from('excel delete'), { filename: 'del.xlsx', contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
             // Ambil ID
             const progressRes = await request(app)

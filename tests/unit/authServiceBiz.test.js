@@ -184,4 +184,49 @@ describe('Unit Test: authService - Business Logic', () => {
             expect(mockChain.del).toHaveBeenCalledTimes(1);
         });
     });
+
+    describe('forgotPassword()', () => {
+        const { emailQueue } = require('../../src/emailWorker');
+        
+        beforeAll(() => {
+            jest.mock('../../src/emailWorker', () => ({
+                emailQueue: { add: jest.fn().mockResolvedValue() }
+            }));
+        });
+
+        it('harus melempar error jika user tidak ditemukan', async () => {
+            const mockChain = {
+                where: jest.fn().mockReturnThis(),
+                orWhere: jest.fn().mockReturnThis(),
+                first: jest.fn().mockResolvedValue(null)
+            };
+            knex.mockReturnValue(mockChain);
+
+            await expect(authService.forgotPassword('nonexistent')).rejects.toThrow('tidak ditemukan');
+        });
+
+        it('harus melempar error jika user tidak memiliki email', async () => {
+            const mockChain = {
+                where: jest.fn().mockReturnThis(),
+                orWhere: jest.fn().mockReturnThis(),
+                first: jest.fn().mockResolvedValue({ id: 1, email: null })
+            };
+            knex.mockReturnValue(mockChain);
+
+            await expect(authService.forgotPassword('noemail')).rejects.toThrow('belum memiliki alamat email');
+        });
+    });
+
+    describe('resetPasswordWithToken()', () => {
+        it('harus melempar error jika token tidak valid atau expired', async () => {
+            const mockChain = {
+                where: jest.fn().mockReturnThis(),
+                andWhere: jest.fn().mockReturnThis(),
+                first: jest.fn().mockResolvedValue(null)
+            };
+            knex.mockReturnValue(mockChain);
+
+            await expect(authService.resetPasswordWithToken('invalid_token', 'newpass')).rejects.toThrow('tidak valid');
+        });
+    });
 });

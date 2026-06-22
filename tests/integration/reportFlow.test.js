@@ -44,7 +44,8 @@ describe('End-to-End Report Flow', () => {
             .field('report_type_id', 1)
             .field('periode_bulan', 4)
             .field('periode_tahun', 2026)
-            .attach('dokumen_monev', Buffer.from('%PDF-1.4 test content'), { filename: 'test.pdf', contentType: 'application/pdf' });
+            .attach('dokumen_monev', Buffer.from('%PDF-1.4 test content'), { filename: 'test.pdf', contentType: 'application/pdf' })
+            .attach('dokumen_excel', Buffer.from('test excel content'), { filename: 'test.xlsx', contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
         if (res.statusCode !== 201) console.error('[DEBUG] Upload response:', JSON.stringify(res.body));
         expect(res.statusCode).toBe(201);

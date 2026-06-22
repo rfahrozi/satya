@@ -60,46 +60,46 @@ const Landing = () => {
   const features = [
     {
       icon: <FileCheck className="w-6 h-6 text-emerald-400" />,
-      title: "Monitoring Terpusat",
-      description: "Pantau kepatuhan pengiriman laporan secara real-time dari seluruh Satuan Kerja Pengadilan Negeri secara komprehensif."
+      title: "Monitoring & Penilaian Mutu",
+      description: "Pantau kepatuhan secara real-time dan berikan penilaian kuantitatif (Scoring 0-100) terstandarisasi untuk kebutuhan Sertifikasi AMPUH."
     },
     {
       icon: <BellRing className="w-6 h-6 text-blue-400" />,
-      title: "Notifikasi Otomatis",
-      description: "Sistem pengingat (BullMQ) berkinerja tinggi yang dikirim secara handal menggunakan protokol API terkini untuk menjamin email terkirim."
+      title: "Notifikasi Otomatis & In-App",
+      description: "Sistem pengingat email otomatis H-3 hingga Hari-H, dilengkapi dengan In-App Alerts seketika dan log Audit Trail riwayat revisi."
     },
     {
       icon: <BarChart3 className="w-6 h-6 text-purple-400" />,
-      title: "Visualisasi & Heatmap",
-      description: "Dashboard interaktif dengan grafik dan heatmap (Zona Hijau, Kuning, Merah) untuk mempermudah pimpinan dalam evaluasi."
+      title: "Visualisasi Heatmap & Export",
+      description: "Dashboard interaktif dengan Heatmap tren 12 Bulan, didukung kapabilitas ekspor rekapitulasi performa format PDF & Excel."
     },
     {
       icon: <ShieldCheck className="w-6 h-6 text-rose-400" />,
-      title: "Keamanan Zero Trust",
-      description: "Arsitektur cloud dengan Object Storage (MinIO) terisolasi dan proxy stream internal menjamin keamanan dokumen absolut."
+      title: "Keamanan Tinggi & Teruji",
+      description: "Arsitektur cloud terisolasi (MinIO) dengan perlindungan akses, dijamin stabilitasnya melalui >90% Test Coverage Backend maupun Frontend."
     }
   ];
 
   const workflows = [
     {
       step: "01",
-      title: "Penetapan Daftar Laporan",
-      description: "Admin PT Kepulauan Riau menetapkan daftar 28 jenis laporan wajib (MONEV) beserta periode dan tenggat waktunya."
+      title: "Penetapan Master Data",
+      description: "Admin PT Kepulauan Riau menetapkan daftar laporan wajib (MONEV), struktur periode (Bulanan, Triwulan, dll), dan jadwal pengingat otomatis."
     },
     {
       step: "02",
       title: "Pengunggahan oleh Satker",
-      description: "Pengadilan Negeri se-wilayah hukum Kepri mengunggah dokumen laporan secara mandiri melalui portal tersendiri."
+      description: "Satuan Kerja (Pengadilan Negeri) mengunggah dokumen PDF/Excel sesuai kewajibannya ke dalam ekosistem cloud terenkripsi."
     },
     {
       step: "03",
-      title: "Verifikasi & Notifikasi Admin",
-      description: "Admin PT memeriksa kelengkapan file. Sistem mengirimkan notifikasi otomatis kepada Satker jika diperlukan revisi."
+      title: "Verifikasi, Scoring & Notifikasi",
+      description: "Admin memvalidasi file dan menyematkan Nilai/Skor Mutu. Sistem secara otomatis mencatat pada Audit Trail dan mengirimkan In-App Alerts revisi ke Satker."
     },
     {
       step: "04",
-      title: "Monitoring Pimpinan (AMPUH)",
-      description: "Ketua PT Kepri memantau real-time capaian kepatuhan seluruh Pengadilan Negeri melalui Dashboard Heatmap interaktif."
+      title: "Evaluasi Pimpinan (AMPUH)",
+      description: "Pimpinan memantau real-time capaian seluruh Pengadilan Negeri melalui Heatmap interaktif dan mengunduh laporan PDF/Excel sebagai dasar pengambilan keputusan."
     }
   ];
 
@@ -120,7 +120,7 @@ const Landing = () => {
             transition={{ duration: 0.8, ease: "easeOut" }}
             className="flex items-center gap-3 cursor-pointer"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-emerald-400 to-blue-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
               <Layers className="w-5 h-5 text-white" />
             </div>
             <span className="text-2xl font-bold tracking-tight text-white">Satya<span className="font-light text-slate-400">Monev</span></span>
@@ -182,7 +182,7 @@ const Landing = () => {
             <Link 
               to="/login" 
               onClick={() => setMobileMenuOpen(false)}
-              className="mt-8 px-6 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-blue-600 text-white text-center font-bold text-lg"
+              className="mt-8 px-6 py-4 rounded-xl bg-linear-to-r from-emerald-500 to-blue-600 text-white text-center font-bold text-lg"
             >
               Masuk Sistem
             </Link>
@@ -208,9 +208,9 @@ const Landing = () => {
           </motion.div>
           
           <motion.h1 variants={fadeUp} className="text-5xl sm:text-6xl md:text-8xl font-extrabold tracking-tighter text-white mb-8 leading-[1.1]">
-            Evolusi Manajemen & <br className="hidden sm:block" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-blue-500">
-              Tata Kelola Yudisial
+            SATYA <br className="hidden sm:block" />
+            <span className="text-transparent bg-clip-text bg-linear-to-r from-emerald-400 via-teal-300 to-blue-500 text-2xl sm:text-3xl md:text-5xl block mt-4 font-bold">
+              (Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel)
             </span>
           </motion.h1>
           
@@ -248,18 +248,18 @@ const Landing = () => {
           className="max-w-6xl mx-auto mt-24 px-6 relative"
         >
           <div className="rounded-3xl border border-white/10 bg-[#0f0f11]/80 p-2 md:p-4 shadow-2xl shadow-emerald-500/20 backdrop-blur-2xl">
-            <div className="rounded-2xl overflow-hidden bg-[#161618] border border-white/5 aspect-[16/9] md:aspect-[21/9] relative flex items-center justify-center">
-              <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+            <div className="rounded-2xl overflow-hidden bg-[#161618] border border-white/5 aspect-video md:aspect-21/9 relative flex items-center justify-center">
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-size-[24px_24px]"></div>
               
               {/* Abstract Representation of Dashboard */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl flex flex-col gap-6 p-8">
                 <div className="flex gap-6">
-                  <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 3, repeat: Infinity }} className="w-1/3 h-28 bg-gradient-to-br from-emerald-500/20 to-transparent border border-emerald-500/20 rounded-2xl backdrop-blur-sm"></motion.div>
-                  <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 3, delay: 1, repeat: Infinity }} className="w-1/3 h-28 bg-gradient-to-br from-blue-500/20 to-transparent border border-blue-500/20 rounded-2xl backdrop-blur-sm"></motion.div>
-                  <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 3, delay: 2, repeat: Infinity }} className="w-1/3 h-28 bg-gradient-to-br from-purple-500/20 to-transparent border border-purple-500/20 rounded-2xl backdrop-blur-sm"></motion.div>
+                  <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 3, repeat: Infinity }} className="w-1/3 h-28 bg-linear-to-br from-emerald-500/20 to-transparent border border-emerald-500/20 rounded-2xl backdrop-blur-sm"></motion.div>
+                  <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 3, delay: 1, repeat: Infinity }} className="w-1/3 h-28 bg-linear-to-br from-blue-500/20 to-transparent border border-blue-500/20 rounded-2xl backdrop-blur-sm"></motion.div>
+                  <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 3, delay: 2, repeat: Infinity }} className="w-1/3 h-28 bg-linear-to-br from-purple-500/20 to-transparent border border-purple-500/20 rounded-2xl backdrop-blur-sm"></motion.div>
                 </div>
-                <div className="w-full h-56 bg-gradient-to-t from-white/5 to-transparent border border-white/10 rounded-2xl backdrop-blur-sm relative overflow-hidden">
-                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
+                <div className="w-full h-56 bg-linear-to-t from-white/5 to-transparent border border-white/10 rounded-2xl backdrop-blur-sm relative overflow-hidden">
+                   <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-shimmer"></div>
                 </div>
               </div>
             </div>
@@ -293,7 +293,7 @@ const Landing = () => {
                 key={idx} 
                 variants={fadeUp}
                 whileHover={{ y: -10, transition: { duration: 0.2 } }}
-                className="group p-8 rounded-3xl bg-gradient-to-b from-white/[0.03] to-transparent border border-white/10 hover:border-emerald-500/30 transition-all duration-300 relative overflow-hidden"
+                className="group p-8 rounded-3xl bg-linear-to-b from-white/3 to-transparent border border-white/10 hover:border-emerald-500/30 transition-all duration-300 relative overflow-hidden"
               >
                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                   {React.cloneElement(feature.icon, { className: "w-24 h-24" })}
@@ -346,9 +346,9 @@ const Landing = () => {
                   key={idx} 
                   variants={fadeUp}
                   whileHover={{ scale: 1.02 }}
-                  className="flex gap-8 p-8 rounded-3xl bg-gradient-to-r from-white/5 to-transparent border border-white/10 hover:border-white/20 transition-all backdrop-blur-sm"
+                  className="flex gap-8 p-8 rounded-3xl bg-linear-to-r from-white/5 to-transparent border border-white/10 hover:border-white/20 transition-all backdrop-blur-sm"
                 >
-                  <div className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-white/20 to-white/5">{item.step}</div>
+                  <div className="text-5xl font-extrabold text-transparent bg-clip-text bg-linear-to-b from-white/20 to-white/5">{item.step}</div>
                   <div>
                     <h4 className="text-2xl font-semibold text-white mb-3">{item.title}</h4>
                     <p className="text-slate-400 text-lg leading-relaxed font-light">{item.description}</p>
@@ -365,7 +365,7 @@ const Landing = () => {
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[200px] bg-emerald-500/10 blur-[100px] pointer-events-none"></div>
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-linear-to-br from-emerald-400 to-blue-500 flex items-center justify-center">
               <Layers className="w-4 h-4 text-white" />
             </div>
             <span className="font-bold text-xl text-white tracking-tight">Satya<span className="font-light text-slate-400">Monev</span></span>

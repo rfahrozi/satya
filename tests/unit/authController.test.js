@@ -153,4 +153,55 @@ describe('Unit Test: authController', () => {
             expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
         });
     });
+
+    describe('forgotPassword()', () => {
+        it('harus menolak jika username kosong', async () => {
+            mockReq.body = {};
+            await authController.forgotPassword(mockReq, mockRes, mockNext);
+            expect(mockNext).toHaveBeenCalledWith(expect.any(AppError));
+        });
+
+        it('harus berhasil memanggil authService.forgotPassword', async () => {
+            mockReq.body = { username: 'test_user' };
+            authService.forgotPassword.mockResolvedValue({ message: 'Success' });
+            await authController.forgotPassword(mockReq, mockRes, mockNext);
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, message: 'Success' }));
+        });
+
+        it('harus meneruskan error ke next', async () => {
+            mockReq.body = { username: 'test_user' };
+            authService.forgotPassword.mockRejectedValue(new AppError('Error'));
+            await authController.forgotPassword(mockReq, mockRes, mockNext);
+            expect(mockNext).toHaveBeenCalledWith(expect.any(AppError));
+        });
+    });
+
+    describe('resetPasswordWithToken()', () => {
+        it('harus menolak jika token atau newPassword kosong', async () => {
+            mockReq.body = {};
+            await authController.resetPasswordWithToken(mockReq, mockRes, mockNext);
+            expect(mockNext).toHaveBeenCalledWith(expect.any(AppError));
+        });
+
+        it('harus menolak jika newPassword kurang dari 6 karakter', async () => {
+            mockReq.body = { token: 'abc', newPassword: '123' };
+            await authController.resetPasswordWithToken(mockReq, mockRes, mockNext);
+            expect(mockNext).toHaveBeenCalledWith(expect.any(AppError));
+        });
+
+        it('harus berhasil mereset password dengan token', async () => {
+            mockReq.body = { token: 'abc', newPassword: 'newpass123' };
+            authService.resetPasswordWithToken.mockResolvedValue();
+            await authController.resetPasswordWithToken(mockReq, mockRes, mockNext);
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('harus meneruskan error ke next', async () => {
+            mockReq.body = { token: 'abc', newPassword: 'newpass123' };
+            authService.resetPasswordWithToken.mockRejectedValue(new AppError('Invalid token'));
+            await authController.resetPasswordWithToken(mockReq, mockRes, mockNext);
+            expect(mockNext).toHaveBeenCalledWith(expect.any(AppError));
+        });
+    });
 });

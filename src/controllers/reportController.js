@@ -19,12 +19,14 @@ const VALID_STATUS_VERIFIKASI = ['belum_lengkap', 'lengkap', 'revisi'];
 async function uploadReport(req, res, next) {
     try {
         const { report_type_id, periode_bulan, periode_tahun, period_type, period_unit } = req.body;
-        const file = req.file;
+        const file = req.files && req.files.dokumen_monev ? req.files.dokumen_monev[0] : null;
+        const fileExcel = req.files && req.files.dokumen_excel ? req.files.dokumen_excel[0] : null;
 
         let pType = period_type || 'monthly';
         let pUnit = period_unit || periode_bulan;
 
-        if (!file) throw new AppError('File dokumen tidak ditemukan.', 400);
+        if (!file) throw new AppError('File dokumen (PDF) tidak ditemukan.', 400);
+        if (!fileExcel) throw new AppError('File Excel tidak ditemukan.', 400);
         if (!report_type_id || !pUnit || !periode_tahun) {
             throw new AppError('Metadata laporan (ID, Periode, Tahun) tidak lengkap.', 400);
         }
@@ -32,6 +34,7 @@ async function uploadReport(req, res, next) {
         const result = await reportService.uploadReportDocument(
             req.tenant,
             file,
+            fileExcel,
             parseInt(report_type_id),
             pType,
             parseInt(pUnit),
@@ -76,7 +79,8 @@ async function getMyProgress(req, res, next) {
 async function getDownloadUrl(req, res, next) {
     try {
         const { id } = req.params;
-        const url = await reportService.generatePresignedUrl(id, req.tenant);
+        const type = req.query.type || 'pdf'; // 'pdf' or 'excel'
+        const url = await reportService.generatePresignedUrl(id, req.tenant, type);
         const BASE_PATH = process.env.BASE_PATH || '/satya';
         const proxyUrl = `${BASE_PATH}/api/v1/reports/proxy?url=${encodeURIComponent(url)}`;
 
@@ -95,7 +99,8 @@ async function getDownloadUrl(req, res, next) {
 async function downloadHistoryFile(req, res, next) {
     try {
         const { id } = req.params;
-        const url = await reportService.generatePresignedUrlForHistory(id, req.tenant);
+        const type = req.query.type || 'pdf'; // 'pdf' or 'excel'
+        const url = await reportService.generatePresignedUrlForHistory(id, req.tenant, type);
         const BASE_PATH = process.env.BASE_PATH || '/satya';
         const proxyUrl = `${BASE_PATH}/api/v1/reports/proxy?url=${encodeURIComponent(url)}`;
 
