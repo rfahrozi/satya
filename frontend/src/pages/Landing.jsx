@@ -361,24 +361,47 @@ const Landing = () => {
       </section>
 
       {/* Footer */}
-      <footer className="py-16 border-t border-white/10 relative overflow-hidden">
+      <footer className="pt-16 pb-8 border-t border-white/10 relative overflow-hidden">
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[200px] bg-emerald-500/10 blur-[100px] pointer-events-none"></div>
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-linear-to-br from-emerald-400 to-blue-500 flex items-center justify-center">
-              <Layers className="w-4 h-4 text-white" />
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8 mb-12">
+            
+            {/* Logo & Info */}
+            <div className="flex flex-col gap-6 items-center md:items-start text-center md:text-left">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-linear-to-br from-emerald-400 to-blue-500 flex items-center justify-center">
+                  <Layers className="w-4 h-4 text-white" />
+                </div>
+                <span className="font-bold text-xl text-white tracking-tight">Satya<span className="font-light text-slate-400">Monev</span></span>
+              </div>
+              <p className="text-slate-400 text-sm leading-relaxed max-w-sm">
+                Jalan Sultan Muhammad Syah, Dompak,<br />
+                Tanjungpinang, Kepulauan Riau
+              </p>
             </div>
-            <span className="font-bold text-xl text-white tracking-tight">Satya<span className="font-light text-slate-400">Monev</span></span>
+
+            {/* Hubungi Kami */}
+            <div className="flex flex-col gap-4 items-center md:items-start text-center md:text-left">
+              <h4 className="text-white font-semibold mb-2">Hubungi Kami</h4>
+              <a href="https://www.pt-kepri.go.id" target="_blank" rel="noreferrer" className="text-slate-400 hover:text-emerald-400 transition-colors text-sm">www.pt-kepri.go.id</a>
+              <a href="mailto:ptkepulauanriau@gmail.com" className="text-slate-400 hover:text-emerald-400 transition-colors text-sm">ptkepulauanriau@gmail.com</a>
+              <span className="text-slate-400 text-sm">WA: +628113976676</span>
+            </div>
+
+            {/* Links */}
+            <div className="flex flex-col gap-4 items-center md:items-start text-center md:text-left">
+              <h4 className="text-white font-semibold mb-2">Tautan</h4>
+              <a href="#" className="text-slate-400 hover:text-emerald-400 transition-colors text-sm">Bantuan</a>
+              <a href="#" className="text-slate-400 hover:text-emerald-400 transition-colors text-sm">Privasi</a>
+              <a href="#" className="text-slate-400 hover:text-emerald-400 transition-colors text-sm">Ketentuan</a>
+            </div>
+            
           </div>
           
-          <div className="text-slate-500 text-center md:text-left">
-            &copy; {new Date().getFullYear()} Pengadilan Tinggi. Hak Cipta Dilindungi.
-          </div>
-          
-          <div className="flex gap-8 text-slate-400 font-medium">
-            <a href="#" className="hover:text-emerald-400 transition-colors">Bantuan</a>
-            <a href="#" className="hover:text-emerald-400 transition-colors">Privasi</a>
-            <a href="#" className="hover:text-emerald-400 transition-colors">Ketentuan</a>
+          <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="text-slate-500 text-sm text-center md:text-left">
+              &copy; {new Date().getFullYear()} Pengadilan Tinggi. Hak Cipta Dilindungi.
+            </div>
           </div>
         </div>
       </footer>
