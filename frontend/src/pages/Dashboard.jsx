@@ -278,7 +278,7 @@ function SatkerRow({ satker, isAdmin, openHistory, handleDownloadPdf, handleDown
 
         <div className="flex items-center gap-6">
           <div className="text-right hidden sm:block">
-            <div className="font-black text-white text-xl">{satker.statistik?.persentase_kepatuhan ?? '-'}%</div>
+            <div className="font-black text-white text-xl">{satker.statistik?.persentase_kepatuhan != null ? `${parseInt(satker.statistik.persentase_kepatuhan)}%` : '-'}</div>
             <div className="text-[11px] text-slate-400 font-medium">Kepatuhan</div>
           </div>
           <div className="text-right hidden md:block">
