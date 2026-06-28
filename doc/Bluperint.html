@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Blueprint Arsitektur Final | Chatbot PTSP</title>
+<style>
+/* ═══════════════════════════════ TOKENS ══════════════════════════════ */
+:root {
+  --p:       #3b82f6; --pd: #1e40af; --pdk: #1e3a8a;
+  --acc:     #0ea5e9; --acc2: #6366f1;
+  --ok:      #10b981; --warn: #f59e0b; --err: #ef4444;
+  --n50:#f8fafc;--n100:#f1f5f9;--n200:#e2e8f0;--n300:#cbd5e1;
+  --n400:#94a3b8;--n500:#64748b;--n600:#475569;--n700:#334155;
+  --n800:#1e293b;--n900:#0f172a;
+  --glass: rgba(30,41,59,0.65);
+  --r-sm:6px;--r-md:12px;--r-lg:18px;--r-xl:24px;--r-f:9999px;
+  --ease: all 0.25s cubic-bezier(0.4,0,0.2,1);
+  --mono: 'JetBrains Mono','Fira Code',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--n900);color:var(--n200);line-height:1.65;min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--n800)}::-webkit-scrollbar-thumb{background:var(--pd);border-radius:var(--r-f)}
+
+.bg-glow{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.bg-glow::before{content:'';position:absolute;width:800px;height:800px;background:radial-gradient(circle,rgba(30,64,175,0.16) 0%,transparent 70%);top:-300px;left:-300px;}
+.bg-glow::after{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(99,102,241,0.12) 0%,transparent 70%);bottom:-200px;right:-200px;}
+
+/* ═══════════════════════════════ COMPONENTS ══════════════════════════════ */
+.topnav{position:sticky;top:0;z-index:100;background:rgba(15,23,42,0.88);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.08);padding:0 24px}
+.nav-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;height:62px;gap:16px}
+.nav-brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-logo{width:36px;height:36px;background:linear-gradient(135deg,var(--p),var(--acc2));border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 0 20px rgba(59,130,246,0.3);}
+.nav-text{font-size:1rem;font-weight:800;color:#fff;letter-spacing:-.02em}
+.nav-sub{display:block;font-size:.6rem;color:var(--n400);font-weight:400;letter-spacing:.07em;text-transform:uppercase;margin-top:-2px}
+
+.wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 24px 80px}
+.hero{padding:72px 0 56px;text-align:center}
+.pill{display:inline-flex;align-items:center;gap:7px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.22);color:var(--p);font-size:.7rem;font-weight:600;padding:5px 14px;border-radius:var(--r-f);letter-spacing:.08em;text-transform:uppercase;margin-bottom:22px}
+.hero h1{font-size:clamp(1.9rem,4vw,2.8rem);font-weight:800;line-height:1.15;letter-spacing:-.03em;color:#fff;margin-bottom:16px}
+.grad{background:linear-gradient(135deg,var(--p) 0%,var(--acc) 50%,var(--acc2) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:1rem;color:var(--n400);max-width:750px;margin:0 auto;line-height:1.75}
+
+.section{margin-bottom:60px}
+.sec-hd{display:flex;align-items:center;gap:12px;margin-bottom:26px;padding-bottom:14px;border-bottom:1px solid var(--n800)}
+.sec-num{width:34px;height:34px;background:linear-gradient(135deg,var(--pd),var(--acc2));border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;color:#fff;flex-shrink:0;}
+.sec-tg h2{font-size:1.3rem;font-weight:700;color:#fff;letter-spacing:-.02em;}
+
+.card{background:var(--glass);border:1px solid rgba(255,255,255,0.07);border-radius:var(--r-lg);padding:26px;backdrop-filter:blur(12px);}
+.card h3 {font-size: 1.05rem; font-weight: 700; color: #fff; margin-bottom: 12px;}
+.card p, .card li {font-size: 0.85rem; color: var(--n300); line-height: 1.6; margin-bottom: 8px;}
+.card ul {padding-left: 20px;}
+
+.grid-2 {display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px;}
+.grid-3 {display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;}
+
+.tag-ok {background: rgba(16,185,129,0.15); color: var(--ok); border: 1px solid rgba(16,185,129,0.3); padding: 2px 8px; border-radius: var(--r-f); font-size: 0.65rem; font-weight: 700; text-transform: uppercase;}
+.tag-warn {background: rgba(245,158,11,0.15); color: var(--warn); border: 1px solid rgba(245,158,11,0.3); padding: 2px 8px; border-radius: var(--r-f); font-size: 0.65rem; font-weight: 700; text-transform: uppercase;}
+
+.diagram-container {background: #0f172a; border: 1px solid var(--n800); border-radius: var(--r-md); padding: 20px; text-align: center; overflow-x: auto; margin-bottom: 24px;}
+.quote-block {border-left: 4px solid var(--p); background: rgba(59,130,246,0.05); padding: 20px; border-radius: 0 var(--r-md) var(--r-md) 0; margin-top: 20px;}
+.quote-block p {font-size: 0.95rem; font-style: italic; color: var(--n100);}
+
+/* Custom Roadmap Timeline */
+.timeline {position: relative; padding-left: 30px; margin-top: 20px;}
+.timeline::before {content: ''; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: var(--n700);}
+.timeline-item {position: relative; margin-bottom: 24px;}
+.timeline-dot {position: absolute; left: -32px; top: 4px; width: 16px; height: 16px; border-radius: 50%; background: var(--p); border: 3px solid var(--n900);}
+.timeline-content h4 {font-size: 0.95rem; color: #fff; margin-bottom: 6px;}
+.timeline-content p {font-size: 0.8rem; color: var(--n400);}
+
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+
+<nav class="topnav">
+  <div class="nav-inner">
+    <div class="nav-brand">
+      <div class="nav-logo">⚖️</div>
+      <div>
+        <span class="nav-text">BLUEPRINT PTSP</span>
+        <span class="nav-sub">Arsitektur Final Chatbot WhatsApp RAG</span>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="pill">📄 Dokumen Spesifikasi Final</div>
+    <h1>Blueprint Arsitektur Final<br><span class="grad">Chatbot PTSP WhatsApp</span></h1>
+    <p class="hero-sub">Kerangka pembangunan Asisten Virtual PTSP berbasis WhatsApp, memadukan kebutuhan operasional peradilan dengan arsitektur microservices RAG (Retrieval-Augmented Generation) lokal.</p>
+  </header>
+
+  <section class="section">
+    <div class="sec-hd"><div class="sec-num">1</div><div class="sec-tg"><h2>Tujuan Sistem</h2></div></div>
+    <div class="card">
+      <p>Sistem ini ditujukan untuk menjadi asisten virtual PTSP yang melayani masyarakat melalui WhatsApp, dengan jawaban yang bersumber dari dokumen resmi pengadilan melalui pendekatan RAG. Prinsip utamanya adalah:</p>
+      <ul>
+        <li>Mudah diakses publik melalui platform WhatsApp.</li>
+        <li>Jawaban harus mengacu ke SOP/aturan internal, bukan sekadar pengetahuan umum model AI.</li>
+        <li>Terdapat mekanisme eskalasi (handoff) ke petugas manusia.</li>
+        <li>Data sensitif harus dibatasi/disensor sebelum diproses oleh AI.</li>
+        <li>Sistem bisa dimulai dari Proof of Concept (PoC) lokal, lalu dinaikkan skalanya ke tingkat produksi.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="sec-hd"><div class="sec-num">2</div><div class="sec-tg"><h2>Prinsip Arsitektur Inti & Topologi</h2></div></div>
+    <p style="margin-bottom: 16px;">Fondasi teknis menggunakan arsitektur microservices berbasis Docker dalam satu jaringan virtual lokal dengan komponen inti: <strong>PostgreSQL + pgvector</strong> (Vector Store), <strong>MinIO</strong> (Object Storage), <strong>Redis</strong> (Cache/Queue), <strong>FastAPI</strong> (Backend API), <strong>Ollama</strong> (AI Engine), dan <strong>OpenClaw</strong> (Orchestrator).</p>
+    
+    <div class="diagram-container">
+      <div class="mermaid">
+        flowchart TD
+          classDef user fill:#1e40af,stroke:#3b82f6,color:#fff
+          classDef channel fill:#065f46,stroke:#10b981,color:#fff
+          classDef backend fill:#4c1d95,stroke:#8b5cf6,color:#fff
+          classDef orc fill:#b45309,stroke:#f59e0b,color:#fff
+          classDef db fill:#374151,stroke:#6b7280,color:#fff
+          
+          User((Masyarakat)):::user <-->|Chat| WABA[WhatsApp Business API / BSP]:::channel
+          WABA -->|Webhook| API[Webhook Receiver<br/>FastAPI Backend]:::backend
+          
+          subgraph Backend Processing
+            API -.->|1. Validasi Request| API
+            API -.->|2. Masking Data Sensitif| API
+            API -.->|3. Logging| API
+          end
+          
+          API --> OC{OpenClaw<br/>Orchestrator}:::orc
+          
+          subgraph OpenClaw Decisions
+            OC -.->|Intent Routing| OC
+            OC -.->|FAQ / Handoff / RAG| OC
+          end
+          
+          OC -->|Jalur RAG| RAG[Backend RAG Service]:::backend
+          
+          RAG -->|1. Query Embedding| Ollama[Ollama LLM]:::backend
+          RAG -->|2. Vector Search| PG[(PostgreSQL + pgvector)]:::db
+          RAG -->|3. Ambil Dokumen| MinIO[(MinIO Storage)]:::db
+          RAG -->|4. Prompt Assembly| Ollama
+          
+          Ollama -->|Jawaban SOP| RAG
+          RAG --> OC
+          OC --> API
+          API -->|Balasan| WABA
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="sec-hd"><div class="sec-num">3</div><div class="sec-tg"><h2>Lapisan Arsitektur (Layering)</h2></div></div>
+    <div class="grid-3">
+      <div class="card">
+        <h3>3.1. Channel Layer</h3>
+        <p>Lapisan antarmuka pengguna, menggunakan <strong>WhatsApp Business API (WABA)</strong> melalui BSP resmi Meta.</p>
+        <ul>
+          <li>Menerima & mengirim pesan.</li>
+          <li>Meneruskan event ke webhook backend.</li>
+        </ul>
+        <p><span class="tag-warn">Pending Design</span> Vendor BSP, format event, dan mekanisme approval Meta masih perlu dipilih.</p>
+      </div>
+      
+      <div class="card">
+        <h3>3.2. Application/API Layer</h3>
+        <p><strong>Backend API (Python/FastAPI)</strong>. Bertindak sebagai otak operasional. Dibagi menjadi modul logis:</p>
+        <ul>
+          <li>Webhook Handler</li>
+          <li>Conversation Service</li>
+          <li>RAG Service</li>
+          <li>Document Ingestion Service</li>
+          <li>Security & Sanitization</li>
+          <li>Escalation Service</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>3.3. Workflow Layer</h3>
+        <p><strong>OpenClaw</strong> bertindak sebagai <i>control plane</i> alur bisnis (mesin keputusan proses).</p>
+        <ul>
+          <li>Menentukan apakah cukup dijawab dari FAQ statis.</li>
+          <li>Menentukan apakah butuh jalur RAG (SOP).</li>
+          <li>Menentukan apakah harus dialihkan (handoff) ke petugas.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="sec-hd"><div class="sec-num">4</div><div class="sec-tg"><h2>Lapisan Data</h2></div></div>
+    <div class="grid-3">
+      <div class="card">
+        <h3>🗄️ PostgreSQL + pgvector</h3>
+        <p>Pusat data terpadu untuk domain operasional dan knowledge retrieval.</p>
+        <ul>
+          <li>Log percakapan & sesi pengguna.</li>
+          <li>Vector embeddings dokumen SOP.</li>
+        </ul>
+        <p><span class="tag-warn">Pending Design</span> Struktur tabel, indeks, relasi, dan strategi partisi belum dirinci.</p>
+      </div>
+      
+      <div class="card">
+        <h3>📦 MinIO Storage</h3>
+        <p><strong>Single Source of Truth</strong> untuk file mentah.</p>
+        <ul>
+          <li>Menyimpan dokumen asli (SOP PTSP, Surat Edaran, Aturan Biaya).</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>⚡ Redis</h3>
+        <p>Cache dan Message Broker / Queue.</p>
+        <ul>
+          <li>Antrean proses ingestion dokumen.</li>
+          <li>Buffering chunking/embedding agar server tidak crash.</li>
+          <li>Penyimpanan state sementara workflow.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="sec-hd"><div class="sec-num">5</div><div class="sec-tg"><h2>Lapisan AI dan Pipeline RAG</h2></div></div>
+    
+    <div class="card" style="margin-bottom: 20px;">
+      <h3>Ollama sebagai AI Engine Lokal</h3>
+      <p>Menjalankan dua fungsi terpisah secara sehat: <strong>Embedding Model</strong> untuk mengubah teks menjadi vektor (indexing/retrieval), dan <strong>Generative Model</strong> (LLM seperti Llama-3 8B) untuk menyusun jawaban. RTX 4070 (8GB VRAM) valid untuk PoC ini.</p>
+    </div>
+
+    <div class="card">
+      <h3>Pipeline RAG Final</h3>
+      <div class="timeline">
+        <div class="timeline-item"><div class="timeline-dot"></div>
+          <div class="timeline-content"><h4>A. Ingestion Dokumen</h4><p>Admin unggah PDF SOP. Disimpan di MinIO. Backend Python mengekstrak teks (PyPDF2/pdfplumber).</p></div>
+        </div>
+        <div class="timeline-item"><div class="timeline-dot"></div>
+          <div class="timeline-content"><h4>B. Chunking</h4><p>Teks dibagi menjadi potongan 500–1000 token dengan <i>overlap</i> agar konteks hukum tidak terputus.</p></div>
+        </div>
+        <div class="timeline-item"><div class="timeline-dot"></div>
+          <div class="timeline-content"><h4>C. Embedding</h4><p>Teks dikirim ke model embedding Ollama. Vektor disimpan ke PostgreSQL + pgvector.</p></div>
+        </div>
+        <div class="timeline-item"><div class="timeline-dot"></div>
+          <div class="timeline-content"><h4>D. Retrieval</h4><p>Pertanyaan user diubah jadi vektor. DB melakukan <i>cosine similarity search</i> mencari ~3 chunk paling relevan.</p></div>
+        </div>
+        <div class="timeline-item"><div class="timeline-dot"></div>
+          <div class="timeline-content"><h4>E. Generation</h4><p>Chunk relevan digabung dengan pertanyaan ke dalam <i>Prompt</i>, dikirim ke LLM generatif Ollama untuk dijawab.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="sec-hd"><div class="sec-num">6</div><div class="sec-tg"><h2>Human Handoff & Batas Kemampuan Bot</h2></div></div>
+    <p>Human handoff adalah <strong>jalur inti</strong>, bukan sekadar fitur tambahan. Trigger handoff wajib:</p>
+    <ul>
+      <li>Pertanyaan terlalu spesifik terkait perkara yang sedang berjalan.</li>
+      <li>Bot tidak tahu jawaban (confidence rendah / dokumen tidak ada).</li>
+      <li>Pertanyaan membutuhkan tindakan administratif langsung dari petugas PTSP asli.</li>
+    </ul>
+    <div class="diagram-container" style="margin-top: 16px;">
+      <div class="mermaid">
+        graph LR
+          In[Pesan Masuk] --> OC{Decision Engine}
+          OC -->|FAQ / Aturan Umum| A[Jawab Otomatis]
+          OC -->|RAG Relevansi Tinggi| A
+          OC -->|Perkara Berjalan| B((Eskalasi Admin))
+          OC -->|Dokumen Tidak Ada| B
+      </div>
+    </div>
+    <p><span class="tag-warn">Pending Design</span> Cara admin menerima limpahan chat (Dashboard, CRM, atau nomor WA khusus) dan SLA respons.</p>
+  </section>
+
+  <section class="section">
+    <div class="grid-2">
+      <div class="card">
+        <h3>7. Keamanan & Privasi</h3>
+        <p><strong>Wajib Ada:</strong> Disclaimer komunikasi dengan AI & Masking sederhana (NIK, No. Rekening) sebelum data diproses.</p>
+        <p><span class="tag-warn">Pending Design</span> Enkripsi at-rest, secret management, retensi log, audit trail admin, klasifikasi data.</p>
+      </div>
+      <div class="card">
+        <h3>8. Observability & Monitoring</h3>
+        <p><strong>Wajib Dipantau:</strong> Status container, antrean Redis, beban GPU Ollama, rasio sukses retrieval, jumlah kegagalan WABA, rasio handoff admin.</p>
+        <p><span class="tag-warn">Pending Design</span> Stack tools spesifik (misal: Prometheus, Grafana, ELK).</p>
+      </div>
+    </div>
+    
+    <div class="card" style="margin-top: 16px;">
+      <h3>9. Blueprint Deployment</h3>
+      <p><strong>Mode Lokal / PoC:</strong> Seluruh komponen berjalan via <code>docker-compose</code>. Sangat hemat biaya, aman, dan cocok untuk spesifikasi laptop RTX 4070 / 32GB RAM.</p>
+      <p><strong>Mode Produksi:</strong> Desain microservices ini secara inheren siap dimigrasi ke cloud. <span class="tag-warn">Pending Design</span> Topologi detail cloud/server production.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="sec-hd"><div class="sec-num">10</div><div class="sec-tg"><h2>Urutan Interaksi Utama Sistem</h2></div></div>
+    <div class="grid-2">
+      <div class="card">
+        <h3 style="color: var(--p);">Alur A — Pertanyaan Masyarakat</h3>
+        <ol style="padding-left: 20px; font-size: 0.85rem; color: var(--n300); line-height: 1.6;">
+          <li>Kirim pesan ke WA PTSP.</li>
+          <li>WABA teruskan event ke Webhook Backend.</li>
+          <li>Backend verifikasi, kelola sesi, dan <b>masking data sensitif</b>.</li>
+          <li>OpenClaw tentukan rute.</li>
+          <li>Backend embed pertanyaan via Ollama.</li>
+          <li>PG+pgvector cari chunk relevan.</li>
+          <li>Backend susun Prompt.</li>
+          <li>Ollama hasilkan jawaban.</li>
+          <li>Balasan dikirim via WABA.</li>
+          <li><i>Jika ragu -> Handoff ke Admin.</i></li>
+        </ol>
+      </div>
+      <div class="card">
+        <h3 style="color: var(--ok);">Alur B — Ingest Dokumen Resmi</h3>
+        <ol style="padding-left: 20px; font-size: 0.85rem; color: var(--n300); line-height: 1.6;">
+          <li>Admin unggah PDF SOP.</li>
+          <li>File masuk ke MinIO.</li>
+          <li>Backend tarik dan ekstrak teks.</li>
+          <li>Teks dipecah (chunking) + overlap.</li>
+          <li>Ollama lakukan embedding tiap chunk.</li>
+          <li>Vektor disimpan ke PG+pgvector.</li>
+          <li>Dokumen siap digunakan AI.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="sec-hd"><div class="sec-num">11</div><div class="sec-tg"><h2>Status Komponen Proyek</h2></div></div>
+    <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left; background: var(--glass); border-radius: var(--r-md); overflow: hidden;">
+      <thead>
+        <tr style="background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.1);">
+          <th style="padding: 14px; width: 50%;"><span class="tag-ok">Fondasi Final / Pasti</span></th>
+          <th style="padding: 14px; width: 50%;"><span class="tag-warn">Perlu Keputusan Lanjutan</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding: 14px; border-right: 1px solid rgba(255,255,255,0.05); color: var(--n300);">
+            <ul style="padding-left: 16px; margin: 0;">
+              <li>WhatsApp sebagai kanal utama</li>
+              <li>Backend Python/FastAPI</li>
+              <li>OpenClaw sebagai orkestrator</li>
+              <li>PostgreSQL + pgvector & MinIO & Redis</li>
+              <li>Ollama (AI Lokal) & Arsitektur RAG</li>
+              <li>Docker-compose untuk PoC lokal</li>
+              <li>Kebutuhan disclaimer & masking data</li>
+              <li>Mekanisme human handoff</li>
+            </ul>
+          </td>
+          <td style="padding: 14px; color: var(--n300);">
+            <ul style="padding-left: 16px; margin: 0;">
+              <li>Pemilihan vendor BSP WhatsApp</li>
+              <li>Format webhook WABA & retry logic</li>
+              <li>Struktur tabel DB & metadata dokumen</li>
+              <li>Desain sistem prompt & threshold handoff</li>
+              <li>UI/UX Dashboard Admin (takeover chat)</li>
+              <li>Observability stack & retensi log</li>
+              <li>Topologi cloud production & SLA</li>
+            </ul>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section">
+    <div class="sec-hd"><div class="sec-num">12</div><div class="sec-tg"><h2>Roadmap Pembangunan Aman</h2></div></div>
+    <div class="grid-3">
+      <div class="card" style="border-top: 3px solid var(--p);">
+        <h3>Fase 1: Fondasi Lokal</h3>
+        <p>Bangun stack Docker lokal (PG, MinIO, Redis, FastAPI, Ollama, OpenClaw). Fokus pada ingest dokumen, retrieval, dan generation.</p>
+      </div>
+      <div class="card" style="border-top: 3px solid var(--acc);">
+        <h3>Fase 2: Knowledge Base</h3>
+        <p>Kumpulkan SOP, FAQ, biaya panjar. Uji kualitas <i>chunking</i>, embedding, dan akurasi retrieval dokumen hukum.</p>
+      </div>
+      <div class="card" style="border-top: 3px solid var(--ok);">
+        <h3>Fase 3: Chatbot Core</h3>
+        <p>Tambahkan session management, disclaimer otomatis, masking data sensitif NIK/Rekening, dan rules bot.</p>
+      </div>
+      <div class="card" style="border-top: 3px solid var(--warn);">
+        <h3>Fase 4: Human Handoff</h3>
+        <p>Bangun alur eskalasi ke admin PTSP untuk pertanyaan spesifik perkara berjalan atau yang tidak terjawab AI.</p>
+      </div>
+      <div class="card" style="border-top: 3px solid var(--err);">
+        <h3>Fase 5: Integrasi WA</h3>
+        <p>Hubungkan backend FastAPI ke WABA/BSP. Uji coba alur percakapan End-to-End dengan pengguna nyata.</p>
+      </div>
+      <div class="card" style="border-top: 3px solid var(--acc2);">
+        <h3>Fase 6: Hardening</h3>
+        <p>Lengkapi logging, monitoring (Observability), kontrol akses admin, retensi data, persiapan migrasi ke cloud.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="quote-block">
+      <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 8px;">Kesimpulan Blueprint</h3>
+      <p>"Chatbot PTSP WhatsApp dibangun sebagai microservices RAG system berbasis Docker, dengan WhatsApp Business API sebagai channel publik, FastAPI sebagai backend utama, OpenClaw sebagai workflow orchestrator, PostgreSQL + pgvector sebagai pusat data relasional dan vector retrieval, MinIO sebagai penyimpanan dokumen sumber, Redis sebagai cache/queue, dan Ollama sebagai engine AI lokal. Alur dimulai dari pesan WhatsApp, sanitasi, routing, retrieval SOP, generasi jawaban, hingga eskalasi admin jika dibutuhkan."</p>
+    </div>
+  </section>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+  });
+</script>
+</body>
+</html>

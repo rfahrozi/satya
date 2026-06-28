@@ -86,7 +86,8 @@ async function generatePresignedUrl(submissionId, tenant, type = 'pdf') {
     if (!submission) throw new AppError('Dokumen tidak ditemukan di database.', 404);
     
     // Proteksi: Satker hanya boleh melihat filenya sendiri
-    if (tenant.role === 'SATKER_PN' && submission.satker_id !== tenant.satkerId) {
+    const pnRoles = ['KPN', 'PANITERA_PN', 'PANMUD_HUKUM_PN', 'STAFF_PANMUD_HUKUM_PN', 'SATKER_PN', 'ADMIN_PN'];
+    if (pnRoles.includes(tenant.role) && submission.satker_id !== tenant.satkerId) {
         throw new AppError('Anda tidak memiliki izin mengakses dokumen ini.', 403);
     }
 
@@ -108,7 +109,8 @@ async function generatePresignedUrlForHistory(historyId, tenant, type = 'pdf') {
     if (!fileUrl) throw new AppError('File dokumen tidak tersedia pada riwayat ini.', 404);
     
     // Proteksi: Pastikan Satker hanya mengakses laporannya sendiri
-    if (tenant.role === 'SATKER_PN') {
+    const pnRoles = ['KPN', 'PANITERA_PN', 'PANMUD_HUKUM_PN', 'STAFF_PANMUD_HUKUM_PN', 'SATKER_PN', 'ADMIN_PN'];
+    if (pnRoles.includes(tenant.role)) {
         const submission = await knex('report_submissions').where({ id: logEntry.submission_id }).first();
         if (submission && submission.satker_id !== tenant.satkerId) {
             throw new AppError('Anda tidak memiliki izin mengakses dokumen ini.', 403);

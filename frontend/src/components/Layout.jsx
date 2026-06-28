@@ -11,6 +11,11 @@ export default function Layout() {
   const userStr = localStorage.getItem('satya_user')
   const user = userStr ? JSON.parse(userStr) : null
 
+  const ptRoles = ['ADMIN_PT', 'KPT', 'WKPT', 'PANITERA_PT', 'PANMUD_HUKUM_PT', 'STAFF_PANMUD_HUKUM_PT', 'PIMPINAN'];
+  const pnRoles = ['KPN', 'PANITERA_PN', 'PANMUD_HUKUM_PN', 'STAFF_PANMUD_HUKUM_PN', 'SATKER_PN', 'ADMIN_PN'];
+  const isAdmin = user.role === 'ADMIN_PT' || user.role === 'ADMIN_PN';
+  const isGlobalAdmin = user.role === 'ADMIN_PT';
+
   const handleLogout = () => {
     localStorage.removeItem('satya_token')
     localStorage.removeItem('satya_user')
@@ -42,9 +47,9 @@ export default function Layout() {
             <div className="flex items-center gap-6">
               
               <div className="hidden md:flex items-center space-x-1">
-                {(user.role === 'ADMIN_PT' || user.role === 'PIMPINAN') && (
-                  <Link 
-                    to="/dashboard" 
+                {ptRoles.includes(user.role) && (
+                  <Link
+                    to="/dashboard"
                     aria-current={location.pathname === '/dashboard' ? 'page' : undefined}
                     className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium text-sm transition-colors ${location.pathname === '/dashboard' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
                   >
@@ -52,33 +57,41 @@ export default function Layout() {
                   </Link>
                 )}
 
-                {user.role === 'ADMIN_PT' && (
+                {isAdmin && (
                   <>
-                    <Link 
-                      to="/users" 
+                    <Link
+                      to="/users"
                       aria-current={location.pathname === '/users' ? 'page' : undefined}
                       className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium text-sm transition-colors ${location.pathname === '/users' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
                     >
                       <Users size={18} aria-hidden="true" /> Manajemen User
                     </Link>
-                    <Link 
-                      to="/master" 
+                  </>
+                )}
+
+                {isGlobalAdmin && (
+                  <>
+                    <Link
+                      to="/master"
                       aria-current={location.pathname === '/master' ? 'page' : undefined}
                       className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium text-sm transition-colors ${location.pathname === '/master' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
                     >
                       <Database size={18} aria-hidden="true" /> Master Data
                     </Link>
-                    <Link 
-                      to="/informasi" 
+                  </>
+                )}
+
+                {ptRoles.includes(user.role) && (
+                    <Link
+                      to="/informasi"
                       aria-current={location.pathname === '/informasi' ? 'page' : undefined}
                       className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium text-sm transition-colors ${location.pathname === '/informasi' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
                     >
                       <Info size={18} aria-hidden="true" /> Informasi
                     </Link>
-                  </>
                 )}
 
-                {user.role === 'SATKER_PN' && (
+                {pnRoles.includes(user.role) && (
                   <Link 
                     to="/portal" 
                     aria-current={location.pathname === '/portal' ? 'page' : undefined}
@@ -95,7 +108,7 @@ export default function Layout() {
                   <p className="text-sm font-semibold text-slate-800">{user.username}</p>
                 </div>
 
-                {user.role === 'SATKER_PN' && <NotificationBell />}
+                {pnRoles.includes(user.role) && <NotificationBell />}
                 
                 <button 
                   onClick={handleLogout}
@@ -124,9 +137,9 @@ export default function Layout() {
         {/* Mobile Navigation Dropdown */}
         {mobileMenuOpen && (
           <div id="mobile-nav" className="md:hidden bg-white border-t border-slate-200 shadow-lg px-4 pt-2 pb-4 space-y-2">
-            {(user.role === 'ADMIN_PT' || user.role === 'PIMPINAN') && (
-              <Link 
-                to="/dashboard" 
+            {ptRoles.includes(user.role) && (
+              <Link
+                to="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
                 aria-current={location.pathname === '/dashboard' ? 'page' : undefined}
                 className={`flex items-center gap-2 px-3 py-3 rounded-md font-medium text-sm transition-colors ${location.pathname === '/dashboard' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
@@ -135,36 +148,44 @@ export default function Layout() {
               </Link>
             )}
 
-            {user.role === 'ADMIN_PT' && (
+            {isAdmin && (
               <>
-                <Link 
-                  to="/users" 
+                <Link
+                  to="/users"
                   onClick={() => setMobileMenuOpen(false)}
                   aria-current={location.pathname === '/users' ? 'page' : undefined}
                   className={`flex items-center gap-2 px-3 py-3 rounded-md font-medium text-sm transition-colors ${location.pathname === '/users' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
                 >
                   <Users size={18} aria-hidden="true" /> Manajemen User
                 </Link>
-                <Link 
-                  to="/master" 
+              </>
+            )}
+
+            {isGlobalAdmin && (
+              <>
+                <Link
+                  to="/master"
                   onClick={() => setMobileMenuOpen(false)}
                   aria-current={location.pathname === '/master' ? 'page' : undefined}
                   className={`flex items-center gap-2 px-3 py-3 rounded-md font-medium text-sm transition-colors ${location.pathname === '/master' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
                 >
                   <Database size={18} aria-hidden="true" /> Master Data
                 </Link>
-                <Link 
-                  to="/informasi" 
+              </>
+            )}
+
+            {ptRoles.includes(user.role) && (
+                <Link
+                  to="/informasi"
                   onClick={() => setMobileMenuOpen(false)}
                   aria-current={location.pathname === '/informasi' ? 'page' : undefined}
                   className={`flex items-center gap-2 px-3 py-3 rounded-md font-medium text-sm transition-colors ${location.pathname === '/informasi' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
                 >
                   <Info size={18} aria-hidden="true" /> Informasi
                 </Link>
-              </>
             )}
 
-            {user.role === 'SATKER_PN' && (
+            {pnRoles.includes(user.role) && (
               <Link 
                 to="/portal" 
                 onClick={() => setMobileMenuOpen(false)}

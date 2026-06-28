@@ -24,7 +24,8 @@ export default function Login() {
       localStorage.setItem('satya_user', JSON.stringify(user))
 
       // Direct to respective portal
-      if (user.role === 'SATKER_PN') {
+      const pnRoles = ['KPN', 'PANITERA_PN', 'PANMUD_HUKUM_PN', 'STAFF_PANMUD_HUKUM_PN', 'SATKER_PN', 'ADMIN_PN'];
+      if (pnRoles.includes(user.role)) {
         navigate('/portal')
       } else {
         navigate('/dashboard')

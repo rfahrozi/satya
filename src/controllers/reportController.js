@@ -290,7 +290,10 @@ async function deleteReport(req, res, next) {
  */
 async function getAdminStats(req, res, next) {
     try {
-        if (req.tenant.role !== 'ADMIN_PT') throw new AppError('Hanya Admin yang dapat mengakses.', 403);
+        const allowedRoles = ['ADMIN_PT', 'KPT', 'WKPT', 'PANITERA_PT'];
+        if (!allowedRoles.includes(req.tenant.role)) {
+            throw new AppError('Hanya Admin atau Pimpinan PT yang dapat mengakses.', 403);
+        }
         const { bulan, tahun, period_type, period_unit } = req.query;
         const pType = period_type || 'monthly';
         const pUnit = period_unit || bulan || '1';
@@ -320,7 +323,10 @@ async function getAdminStats(req, res, next) {
  */
 async function getQueueStatus(req, res, next) {
     try {
-        if (req.tenant.role !== 'ADMIN_PT') throw new AppError('Hanya Admin yang dapat mengakses.', 403);
+        const allowedRoles = ['ADMIN_PT', 'KPT', 'WKPT', 'PANITERA_PT'];
+        if (!allowedRoles.includes(req.tenant.role)) {
+            throw new AppError('Hanya Admin atau Pimpinan PT yang dapat mengakses.', 403);
+        }
         const { emailQueue } = require('../emailWorker');
         const [waiting, active, completed, failed, delayed] = await Promise.all([
             emailQueue.getWaitingCount(),

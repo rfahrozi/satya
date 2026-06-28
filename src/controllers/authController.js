@@ -38,17 +38,17 @@ async function login(req, res, next) {
  */
 async function saveOrUpdateUser(req, res, next) {
     try {
-        if (req.tenant.role !== 'ADMIN_PT') {
+        if (req.tenant.role !== 'ADMIN_PT' && req.tenant.role !== 'ADMIN_PN') {
             throw new AppError('Anda tidak memiliki izin untuk mengelola akun.', 403);
         }
 
         const { id, ...userData } = req.body;
 
         if (id) {
-            await authService.updateUser(id, userData);
+            await authService.updateUser(req.tenant, id, userData);
             res.status(200).json({ success: true, message: 'Akun berhasil diperbarui.' });
         } else {
-            await authService.createUser(userData);
+            await authService.createUser(req.tenant, userData);
             res.status(201).json({ success: true, message: 'Akun baru berhasil dibuat.' });
         }
     } catch (error) {
@@ -61,11 +61,11 @@ async function saveOrUpdateUser(req, res, next) {
  */
 async function getAllUsers(req, res, next) {
     try {
-        if (req.tenant.role !== 'ADMIN_PT') {
+        if (req.tenant.role !== 'ADMIN_PT' && req.tenant.role !== 'ADMIN_PN') {
             throw new AppError('Akses ditolak.', 403);
         }
 
-        const users = await authService.getAllUsers();
+        const users = await authService.getAllUsers(req.tenant);
 
         res.status(200).json({
             success: true,
@@ -81,12 +81,12 @@ async function getAllUsers(req, res, next) {
  */
 async function deleteUser(req, res, next) {
     try {
-        if (req.tenant.role !== 'ADMIN_PT') {
+        if (req.tenant.role !== 'ADMIN_PT' && req.tenant.role !== 'ADMIN_PN') {
             throw new AppError('Akses ditolak.', 403);
         }
 
         const { id } = req.params;
-        await authService.deleteUser(id);
+        await authService.deleteUser(req.tenant, id);
 
         res.status(200).json({
             success: true,
@@ -102,12 +102,12 @@ async function deleteUser(req, res, next) {
  */
 async function resetPassword(req, res, next) {
     try {
-        if (req.tenant.role !== 'ADMIN_PT') {
+        if (req.tenant.role !== 'ADMIN_PT' && req.tenant.role !== 'ADMIN_PN') {
             throw new AppError('Akses ditolak.', 403);
         }
 
         const { id } = req.params;
-        await authService.updateUser(id, { password: 'password123' });
+        await authService.updateUser(req.tenant, id, { password: 'password123' });
 
         res.status(200).json({
             success: true,

@@ -73,6 +73,10 @@ export default function SatkerPortal() {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [uploadModal.open]);
 
+  const userStr = localStorage.getItem('satya_user');
+  const user = userStr ? JSON.parse(userStr) : null;
+  const canUpload = user && ['PANMUD_HUKUM_PN', 'STAFF_PANMUD_HUKUM_PN', 'SATKER_PN'].includes(user.role);
+
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['my-progress', bulan, tahun],
     queryFn: async () => {
@@ -290,17 +294,21 @@ export default function SatkerPortal() {
                 <button onClick={() => handleDownloadExcel(r.submission_id)} title="Unduh Excel" className="p-2 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 transition-colors">
                   <Download size={16} />
                 </button>
-                <button onClick={() => confirmDelete(r.submission_id, r.nama_laporan)} title="Hapus" className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors">
-                  <Trash2 size={16} />
-                </button>
+                {canUpload && (
+                  <button onClick={() => confirmDelete(r.submission_id, r.nama_laporan)} title="Hapus" className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors">
+                    <Trash2 size={16} />
+                  </button>
+                )}
               </>
             )}
-            <button
-              onClick={() => openUploadModal(r)}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${uploaded ? 'border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/50' : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-900/20'}`}
-            >
-              {uploaded ? 'Perbarui' : 'Unggah'}
-            </button>
+            {canUpload && (
+              <button
+                onClick={() => openUploadModal(r)}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${uploaded ? 'border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/50' : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-900/20'}`}
+              >
+                {uploaded ? 'Perbarui' : 'Unggah'}
+              </button>
+            )}
           </div>
         </div>
       </div>

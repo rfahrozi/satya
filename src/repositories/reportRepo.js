@@ -118,7 +118,7 @@ async function findSatkersForReminder(periodType, periodUnit, periodeTahun) {
         SELECT s.id, s.nama_satker, u.email
         FROM satkers s
         JOIN users u ON u.satker_id = s.id
-            AND u.role = 'SATKER_PN'
+            AND u.role IN ('SATKER_PN', 'PANMUD_HUKUM_PN', 'STAFF_PANMUD_HUKUM_PN')
             AND u.is_active = true
             AND u.email IS NOT NULL
         WHERE (

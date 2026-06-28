@@ -46,7 +46,7 @@ const WARNA_CONFIG = {
 const BULAN_PENDEK = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
 
 // ─── Komponen Sel Heatmap ─────────────────────────────────────────────────────
-function HeatmapSel({ sel, isFuture }) {
+function HeatmapSel({ sel, isFuture, onClick }) {
   const [tip, setTip] = useState(false);
   const warna = isFuture ? 'abu' : (sel?.warna ?? 'abu');
   const cfg   = WARNA_CONFIG[warna];
@@ -55,14 +55,15 @@ function HeatmapSel({ sel, isFuture }) {
 
   return (
     <div
-      className={`relative group`}
+      className={`relative group ${!isFuture ? 'cursor-pointer' : ''}`}
       onMouseEnter={() => setTip(true)}
       onMouseLeave={() => setTip(false)}
+      onClick={!isFuture ? onClick : undefined}
     >
       <div
         className={`
           w-full aspect-square rounded-md border ${cfg.border} ${cfg.bg} ${opacity}
-          flex items-center justify-center cursor-default
+          flex items-center justify-center
           transition-all duration-300 hover:scale-110 hover:z-10 hover:shadow-[0_0_12px_rgba(0,0,0,0.5)]
         `}
         style={{ boxShadow: tip && !isFuture ? `0 0 10px var(--tw-shadow-color)` : 'none', shadowColor: cfg.bg }}
@@ -96,7 +97,7 @@ function HeatmapSel({ sel, isFuture }) {
 }
 
 // ─── Komponen Utama Heatmap ───────────────────────────────────────────────────
-function HeatmapKepatuhan({ raw, isLoading, tahun, setTahun, now }) {
+function HeatmapKepatuhan({ raw, isLoading, tahun, setTahun, now, onCellClick }) {
   const heatmapData = raw?.data ?? [];
   const stats       = raw?.stats ?? null;
   const bulanSkrg   = now.getMonth() + 1;
@@ -228,7 +229,14 @@ function HeatmapKepatuhan({ raw, isLoading, tahun, setTahun, now }) {
               <div className="flex-1 grid grid-cols-12 gap-1.5">
                 {satker.sel.map(sel => {
                   const isFuture = isThisYear && sel.bulan > bulanSkrg;
-                  return <HeatmapSel key={sel.bulan} sel={sel} isFuture={isFuture} />;
+                  return (
+                    <HeatmapSel
+                      key={sel.bulan}
+                      sel={sel}
+                      isFuture={isFuture}
+                      onClick={() => onCellClick && onCellClick(sel.bulan, satker.nama_satker)}
+                    />
+                  );
                 })}
               </div>
             </div>
@@ -394,7 +402,7 @@ function SatkerRow({ satker, isAdmin, openHistory, handleDownloadPdf, handleDown
 export default function Dashboard() {
   const queryClient = useQueryClient();
   const user = JSON.parse(localStorage.getItem('satya_user') || 'null') || {};
-  const isAdmin = user.role === 'ADMIN_PT';
+  const isAdmin = ['ADMIN_PT', 'PANMUD_HUKUM_PT', 'STAFF_PANMUD_HUKUM_PT'].includes(user.role);
 
   const now = new Date();
   const [bulan, setBulan] = useState(String(now.getMonth() + 1));
@@ -414,8 +422,31 @@ export default function Dashboard() {
   const [selectedHistoryId, setSelectedHistoryId] = useState(null);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
+  // Current Time State
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const openHistory = (submissionId) => { setSelectedHistoryId(submissionId); setIsHistoryModalOpen(true); };
   const closeHistory = () => { setIsHistoryModalOpen(false); setSelectedHistoryId(null); };
+
+  const handleHeatmapCellClick = (clickedBulan, satkerName) => {
+    setBulan(String(clickedBulan));
+    if (satkerName) {
+      setSearch(satkerName);
+    }
+
+    // Automatically scroll down to the "Rincian Satuan Kerja" section
+    const detailsSection = document.getElementById("rincian-satuan-kerja");
+    if (detailsSection) {
+      detailsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
   const verifyModalRef = useFocusTrap(verifyModal.open);
 
@@ -564,6 +595,23 @@ export default function Dashboard() {
     return `${Math.floor(diff/86400)} hari yang lalu`;
   };
 
+  // Date formatters
+  const dateFormat = new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+
+  const timeFormat = new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const formattedDate = dateFormat.format(currentTime);
+  const formattedTime = timeFormat.format(currentTime).replace(/\./g, ':');
+
   return (
     <div className="space-y-8 pb-12">
       {/* Header & Controls */}
@@ -588,6 +636,21 @@ export default function Dashboard() {
             <button onClick={handleExportExcel} className="flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors">
               <Download size={16} /> <span className="hidden sm:inline">Excel</span>
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Date/Time Banner */}
+      <div className="bg-linear-to-r from-blue-600 via-teal-500/80 to-rose-500/80 rounded-2xl p-4 flex justify-between items-center shadow-lg border border-white/10">
+        <div>
+          <div className="text-white/80 text-sm font-medium mb-0.5">Hari ini,</div>
+          <div className="text-white text-xl font-bold">{formattedDate}</div>
+        </div>
+        <div className="text-right">
+          <div className="text-white text-4xl font-light tracking-tight">{formattedTime}</div>
+          <div className="flex items-center justify-end gap-1.5 text-white/90 text-xs font-semibold mt-0.5">
+            <Clock size={12} />
+            <span>WIB</span>
           </div>
         </div>
       </div>
@@ -739,10 +802,10 @@ export default function Dashboard() {
       )}
 
       {/* Heatmap Section */}
-      <HeatmapKepatuhan raw={heatmapRaw} isLoading={heatmapLoading} tahun={heatmapTahun} setTahun={setHeatmapTahun} now={now} />
+      <HeatmapKepatuhan raw={heatmapRaw} isLoading={heatmapLoading} tahun={heatmapTahun} setTahun={setHeatmapTahun} now={now} onCellClick={handleHeatmapCellClick} />
 
       {/* Satker List / Grid */}
-      <div className="bg-slate-900 border border-slate-700/50 rounded-3xl p-6 shadow-xl">
+      <div id="rincian-satuan-kerja" className="bg-slate-900 border border-slate-700/50 rounded-3xl p-6 shadow-xl scroll-mt-20">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-blue-500/20 rounded-xl"><CheckCheck size={20} className="text-blue-400" /></div>

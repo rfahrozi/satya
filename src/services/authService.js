@@ -50,10 +50,24 @@ async function loginUser(username, password) {
  * Membuat akun user baru (hanya dipanggil oleh Admin PT)
  * @param {Object} userData - { username, password, role, satker_id, email }
  */
-async function createUser({ username, password, role, satker_id, email }) {
+async function createUser(tenant, { username, password, role, satker_id, email }) {
     if (!password || password.trim() === '') {
         throw new AppError('Password wajib diisi untuk akun baru.', 400);
     }
+
+    // Validasi untuk ADMIN_PN: hanya boleh buat user untuk satkernya sendiri,
+    // dan hanya boleh buat role PN
+    if (tenant.role === 'ADMIN_PN') {
+        if (!tenant.satkerId) {
+            throw new AppError('Token sesi tidak valid: Satker ID tidak ditemukan. Silakan login kembali.', 403);
+        }
+        satker_id = tenant.satkerId;
+        const pnRoles = ['KPN', 'PANITERA_PN', 'PANMUD_HUKUM_PN', 'STAFF_PANMUD_HUKUM_PN', 'SATKER_PN', 'ADMIN_PN'];
+        if (!pnRoles.includes(role)) {
+            throw new AppError('ADMIN_PN hanya dapat membuat akun dengan role tingkat Pengadilan Negeri.', 403);
+        }
+    }
+
     const password_hash = await bcrypt.hash(password, 10);
     await knex('users').insert({
         username,
@@ -69,7 +83,25 @@ async function createUser({ username, password, role, satker_id, email }) {
  * @param {number} id - ID user yang akan diperbarui
  * @param {Object} userData - { username, password, role, satker_id, email }
  */
-async function updateUser(id, { username, password, role, satker_id, email }) {
+async function updateUser(tenant, id, { username, password, role, satker_id, email }) {
+    // Validasi untuk ADMIN_PN
+    if (tenant.role === 'ADMIN_PN') {
+        if (!tenant.satkerId) {
+            throw new AppError('Token sesi tidak valid: Satker ID tidak ditemukan. Silakan login kembali.', 403);
+        }
+
+        const targetUser = await knex('users').where({ id }).first();
+        if (!targetUser || targetUser.satker_id !== tenant.satkerId) {
+            throw new AppError('Anda hanya dapat mengubah akun yang berada di satuan kerja Anda.', 403);
+        }
+
+        satker_id = tenant.satkerId;
+        const pnRoles = ['KPN', 'PANITERA_PN', 'PANMUD_HUKUM_PN', 'STAFF_PANMUD_HUKUM_PN', 'SATKER_PN', 'ADMIN_PN'];
+        if (role && !pnRoles.includes(role)) {
+            throw new AppError('ADMIN_PN hanya dapat mengatur role tingkat Pengadilan Negeri.', 403);
+        }
+    }
+
     const userData = {
         username,
         role: role || 'SATKER_PN',
@@ -87,8 +119,8 @@ async function updateUser(id, { username, password, role, satker_id, email }) {
  * Mengambil semua daftar user Satker dan Pimpinan (tidak termasuk Admin)
  * @returns {Array}
  */
-async function getAllUsers() {
-    return knex('users')
+async function getAllUsers(tenant) {
+    let query = knex('users')
         .leftJoin('satkers', 'users.satker_id', 'satkers.id')
         .select(
             'users.id',
@@ -96,9 +128,21 @@ async function getAllUsers() {
             'users.role',
             'users.email',
             'users.is_active',
+            'users.satker_id',
             'satkers.nama_satker'
-        )
-        .whereNot('users.role', 'ADMIN_PT'); // Jangan tampilkan sesama admin untuk keamanan
+        );
+
+    if (tenant.role === 'ADMIN_PN') {
+        // Mencegah kebocoran data jika satkerId pada token undefined
+        if (!tenant.satkerId) {
+            throw new AppError('Token sesi tidak valid: Satker ID tidak ditemukan. Silakan login kembali.', 403);
+        }
+        query = query.where('users.satker_id', tenant.satkerId);
+    } else {
+        query = query.whereNot('users.role', 'ADMIN_PT'); // Jangan tampilkan sesama admin PT untuk keamanan
+    }
+
+    return query;
 }
 
 /**
@@ -132,7 +176,17 @@ function verifyToken(token) {
  * Menghapus akun user
  * @param {number} id
  */
-async function deleteUser(id) {
+async function deleteUser(tenant, id) {
+    if (tenant.role === 'ADMIN_PN') {
+        if (!tenant.satkerId) {
+            throw new AppError('Token sesi tidak valid: Satker ID tidak ditemukan. Silakan login kembali.', 403);
+        }
+
+        const targetUser = await knex('users').where({ id }).first();
+        if (!targetUser || targetUser.satker_id !== tenant.satkerId) {
+            throw new AppError('Anda hanya dapat menghapus akun yang berada di satuan kerja Anda.', 403);
+        }
+    }
     await knex('users').where({ id }).del();
 }
 

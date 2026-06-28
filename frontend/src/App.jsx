@@ -25,7 +25,8 @@ function ProtectedRoute({ children, allowedRoles }) {
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     // Redirection fallback if accessing unauthorized route
-    if (user.role === 'SATKER_PN') return <Navigate to="/portal" replace />;
+    const pnRoles = ['KPN', 'PANITERA_PN', 'PANMUD_HUKUM_PN', 'STAFF_PANMUD_HUKUM_PN', 'SATKER_PN', 'ADMIN_PN'];
+    if (pnRoles.includes(user.role)) return <Navigate to="/portal" replace />;
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -46,49 +47,49 @@ function App() {
         {/* Protected Dashboard/API Routes wrapped in App Shell Layout */}
         <Route element={<Layout />}>
           
-          <Route 
-            path="/dashboard" 
+          <Route
+            path="/dashboard"
             element={
-              <ProtectedRoute allowedRoles={['ADMIN_PT', 'PIMPINAN']}>
+              <ProtectedRoute allowedRoles={['ADMIN_PT', 'KPT', 'WKPT', 'PANITERA_PT', 'PANMUD_HUKUM_PT', 'STAFF_PANMUD_HUKUM_PT', 'PIMPINAN']}>
                 <Dashboard />
               </ProtectedRoute>
-            } 
+            }
           />
-          
-          <Route 
-            path="/users" 
+
+          <Route
+            path="/users"
             element={
-              <ProtectedRoute allowedRoles={['ADMIN_PT']}>
+              <ProtectedRoute allowedRoles={['ADMIN_PT', 'ADMIN_PN']}>
                 <UserManagement />
               </ProtectedRoute>
-            } 
+            }
           />
 
-          <Route 
-            path="/informasi" 
+          <Route
+            path="/informasi"
             element={
-              <ProtectedRoute allowedRoles={['ADMIN_PT', 'PIMPINAN']}>
+              <ProtectedRoute allowedRoles={['ADMIN_PT', 'KPT', 'WKPT', 'PANITERA_PT', 'PANMUD_HUKUM_PT', 'STAFF_PANMUD_HUKUM_PT', 'PIMPINAN']}>
                 <Informasi />
               </ProtectedRoute>
-            } 
+            }
           />
 
-          <Route 
-            path="/master" 
+          <Route
+            path="/master"
             element={
               <ProtectedRoute allowedRoles={['ADMIN_PT']}>
                 <MasterData />
               </ProtectedRoute>
-            } 
+            }
           />
 
-          <Route 
-            path="/portal" 
+          <Route
+            path="/portal"
             element={
-              <ProtectedRoute allowedRoles={['SATKER_PN']}>
+              <ProtectedRoute allowedRoles={['KPN', 'PANITERA_PN', 'PANMUD_HUKUM_PN', 'STAFF_PANMUD_HUKUM_PN', 'SATKER_PN', 'ADMIN_PN']}>
                 <SatkerPortal />
               </ProtectedRoute>
-            } 
+            }
           />
           
         </Route>

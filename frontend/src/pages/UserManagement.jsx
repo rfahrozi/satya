@@ -29,9 +29,18 @@ import ConfirmDialog from '../components/ConfirmDialog';
   - Adjust endpoint paths if your backend uses other route prefixes.
 */
 
-const ROLE_OPTIONS = [
+const ALL_ROLE_OPTIONS = [
   { value: 'ADMIN_PT', label: 'Administrator (ADMIN_PT)' },
-  { value: 'PIMPINAN', label: 'Pimpinan (PIMPINAN)' },
+  { value: 'KPT', label: 'Ketua PT (KPT)' },
+  { value: 'WKPT', label: 'Wakil Ketua PT (WKPT)' },
+  { value: 'PANITERA_PT', label: 'Panitera PT (PANITERA_PT)' },
+  { value: 'PANMUD_HUKUM_PT', label: 'Panitera Muda Hukum PT (PANMUD_HUKUM_PT)' },
+  { value: 'STAFF_PANMUD_HUKUM_PT', label: 'Staff Panmud Hukum PT (STAFF_PANMUD_HUKUM_PT)' },
+  { value: 'ADMIN_PN', label: 'Admin PN (ADMIN_PN)' },
+  { value: 'KPN', label: 'Ketua PN (KPN)' },
+  { value: 'PANITERA_PN', label: 'Panitera PN (PANITERA_PN)' },
+  { value: 'PANMUD_HUKUM_PN', label: 'Panmud Hukum PN (PANMUD_HUKUM_PN)' },
+  { value: 'STAFF_PANMUD_HUKUM_PN', label: 'Staff Panmud Hukum PN (STAFF_PANMUD_HUKUM_PN)' },
   { value: 'SATKER_PN', label: 'Satker (SATKER_PN)' },
 ];
 
@@ -52,6 +61,14 @@ function Badge({ children, className = '' }) {
 
 export default function UserManagement() {
   const queryClient = useQueryClient();
+
+  const userStr = localStorage.getItem('satya_user');
+  const currentUser = userStr ? JSON.parse(userStr) : null;
+  const isAdminPN = currentUser?.role === 'ADMIN_PN';
+
+  const roleOptions = isAdminPN
+    ? ALL_ROLE_OPTIONS.filter(r => ['KPN', 'PANITERA_PN', 'PANMUD_HUKUM_PN', 'STAFF_PANMUD_HUKUM_PN', 'SATKER_PN', 'ADMIN_PN'].includes(r.value))
+    : ALL_ROLE_OPTIONS;
 
   // UI state
   const [q, setQ] = useState('');
@@ -150,7 +167,7 @@ export default function UserManagement() {
       username: '',
       email: '',
       role: 'SATKER_PN',
-      satker_id: '',
+      satker_id: isAdminPN && currentUser?.satkerId ? String(currentUser.satkerId) : '',
       password: '',
       confirmPassword: '',
       active: true,
@@ -166,7 +183,7 @@ export default function UserManagement() {
       username: user.username || '',
       email: user.email || '',
       role: user.role || 'SATKER_PN',
-      satker_id: user.satker_id ?? '',
+      satker_id: user.satker_id ? String(user.satker_id) : (isAdminPN && currentUser?.satkerId ? String(currentUser.satkerId) : ''),
       password: '',
       confirmPassword: '',
       active: user.active ?? true,
@@ -190,8 +207,10 @@ export default function UserManagement() {
       setFormError('Masukkan alamat email yang valid.');
       return false;
     }
-    if (form.role === 'SATKER_PN' && !form.satker_id) {
-      setFormError('Pilih Satuan Kerja untuk role Satker.');
+
+    const pnRoles = ['KPN', 'PANITERA_PN', 'PANMUD_HUKUM_PN', 'STAFF_PANMUD_HUKUM_PN', 'SATKER_PN', 'ADMIN_PN'];
+    if (pnRoles.includes(form.role) && !form.satker_id) {
+      setFormError('Pilih Satuan Kerja untuk role Pengadilan Negeri.');
       return false;
     }
     if (mode === 'create') {
@@ -224,11 +243,12 @@ export default function UserManagement() {
     e.preventDefault();
     if (!validateForm()) return;
 
+    const pnRoles = ['KPN', 'PANITERA_PN', 'PANMUD_HUKUM_PN', 'STAFF_PANMUD_HUKUM_PN', 'SATKER_PN', 'ADMIN_PN'];
     const payload = {
       username: form.username.trim(),
       email: form.email.trim(),
       role: form.role,
-      satker_id: form.role === 'SATKER_PN' ? form.satker_id : null,
+      satker_id: pnRoles.includes(form.role) && form.satker_id ? Number(form.satker_id) : null,
       active: !!form.active,
     };
     // only send password if provided
@@ -273,8 +293,17 @@ export default function UserManagement() {
   function RoleBadge({ role }) {
     const map = {
       ADMIN_PT: 'bg-violet-600 text-white',
-      PIMPINAN: 'bg-teal-600 text-white',
-      SATKER_PN: 'bg-amber-500 text-white',
+      KPT: 'bg-teal-600 text-white',
+      WKPT: 'bg-teal-600 text-white',
+      PANITERA_PT: 'bg-teal-600 text-white',
+      PANMUD_HUKUM_PT: 'bg-indigo-500 text-white',
+      STAFF_PANMUD_HUKUM_PT: 'bg-indigo-400 text-white',
+      ADMIN_PN: 'bg-amber-600 text-white',
+      KPN: 'bg-orange-500 text-white',
+      PANITERA_PN: 'bg-orange-500 text-white',
+      PANMUD_HUKUM_PN: 'bg-amber-500 text-white',
+      STAFF_PANMUD_HUKUM_PN: 'bg-yellow-500 text-white',
+      SATKER_PN: 'bg-yellow-600 text-white',
     };
     return <Badge className={map[role] || 'bg-slate-500 text-white'}>{role}</Badge>;
   }
@@ -340,7 +369,7 @@ export default function UserManagement() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <RoleBadge role={user.role} />
-                      <div className="text-xs text-slate-400">{user.role === 'SATKER_PN' ? (user.satker_name ?? '—') : null}</div>
+                      <div className="text-xs text-slate-400">{user.satker_name ?? '—'}</div>
                     </div>
                   </td>
                   <td className="px-4 py-3">
@@ -401,16 +430,16 @@ export default function UserManagement() {
               <div>
                 <label htmlFor="form-role" className="block text-xs text-slate-400 mb-1">Role</label>
                 <select id="form-role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full p-2.5 bg-slate-800 border border-white/6 rounded-md">
-                  {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                  {roleOptions.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                 </select>
               </div>
 
               <div>
-                <label htmlFor="form-satker" className="block text-xs text-slate-400 mb-1">Satuan Kerja (opsional)</label>
-                <select id="form-satker" value={form.satker_id || ''} onChange={(e) => setForm({ ...form, satker_id: e.target.value })} className="w-full p-2.5 bg-slate-800 border border-white/6 rounded-md">
-                  <option value="">-- Pilih Satker (jika role Satker) --</option>
+                <label htmlFor="form-satker" className="block text-xs text-slate-400 mb-1">Satuan Kerja (wajib untuk role PN)</label>
+                <select id="form-satker" value={String(form.satker_id || '')} onChange={(e) => setForm({ ...form, satker_id: e.target.value })} className="w-full p-2.5 bg-slate-800 border border-white/6 rounded-md" disabled={isAdminPN}>
+                  <option value="">-- Pilih Satker --</option>
                   {SATKER_OPTIONS.map(s => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
+                    <option key={s.id} value={String(s.id)}>{s.name}</option>
                   ))}
                 </select>
               </div>
