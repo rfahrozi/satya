@@ -25,8 +25,8 @@ async function uploadReport(req, res, next) {
         let pType = period_type || 'monthly';
         let pUnit = period_unit || periode_bulan;
 
-        if (!file) throw new AppError('File dokumen (PDF) tidak ditemukan.', 400);
-        if (!fileExcel) throw new AppError('File Excel tidak ditemukan.', 400);
+        if (!file) throw new AppError('File dokumen utama (PDF) tidak ditemukan.', 400);
+        if (!fileExcel) throw new AppError('File data pendukung (Excel/Word) tidak ditemukan.', 400);
         if (!report_type_id || !pUnit || !periode_tahun) {
             throw new AppError('Metadata laporan (ID, Periode, Tahun) tidak lengkap.', 400);
         }

@@ -153,14 +153,14 @@ export default function SatkerPortal() {
 
   const onFileChangePdf = (f) => {
     if (!f) return;
-    if (f.type !== 'application/pdf') return setToastMsg({ type: 'error', text: 'Format tidak didukung. Gunakan PDF atau XLSX.' });
+    if (f.type !== 'application/pdf') return setToastMsg({ type: 'error', text: 'Format tidak didukung. Gunakan PDF.' });
     if (f.size > 10 * 1024 * 1024) return setToastMsg({ type: 'error', text: 'Ukuran file terlalu besar (maks 10MB).' });
     setSelectedFilePdf(f);
   };
   const onFileChangeExcel = (f) => {
     if (!f) return;
-    if (!f.name.endsWith('.xlsx') && !f.name.endsWith('.xls') && !f.type.includes('spreadsheet') && !f.type.includes('excel')) {
-      return setToastMsg({ type: 'error', text: 'Format tidak didukung. Gunakan PDF atau XLSX.' });
+    if (!f.name.endsWith('.xlsx') && !f.name.endsWith('.xls') && !f.name.endsWith('.doc') && !f.name.endsWith('.docx') && !f.type.includes('spreadsheet') && !f.type.includes('excel') && !f.type.includes('word')) {
+      return setToastMsg({ type: 'error', text: 'Format tidak didukung. Gunakan XLSX, XLS, DOC, atau DOCX.' });
     }
     if (f.size > 10 * 1024 * 1024) return setToastMsg({ type: 'error', text: 'Ukuran file terlalu besar (maks 10MB).' });
     setSelectedFileExcel(f);
@@ -176,7 +176,7 @@ export default function SatkerPortal() {
 
   const submitUpload = (e) => {
     e.preventDefault();
-    if (!selectedFilePdf || !selectedFileExcel) return setToastMsg({ type: 'error', text: 'Pilih file PDF dan Excel terlebih dahulu.' });
+    if (!selectedFilePdf || !selectedFileExcel) return setToastMsg({ type: 'error', text: 'Pilih file PDF dan Dokumen Pendukung (Excel/Word) terlebih dahulu.' });
     const fd = new FormData();
     fd.append('dokumen_monev', selectedFilePdf);
     fd.append('dokumen_excel', selectedFileExcel);
@@ -476,9 +476,9 @@ export default function SatkerPortal() {
                   className={`border-2 ${isDraggingExcel ? 'border-green-500 bg-green-500/10' : 'border-dashed border-white/10 hover:border-green-500/50 hover:bg-white/5'} rounded-xl p-5 text-center transition-all cursor-pointer flex flex-col items-center justify-center min-h-[150px]`}
                 >
                   <UploadCloud size={32} className="text-green-400 mb-3" />
-                  <div className="text-sm font-medium text-gray-200 mb-1">Data Excel</div>
-                  <div className="text-[11px] text-gray-500">Maks 10MB (.xlsx)</div>
-                  <input ref={fileInputExcelRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => onFileChangeExcel(e.target.files?.[0])} />
+                  <div className="text-sm font-medium text-gray-200 mb-1">Data Dokumen</div>
+                  <div className="text-[11px] text-gray-500">Maks 10MB (.xlsx, .doc)</div>
+                  <input ref={fileInputExcelRef} type="file" accept=".xlsx,.xls,.doc,.docx" className="hidden" onChange={(e) => onFileChangeExcel(e.target.files?.[0])} />
                   {selectedFileExcel && (
                     <div className="mt-4 text-xs w-full bg-slate-800 rounded-lg p-2.5 flex items-center justify-between border border-white/5">
                       <span className="truncate text-gray-300 pr-2 font-medium">{selectedFileExcel.name}</span>

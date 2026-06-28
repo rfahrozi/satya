@@ -15,14 +15,17 @@ const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 10 * 1024 * 1024 }, // Batas maksimal 10MB per file
     fileFilter: (req, file, cb) => {
-        // Validasi tipe file: Hanya PDF dan Excel (.xlsx)
+        // Validasi tipe file: Hanya PDF dan Excel (.xlsx) / Word (.docx)
         if (
             file.mimetype === 'application/pdf' ||
-            file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+            file.mimetype === 'application/vnd.ms-excel' ||
+            file.mimetype === 'application/msword' ||
+            file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         ) {
             cb(null, true);
         } else {
-            cb(new AppError('Format file tidak didukung. Gunakan PDF atau XLSX.', 400), false);
+            cb(new AppError('Format file tidak didukung. Gunakan PDF, XLSX, XLS, DOC, atau DOCX.', 400), false);
         }
     }
 });
