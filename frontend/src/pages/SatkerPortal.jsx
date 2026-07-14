@@ -176,10 +176,10 @@ export default function SatkerPortal() {
 
   const submitUpload = (e) => {
     e.preventDefault();
-    if (!selectedFilePdf || !selectedFileExcel) return setToastMsg({ type: 'error', text: 'Pilih file PDF dan Dokumen Pendukung (Excel/Word) terlebih dahulu.' });
+    if (!selectedFilePdf && !selectedFileExcel) return setToastMsg({ type: 'error', text: 'Pilih minimal satu file (PDF atau Dokumen Pendukung) terlebih dahulu.' });
     const fd = new FormData();
-    fd.append('dokumen_monev', selectedFilePdf);
-    fd.append('dokumen_excel', selectedFileExcel);
+    if (selectedFilePdf) fd.append('dokumen_monev', selectedFilePdf);
+    if (selectedFileExcel) fd.append('dokumen_excel', selectedFileExcel);
     fd.append('report_type_id', String(uploadModal.reportTypeId));
     fd.append('periode_bulan', String(bulan));
     fd.append('periode_tahun', String(tahun));
@@ -506,7 +506,7 @@ export default function SatkerPortal() {
                 <button type="button" onClick={closeUploadModal} className="px-5 py-2.5 rounded-lg bg-transparent text-gray-300 hover:bg-white/5 transition-colors text-sm font-medium">Batal</button>
                 <button
                   type="submit"
-                  disabled={uploadMutation.isLoading || !selectedFilePdf || !selectedFileExcel}
+                  disabled={uploadMutation.isLoading || (!selectedFilePdf && !selectedFileExcel)}
                   className="px-6 py-2.5 rounded-lg bg-emerald-600 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-500 transition-colors shadow-lg shadow-emerald-900/20 text-sm flex items-center gap-2"
                 >
                   {uploadMutation.isLoading ? 'Uploading...' : uploadModal.existingSubmissionId ? 'Timpa & Simpan' : 'Unggah Dokumen'}

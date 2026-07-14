@@ -27,17 +27,27 @@ async function uploadReportDocument(tenant, file, fileExcel, reportTypeId, perio
     // [UPDATE FEATURE B]: We now keep the old files in MinIO for Audit Trail purposes.
     // if (existing) { ... }
 
-    // 3. Tentukan nama file unik (Path: SatkerID/Tahun/periodType/periodUnit/Timestamp-NamaFile)
-    const filename = `${tenant.satkerId}/${tahun}/${periodType}/${periodUnit}/${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
-    const excelFilename = `${tenant.satkerId}/${tahun}/${periodType}/${periodUnit}/${Date.now()}-excel-${fileExcel.originalname.replace(/\s+/g, '_')}`;
+    // 3. Tentukan nama file dan upload ke MinIO (hanya jika ada file baru)
+    let filename = existing ? existing.file_url : null;
+    let excelFilename = existing ? existing.excel_file_url : null;
+    let nama_file_asli = existing ? existing.nama_file_asli : null;
+    let nama_excel_file_asli = existing ? existing.nama_excel_file_asli : null;
 
-    // 4. Upload ke MinIO
-    await minioClient.putObject(BUCKET_NAME, filename, file.buffer, file.size, {
-        'Content-Type': file.mimetype
-    });
-    await minioClient.putObject(BUCKET_NAME, excelFilename, fileExcel.buffer, fileExcel.size, {
-        'Content-Type': fileExcel.mimetype
-    });
+    if (file) {
+        filename = `${tenant.satkerId}/${tahun}/${periodType}/${periodUnit}/${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
+        await minioClient.putObject(BUCKET_NAME, filename, file.buffer, file.size, {
+            'Content-Type': file.mimetype
+        });
+        nama_file_asli = file.originalname;
+    }
+
+    if (fileExcel) {
+        excelFilename = `${tenant.satkerId}/${tahun}/${periodType}/${periodUnit}/${Date.now()}-excel-${fileExcel.originalname.replace(/\s+/g, '_')}`;
+        await minioClient.putObject(BUCKET_NAME, excelFilename, fileExcel.buffer, fileExcel.size, {
+            'Content-Type': fileExcel.mimetype
+        });
+        nama_excel_file_asli = fileExcel.originalname;
+    }
 
     const dataSubmission = {
         satker_id: tenant.satkerId,
@@ -46,9 +56,9 @@ async function uploadReportDocument(tenant, file, fileExcel, reportTypeId, perio
         period_unit: periodUnit,
         periode_tahun: tahun,
         file_url: filename,
-        nama_file_asli: file.originalname,
+        nama_file_asli: nama_file_asli,
         excel_file_url: excelFilename,
-        nama_excel_file_asli: fileExcel.originalname,
+        nama_excel_file_asli: nama_excel_file_asli,
         status_verifikasi: 'belum_lengkap', // Reset status jika di-update
         catatan_admin: null,
         updated_at: knex.fn.now()
