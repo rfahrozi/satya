@@ -28,11 +28,9 @@ wait_for minio 9000
 # MinIO bucket init handled by app.js initMinio()
 echo "MinIO ready - bucket init by app..."
 
-# Migrate & seed
+# Migrate (seeding dijalankan secara manual di production untuk menghindari data loss)
 echo "Running knex migrations..."
 npx knex migrate:latest
-echo "Running seeds..."
-npx knex seed:run
 
 echo "Setup complete, exec app..."
 exec "$@"
