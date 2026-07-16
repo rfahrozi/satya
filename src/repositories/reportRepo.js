@@ -1,5 +1,39 @@
 /**
- * SATYA - Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel - Report Repository
+ * Cek satker mana yang belum upload laporan tertentu untuk periode tertentu
+ */
+async function getMissingSubmissionsForReport(reportTypeId, periodType, periodUnit, periodeTahun) {
+    const result = await knex.raw(`
+        SELECT s.id as satker_id, s.nama_satker, u.email
+        FROM satkers s
+        JOIN users u ON u.satker_id = s.id
+            AND u.role IN ('SATKER_PN', 'PANMUD_HUKUM_PN', 'STAFF_PANMUD_HUKUM_PN')
+            AND u.is_active = true
+            AND u.email IS NOT NULL
+        WHERE NOT EXISTS (
+            SELECT 1 FROM report_submissions rs
+            WHERE rs.satker_id = s.id
+              AND rs.report_type_id = ?
+              AND rs.period_type = ?
+              AND rs.period_unit = ?
+              AND rs.periode_tahun = ?
+        )
+    `, [reportTypeId, periodType, String(periodUnit), String(periodeTahun)]);
+    
+    return result.rows || result; // pg vs sqlite compat
+}
+
+/**
+ * Mengambil seluruh deadline config untuk report yang wajib
+ */
+async function getActiveDeadlineConfigs() {
+    return await knex('deadline_configs as dc')
+        .join('report_types as rt', 'dc.report_type_id', 'rt.id')
+        .where('rt.is_wajib', true)
+        .select('dc.*', 'rt.nama_laporan');
+}
+
+/**
+ * [READ] Antrian Verifikasirasi dan Tata kelola Yudisial yang Akuntabel - Report Repository
  * Layer akses data untuk semua operasi laporan
  */
 const knex = require('../config/knex');
@@ -331,6 +365,8 @@ module.exports = {
     getSatkerProgress,
     getRekapitulasiPimpinan,
     getTotalReportTypes,
+    getMissingSubmissionsForReport,
+    getActiveDeadlineConfigs,
     findSatkersForReminder,
     getAntrianVerifikasi,
     getLoopRevisi,

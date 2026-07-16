@@ -182,9 +182,11 @@ async function verifyAndNotify(tenant, submissionId, status, catatan, score) {
     }
 
     // 3. Jika statusnya REVISI, masukkan ke antrean email
-    if (status === 'revisi') {
+        if (status === 'revisi') {
         const detail = await knex('users')
             .where('satker_id', submission.satker_id)
+            .whereNotNull('email')
+            .whereIn('role', ['SATKER_PN', 'PANMUD_HUKUM_PN', 'STAFF_PANMUD_HUKUM_PN'])
             .select('email as satker_email')
             .first();
 
@@ -193,9 +195,10 @@ async function verifyAndNotify(tenant, submissionId, status, catatan, score) {
                 to: detail.satker_email,
                 nama_laporan: submission.nama_laporan,
                 catatan_admin: catatan
-            }, { attempts: 3, backoff: 5000 }); // Coba lagi 3x jika gagal
+            }, { attempts: 3, backoff: 5000 });
         }
     }
+}
 }
 
 /**

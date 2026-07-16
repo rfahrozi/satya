@@ -1,81 +1,101 @@
 /**
  * SATYA - Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel - Scheduler (Cron Job)
- * Menjalankan tugas pengecekan dan pengiriman reminder secara terjadwal.
+ * Menjalankan tugas pengecekan dan pengiriman reminder secara terjadwal berdasarkan deadline per dokumen.
  */
 const cron = require('node-cron');
 const reportRepo = require('./repositories/reportRepo');
-const { emailQueue } = require('./emailWorker'); // ← Fix: path yang benar
+const { emailQueue } = require('./emailWorker');
 
-// Hari deadline dapat dikonfigurasi via env var. Default: tanggal 10 bulan berikutnya.
-const DEADLINE_DAY = parseInt(process.env.DEADLINE_DAY) || 10;
+console.log('⏰ Scheduler Pengingat Otomatis diaktifkan. (Mode Periode Dinamis)');
 
-console.log(`⏰ Scheduler Pengingat Otomatis diaktifkan. Deadline hari ke-${DEADLINE_DAY}.`);
-
-/**
- * Pure function: Mengecek apakah hari ini adalah hari pengiriman reminder.
- * Diekspor untuk keperluan unit testing tanpa mocking cron.
- *
- * @param {Date} today - Tanggal yang dicek
- * @param {number} deadlineDay - Hari deadline dalam sebulan
- * @returns {boolean}
- */
-function isReminderDay(today, deadlineDay) {
-    const currentDay = today.getDate();
+function isReminderDay(currentDay, deadlineDay) {
     const targetDays = [deadlineDay - 3, deadlineDay - 1, deadlineDay];
     return targetDays.includes(currentDay);
 }
 
-// Jadwal berjalan setiap hari jam 8:00 pagi Waktu Indonesia Barat
-cron.schedule('0 8 * * *', async () => {
-    console.log(`\n[${new Date().toISOString()}] --- Menjalankan Pengecekan Reminder Harian ---`);
-
-    const today = new Date();
-
-    if (!isReminderDay(today, DEADLINE_DAY)) {
-        console.log('Hari ini bukan jadwal pengiriman reminder. Pengecekan selesai.');
-        return;
+// Mengembalikan array { periodUnit, periodeTahun } yang deadline-nya jatuh pada bulan ini
+// Contoh: quarterly, bulan saat ini = 4 (April), berarti periodUnit = 1 (Q1), dan deadline nya adalah bulan ini
+function getTargetPeriodsForCurrentMonth(periodType, currentMonth, currentYear) {
+    const targets = [];
+    if (periodType === 'monthly') {
+        // Laporan bulanan untuk bulan sebelumnya, deadline di bulan saat ini
+        const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+        const year = currentMonth === 1 ? currentYear - 1 : currentYear;
+        targets.push({ periodUnit: prevMonth, periodeTahun: year });
+    } else if (periodType === 'quarterly') {
+        // Q1 (1,2,3) deadline di bulan 4
+        if (currentMonth === 4) targets.push({ periodUnit: 1, periodeTahun: currentYear });
+        // Q2 (4,5,6) deadline di bulan 7
+        if (currentMonth === 7) targets.push({ periodUnit: 2, periodeTahun: currentYear });
+        // Q3 (7,8,9) deadline di bulan 10
+        if (currentMonth === 10) targets.push({ periodUnit: 3, periodeTahun: currentYear });
+        // Q4 (10,11,12) deadline di bulan 1
+        if (currentMonth === 1) targets.push({ periodUnit: 4, periodeTahun: currentYear - 1 });
+    } else if (periodType === 'semesterly') {
+        // S1 (1-6) deadline di bulan 7
+        if (currentMonth === 7) targets.push({ periodUnit: 1, periodeTahun: currentYear });
+        // S2 (7-12) deadline di bulan 1
+        if (currentMonth === 1) targets.push({ periodUnit: 2, periodeTahun: currentYear - 1 });
+    } else if (periodType === 'annually') {
+        // Tahunan deadline di bulan 1 tahun berikutnya
+        if (currentMonth === 1) targets.push({ periodUnit: 1, periodeTahun: currentYear - 1 });
     }
+    return targets;
+}
 
-    // Tentukan periode laporan yang dicek (selalu bulan sebelumnya dari bulan berjalan)
-    const targetDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const periodeBulan = targetDate.getMonth() + 1;
-    const periodeTahun = targetDate.getFullYear();
-
-    const deadlineText = `${DEADLINE_DAY} ${targetDate.toLocaleString('id-ID', { month: 'long' })} ${periodeTahun}`;
-    console.log(`Mengecek kelengkapan laporan untuk periode: ${periodeBulan}-${periodeTahun}. Deadline: ${deadlineText}`);
+cron.schedule('0 8 * * *', async () => {
+    console.log(`
+[${new Date().toISOString()}] --- Menjalankan Pengecekan Reminder Harian ---`);
+    const today = new Date();
+    const currentDay = today.getDate();
+    const currentMonth = today.getMonth() + 1;
+    const currentYear = today.getFullYear();
 
     try {
-        const totalWajib = await reportRepo.getTotalReportTypes();
-        if (totalWajib === 0) {
-            console.log('Tidak ada tipe laporan yang terdaftar. Reminder tidak dijalankan.');
-            return;
-        }
+        const configs = await reportRepo.getActiveDeadlineConfigs();
+        
+        let totalJobs = 0;
+        
+        for (const config of configs) {
+            // Apakah hari ini H-3, H-1, atau H-0 dari deadline laporan ini?
+            if (!isReminderDay(currentDay, config.day_of_period)) continue;
+            
+            // Cek apakah ada periode laporan ini yang deadline-nya jatuh di bulan ini
+            const targetPeriods = getTargetPeriodsForCurrentMonth(config.period_type, currentMonth, currentYear);
+            
+            for (const target of targetPeriods) {
+                const missingSatkers = await reportRepo.getMissingSubmissionsForReport(
+                    config.report_type_id, 
+                    config.period_type, 
+                    target.periodUnit, 
+                    target.periodeTahun
+                );
+                
+                if (missingSatkers.length === 0) continue;
+                
+                const targetDateObj = new Date(currentYear, currentMonth - 1, config.day_of_period);
+                const deadlineText = `${config.day_of_period} ${targetDateObj.toLocaleString('id-ID', { month: 'long' })} ${currentYear}`;
+                
+                const jobs = missingSatkers.map(satker => ({
+                    name: 'sendReminderEmail',
+                    data: {
+                        to: satker.email,
+                        nama_satker: satker.nama_satker,
+                        deadline_text: deadlineText,
+                        nama_laporan: config.nama_laporan // opsional: modifikasi worker untuk menerima ini
+                    },
+                    opts: {
+                        jobId: `reminder-${satker.satker_id}-${config.report_type_id}-${config.period_type}-${target.periodUnit}-${target.periodeTahun}-${currentDay}`
+                    }
+                }));
 
-        const satkersToRemind = await reportRepo.findSatkersForReminder('monthly', periodeBulan, periodeTahun);
-
-        if (satkersToRemind.length === 0) {
-            console.log('✅ Semua satker telah melengkapi laporan. Tidak ada reminder yang dikirim.');
-            return;
-        }
-
-        console.log(`🚨 Ditemukan ${satkersToRemind.length} satker yang belum lengkap. Menambahkan ke antrean email...`);
-
-        // Gunakan addBulk agar semua job dikirim ke Redis dalam satu operasi (lebih efisien)
-        const jobs = satkersToRemind.map((satker) => ({
-            name: 'sendReminderEmail',
-            data: {
-                to: satker.email,
-                nama_satker: satker.nama_satker,
-                deadline_text: deadlineText
-            },
-            opts: {
-                // Mencegah duplikasi job jika scheduler berjalan lebih dari sekali di hari yang sama
-                jobId: `reminder-${satker.id}-${periodeBulan}-${periodeTahun}`
+                await emailQueue.addBulk(jobs);
+                totalJobs += jobs.length;
+                console.log(`   -> Ditambahkan ${jobs.length} job pengingat untuk: ${config.nama_laporan} (${config.period_type} ${target.periodUnit}-${target.periodeTahun})`);
             }
-        }));
-
-        await emailQueue.addBulk(jobs);
-        satkersToRemind.forEach(s => console.log(`   -> Job reminder untuk ${s.nama_satker} (${s.email}) ditambahkan.`));
+        }
+        
+        console.log(`Total ${totalJobs} job reminder ditambahkan hari ini.`);
 
     } catch (error) {
         console.error('❌ Terjadi kesalahan saat menjalankan scheduler reminder:', error);
@@ -86,4 +106,4 @@ cron.schedule('0 8 * * *', async () => {
     timezone: 'Asia/Jakarta'
 });
 
-module.exports = { isReminderDay };
+module.exports = { isReminderDay, getTargetPeriodsForCurrentMonth };
