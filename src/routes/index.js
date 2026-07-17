@@ -29,6 +29,10 @@ router.use('/master', masterRoutes);
 const notificationRoutes = require('./notificationRoutes');
 router.use('/notifications', notificationRoutes);
 
+// Jalur Internal Monitoring
+const internalMonitoringRoutes = require('./internalMonitoringRoutes');
+router.use('/internal-monitoring', internalMonitoringRoutes);
+
 /**
  * Health Check Endpoint
  * Digunakan untuk memonitor apakah API berjalan (Uptime Monitoring)

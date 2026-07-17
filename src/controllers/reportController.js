@@ -1,7 +1,7 @@
 /**
  * SATYA - Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel - Report Controller
  * Menangani siklus hidup dokumen: Upload, Progress, Verifikasi, dan CRUD
- */
+ * reportController.js/
 
 const reportService = require('../services/reportService');
 const reportRepo = require('../repositories/reportRepo');
