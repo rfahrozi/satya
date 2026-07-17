@@ -1,12 +1,7 @@
 const repo = require('../repositories/internalMonitoringRepo');
 const knex = require('../config/knex');
-
-function forbidden(msg = 'Akses ditolak') {
-  const err = new Error(msg);
-  err.code = 'FORBIDDEN';
-  err.statusCode = 403;
-  throw err;
-}
+const authSvc = require('./internalMonitoringAuthorizationService');
+const { AppError } = require('../middlewares/errorHandler');
 
 function badRequest(code, msg) {
   const err = new Error(msg);
@@ -22,10 +17,11 @@ function notFound(msg) {
   throw err;
 }
 
-// Check authorization capabilities
-function hasCapability(target, userId, capabilities) {
-  if (!target.assignees) return false;
-  return target.assignees.some(a => a.user_id === userId && capabilities.includes(a.capability));
+function conflict(code, msg) {
+  const err = new Error(msg);
+  err.code = code;
+  err.statusCode = 409;
+  throw err;
 }
 
 function logSodOverride(trx, targetId, actorId, action, notes) {
@@ -54,67 +50,86 @@ class InternalMonitoringService {
         badRequest('INVALID_STATE_TRANSITION', 'Hanya bisa save draft pada status NOT_STARTED, IN_PROGRESS, atau REVISION_REQUIRED');
       }
 
-      if (actor.role !== 'ADMIN_PT' && !hasCapability(target, actor.id, ['COLLECTOR', 'SUPPORTING_PIC'])) {
-        forbidden('Hanya Collector yang dapat menyimpan draft');
-      }
+      await authSvc.assertHasCapability(actor, id, ['COLLECTOR', 'SUPPORTING_PIC'], trx);
 
       const nextStatus = target.workflow_status === 'NOT_STARTED' ? 'IN_PROGRESS' : target.workflow_status;
       
-      await repo.updateTargetState(id, null, {
+      const updated = await repo.updateTargetState(id, null, {
         workflow_status: nextStatus,
-        updated_by: actor.id
+        updated_by: actor.userId
       }, target.lock_version, trx);
+      
+      if (updated === 0) {
+        const error = new Error('Data telah diubah oleh pengguna lain (VERSION_CONFLICT). Muat ulang dan coba lagi.');
+        error.statusCode = 409;
+        throw error;
+      }
       
       return { success: true, message: 'Draft saved' };
     });
   }
 
   async submitTarget(id, actor) {
-    return knex.transaction(async (trx) => {
-      const target = await repo.getTargetDetail(id, trx);
-      if (!target) notFound('Target tidak ditemukan');
+    try {
+      return await knex.transaction(async (trx) => {
+        const target = await repo.getTargetDetail(id, trx);
+        if (!target) notFound('Target tidak ditemukan');
 
-      if (!['IN_PROGRESS', 'REVISION_REQUIRED'].includes(target.workflow_status)) {
-        badRequest('INVALID_STATE_TRANSITION', 'Submit hanya dari IN_PROGRESS atau REVISION_REQUIRED');
-      }
+        if (!['IN_PROGRESS', 'REVISION_REQUIRED'].includes(target.workflow_status)) {
+          badRequest('INVALID_STATE_TRANSITION', 'Submit hanya dari IN_PROGRESS atau REVISION_REQUIRED');
+        }
 
-      if (actor.role !== 'ADMIN_PT' && !hasCapability(target, actor.id, ['COLLECTOR'])) {
-        forbidden('Hanya Collector yang dapat submit target');
-      }
+        await authSvc.assertHasCapability(actor, id, ['COLLECTOR'], trx);
 
-      // Validate evidence completeness
-      const validation = await repo.validateEvidenceCompleteness(id, trx);
-      if (!validation.complete) {
-        badRequest('EVIDENCE_INCOMPLETE', 'Bukti wajib belum lengkap');
-      }
+        // Validate evidence completeness
+        const requirements = await repo.getEvidenceRequirements(target.monitoring_item_id, target.period_id ? new Date() : new Date(), trx); // Use a stable date conceptually
+        
+        for (const req of requirements) {
+          if (req.is_required) {
+            const latest = target.evidences.find(e => e.requirement_id === req.id && ['DRAFT', 'SUBMITTED', 'VERIFIED'].includes(e.evidence_status));
+            if (!latest) {
+               badRequest('EVIDENCE_INCOMPLETE', `Bukti wajib belum lengkap: ${req.label}`);
+            }
+          }
+        }
 
-      const nextStatus = target.workflow_status === 'REVISION_REQUIRED' && target.current_review_stage 
-                         ? target.current_review_stage 
-                         : 'AWAITING_APPROVAL';
+        const nextStatus = target.workflow_status === 'REVISION_REQUIRED' && target.current_review_stage 
+                           ? target.current_review_stage 
+                           : 'AWAITING_APPROVAL';
 
-      const wasLate = new Date() > new Date(target.due_at);
+        const wasLate = new Date() > new Date(target.due_at);
 
-      await repo.updateTargetState(id, null, {
-        workflow_status: nextStatus,
-        submitted_at: knex.fn.now(),
-        was_submitted_late: wasLate,
-        updated_by: actor.id
-      }, target.lock_version, trx);
+        const updated = await repo.updateTargetState(id, null, {
+          workflow_status: nextStatus,
+          submitted_at: knex.fn.now(),
+          was_submitted_late: wasLate,
+          updated_by: actor.userId
+        }, target.lock_version, trx);
 
-      // Lock draft evidences
-      await trx('monitoring_evidences')
-        .where({ monitoring_target_id: id, evidence_status: 'DRAFT' })
-        .update({ evidence_status: 'SUBMITTED' });
+        if (updated === 0) {
+          const error = new Error('Data telah diubah oleh pengguna lain (VERSION_CONFLICT). Muat ulang dan coba lagi.');
+          error.statusCode = 409;
+          throw error;
+        }
 
-      await repo.insertActivity({
-        monitoring_target_id: id,
-        actor_user_id: actor.id,
-        action: 'SUBMIT',
-        description: 'Target disubmit'
-      }, trx);
+        // Lock draft evidences
+        await trx('monitoring_evidences')
+          .where({ monitoring_target_id: id, evidence_status: 'DRAFT' })
+          .update({ evidence_status: 'SUBMITTED' });
 
-      return { success: true };
-    });
+        await repo.insertActivity({
+          monitoring_target_id: id,
+          actor_user_id: actor.userId,
+          action: 'SUBMIT',
+          description: 'Target disubmit'
+        }, trx);
+
+        return { success: true };
+      });
+    } catch (err) {
+      console.log('SUBMIT TARGET THREW ERROR:', err);
+      throw err;
+    }
   }
 
   async approveTarget(id, actor) {
@@ -126,27 +141,24 @@ class InternalMonitoringService {
         badRequest('INVALID_STATE_TRANSITION', 'Hanya dapat approve dari AWAITING_APPROVAL');
       }
 
-      // SOD check
-      const isCollector = hasCapability(target, actor.id, ['COLLECTOR']);
-      const isApprover = hasCapability(target, actor.id, ['ACCOUNTABLE_OWNER', 'APPROVER']);
-      
-      if (actor.role !== 'ADMIN_PT') {
-        if (!isApprover) forbidden('Hanya Approver yang dapat menyetujui');
-        if (isCollector) {
-          await logSodOverride(trx, id, actor.id, 'APPROVE', 'Collector melakukan approve sendiri');
-          // for slice, we let it pass with an override log, or fail? "Exception harus dicatat sebagai SOD_OVERRIDE" implies it passes but is logged.
-        }
-      }
+      await authSvc.assertHasCapability(actor, id, ['ACCOUNTABLE_OWNER', 'APPROVER'], trx);
+      await authSvc.assertSegregationOfDuties(actor, target, 'APPROVE', trx);
 
-      await repo.updateTargetState(id, null, {
+      const updated = await repo.updateTargetState(id, null, {
         workflow_status: 'AWAITING_VERIFICATION',
         approved_at: knex.fn.now(),
-        updated_by: actor.id
+        updated_by: actor.userId
       }, target.lock_version, trx);
+
+      if (updated === 0) {
+        const error = new Error('Data telah diubah oleh pengguna lain (VERSION_CONFLICT). Muat ulang dan coba lagi.');
+        error.statusCode = 409;
+        throw error;
+      }
 
       await repo.insertActivity({
         monitoring_target_id: id,
-        actor_user_id: actor.id,
+        actor_user_id: actor.userId,
         action: 'APPROVE',
         description: 'Target disetujui'
       }, trx);
@@ -239,47 +251,107 @@ class InternalMonitoringService {
     });
   }
 
-  async addEvidence(id, requirementId, payload, actor) {
+  async listTargetEvidence(actor, targetId) {
+    const target = await repo.getTargetDetail(targetId, knex);
+    if (!target) notFound('Target tidak ditemukan');
+    await authSvc.assertCanViewTarget(actor, target);
+    
+    return repo.listEvidenceByTarget(targetId, knex);
+  }
+
+  async saveEvidence(actor, targetId, payload) {
     return knex.transaction(async (trx) => {
-      const target = await repo.getTargetDetail(id, trx);
+      const target = await repo.getTargetDetail(targetId, trx);
       if (!target) notFound('Target tidak ditemukan');
       
-      if (!['NOT_STARTED', 'IN_PROGRESS', 'REVISION_REQUIRED'].includes(target.workflow_status)) {
-        badRequest('INVALID_STATE_TRANSITION', 'Tidak dapat upload evidence pada status ini');
-      }
-
-      if (actor.role !== 'ADMIN_PT' && !hasCapability(target, actor.id, ['COLLECTOR', 'SUPPORTING_PIC'])) {
-        forbidden('Hanya Collector yang dapat menambah evidence');
-      }
+      const requirementId = payload.requirement_id;
+      await authSvc.assertCanEditEvidence(actor, target, requirementId, trx);
 
       const reqs = await repo.getEvidenceRequirements(target.monitoring_item_id, new Date(), trx);
       const req = reqs.find(r => r.id === parseInt(requirementId));
       if (!req) notFound('Requirement tidak valid');
+      
+      if (payload.evidence_type && payload.evidence_type !== req.evidence_type) {
+        badRequest('EVIDENCE_TYPE_MISMATCH', `Tipe evidence harus ${req.evidence_type}`);
+      }
 
       // Versioning
       const existingVersions = await trx('monitoring_evidences')
-        .where({ monitoring_target_id: id, requirement_id: requirementId });
+        .where({ monitoring_target_id: targetId, requirement_id: requirementId });
       
       const newVersionNo = existingVersions.length > 0 ? Math.max(...existingVersions.map(e => e.version_no)) + 1 : 1;
 
       // Supersede older drafts if they exist
       await trx('monitoring_evidences')
-        .where({ monitoring_target_id: id, requirement_id: requirementId, evidence_status: 'DRAFT' })
+        .where({ monitoring_target_id: targetId, requirement_id: requirementId, evidence_status: 'DRAFT' })
         .update({ evidence_status: 'SUPERSEDED', superseded_at: knex.fn.now() });
 
       const evidence = await repo.insertEvidenceVersion({
-        monitoring_target_id: id,
+        monitoring_target_id: targetId,
         requirement_id: requirementId,
         version_no: newVersionNo,
         evidence_type: req.evidence_type,
-        ...payload,
-        submitted_by: actor.id,
+        value_text: payload.value_text,
+        value_number: payload.value_number,
+        value_date: payload.value_date,
+        value_boolean: payload.value_boolean,
+        submitted_by: actor.userId,
         evidence_status: 'DRAFT'
       }, trx);
       
       // Auto-update target status to IN_PROGRESS if NOT_STARTED
       if (target.workflow_status === 'NOT_STARTED') {
-        await repo.updateTargetState(id, null, { workflow_status: 'IN_PROGRESS' }, target.lock_version, trx);
+        const updated = await repo.updateTargetState(targetId, 'NOT_STARTED', { workflow_status: 'IN_PROGRESS' }, target.lock_version, trx);
+        if (updated === 0) conflict('VERSION_CONFLICT', 'Lock version mismatch saat auto-update ke IN_PROGRESS');
+      }
+
+      return evidence;
+    });
+  }
+
+  async uploadEvidenceFile(actor, targetId, requirementId, file) {
+    return knex.transaction(async (trx) => {
+      const target = await repo.getTargetDetail(targetId, trx);
+      if (!target) notFound('Target tidak ditemukan');
+      
+      await authSvc.assertCanEditEvidence(actor, target, requirementId, trx);
+
+      const reqs = await repo.getEvidenceRequirements(target.monitoring_item_id, new Date(), trx);
+      const req = reqs.find(r => r.id === parseInt(requirementId));
+      if (!req) notFound('Requirement tidak valid');
+
+      if (req.evidence_type !== 'FILE') {
+        badRequest('EVIDENCE_TYPE_MISMATCH', 'Requirement ini tidak menerima tipe FILE');
+      }
+
+      // TODO: actual file upload to MinIO to get ID/URL, here we just simulate
+      const fileSubmissionId = null;
+
+      // Versioning
+      const existingVersions = await trx('monitoring_evidences')
+        .where({ monitoring_target_id: targetId, requirement_id: requirementId });
+      
+      const newVersionNo = existingVersions.length > 0 ? Math.max(...existingVersions.map(e => e.version_no)) + 1 : 1;
+
+      // Supersede older drafts
+      await trx('monitoring_evidences')
+        .where({ monitoring_target_id: targetId, requirement_id: requirementId, evidence_status: 'DRAFT' })
+        .update({ evidence_status: 'SUPERSEDED', superseded_at: knex.fn.now() });
+
+      const evidence = await repo.insertEvidenceVersion({
+        monitoring_target_id: targetId,
+        requirement_id: requirementId,
+        version_no: newVersionNo,
+        evidence_type: 'FILE',
+        value_text: file.originalname, // Save filename as text
+        file_submission_id: fileSubmissionId,
+        submitted_by: actor.userId,
+        evidence_status: 'DRAFT'
+      }, trx);
+      
+      if (target.workflow_status === 'NOT_STARTED') {
+        const updated = await repo.updateTargetState(targetId, 'NOT_STARTED', { workflow_status: 'IN_PROGRESS' }, target.lock_version, trx);
+        if (updated === 0) conflict('VERSION_CONFLICT', 'Lock version mismatch saat auto-update ke IN_PROGRESS');
       }
 
       return evidence;

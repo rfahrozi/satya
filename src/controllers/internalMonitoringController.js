@@ -59,7 +59,7 @@ exports.verifyTarget = async (req, res, next) => {
 
 exports.listEvidence = async (req, res, next) => {
   try {
-    const evs = await repo.listEvidenceByTarget(req.params.id);
+    const evs = await service.listTargetEvidence(req.user, req.params.id);
     res.json({ success: true, data: evs });
   } catch (err) { next(err); }
 };
@@ -67,16 +67,14 @@ exports.listEvidence = async (req, res, next) => {
 exports.addEvidenceFile = async (req, res, next) => {
   try {
     if (!req.file) throw new Error('File required');
-    // Simulated file storage logic
-    const payload = { value_text: req.file.originalname, file_submission_id: null };
-    const result = await service.addEvidence(req.params.id, req.params.requirementId, payload, req.user);
+    const result = await service.uploadEvidenceFile(req.user, req.params.id, req.params.requirementId, req.file);
     res.status(201).json({ success: true, data: result });
   } catch (err) { next(err); }
 };
 
 exports.addEvidence = async (req, res, next) => {
   try {
-    const result = await service.addEvidence(req.params.id, req.body.requirement_id, req.body, req.user);
+    const result = await service.saveEvidence(req.user, req.params.id, req.body);
     res.status(201).json({ success: true, data: result });
   } catch (err) { next(err); }
 };

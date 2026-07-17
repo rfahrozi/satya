@@ -1,0 +1,4 @@
+Error: SOD Violation: Submitter tidak boleh melakukan Approval pada target yang sama.
+    at Object.assertSegregationOfDuties (C:\My Project\satya\src\services\internalMonitoringAuthorizationService.js:79:13)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at C:\My Project\satya\src\services\internalMonitoringService.js:145:7

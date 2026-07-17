@@ -3,8 +3,15 @@ const multer = require('multer');
 const masterController = require('../controllers/internalMonitoringMasterController');
 const operationalController = require('../controllers/internalMonitoringController');
 const dashboardController = require('../controllers/internalMonitoringDashboardController');
+const tenantContext = require('../middlewares/tenant');
 
 const router = express.Router();
+router.use(tenantContext);
+router.use((req, res, next) => {
+  req.user = req.tenant || {};
+  req.user.id = req.user.userId;
+  next();
+});
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // --- Period & Generation ---

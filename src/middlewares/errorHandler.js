@@ -30,6 +30,14 @@ const errorHandler = (err, req, res, next) => {
     err.statusCode = err.statusCode || 500;
     err.status = err.status || 'error';
 
+    // Log error untuk internal server error
+    if (process.env.NODE_ENV !== 'test') {
+        console.error('ERROR 💥', err);
+    } else {
+        console.error('TEST ERROR 💥', err);
+        require('fs').writeFileSync('debug_error.log', err.stack || err.message);
+    }
+
     // Log error untuk kebutuhan debugging di server (Internal)
     if (process.env.NODE_ENV !== 'test') {
         console.error('⚠️ [ERROR LOG]:', {

@@ -165,6 +165,12 @@ async function supersedeEvidence(evidenceId, trx = knex) {
     .update({ evidence_status: 'SUPERSEDED', superseded_at: knex.fn.now() });
 }
 
+async function markEvidenceSubmitted(targetId, trx = knex) {
+  return trx('monitoring_evidences')
+    .where({ monitoring_target_id: targetId, evidence_status: 'DRAFT' })
+    .update({ evidence_status: 'SUBMITTED', updated_at: knex.fn.now() });
+}
+
 async function validateEvidenceCompleteness(targetId, trx = knex) {
   const target = await getTargetById(targetId, trx);
   const reqs = await getEvidenceRequirements(target.monitoring_item_id, new Date(), trx);
@@ -269,6 +275,7 @@ module.exports = {
   getLatestEvidence,
   insertEvidenceVersion,
   supersedeEvidence,
+  markEvidenceSubmitted,
   validateEvidenceCompleteness,
   insertVerification,
   listVerificationHistory,
