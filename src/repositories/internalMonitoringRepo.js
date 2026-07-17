@@ -227,7 +227,13 @@ async function updateFollowUpState(id, fromStatuses, patch, trx = knex) {
     if (Array.isArray(fromStatuses)) query = query.whereIn('status', fromStatuses);
     else query = query.where('status', fromStatuses);
   }
-  return query.update(patch);
+  const updated = await query.update(patch);
+  if (updated === 0) {
+    const error = new Error('Follow-up tidak dalam status yang valid untuk aksi ini');
+    error.statusCode = 400;
+    throw error;
+  }
+  return updated;
 }
 
 // --- Dashboard ---
@@ -253,6 +259,7 @@ async function getOperationalSummary(periodId, trx = knex) {
     return acc;
   }, {});
 }
+
 
 module.exports = {
   listActiveItems,

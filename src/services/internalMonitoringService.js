@@ -371,9 +371,7 @@ class InternalMonitoringService {
       const target = await repo.getTargetDetail(targetId, trx);
       if (!target) notFound('Target tidak ditemukan');
 
-      if (actor.role !== 'ADMIN_PT' && !hasCapability(target, actor.id, ['VERIFIER'])) {
-        forbidden('Hanya Verifier yang dapat membuat follow-up');
-      }
+      await authSvc.assertHasCapability(actor, targetId, ['VERIFIER'], trx);
 
       const fu = await repo.createFollowUp({
         monitoring_target_id: targetId,
@@ -412,16 +410,14 @@ class InternalMonitoringService {
           fromStatuses = ['AWAITING_VERIFICATION'];
           nextStatus = 'CLOSED';
           if (actor.role !== 'ADMIN_PT') {
-            const target = await repo.getTargetDetail(fu.monitoring_target_id, trx);
-            if (!hasCapability(target, actor.id, ['VERIFIER'])) forbidden('Hanya Verifier yang dapat close follow-up');
+            await authSvc.assertHasCapability(actor, fu.monitoring_target_id, ['VERIFIER'], trx);
           }
           break;
         case 'reopen':
           fromStatuses = ['AWAITING_VERIFICATION'];
           nextStatus = 'REOPENED';
           if (actor.role !== 'ADMIN_PT') {
-            const target = await repo.getTargetDetail(fu.monitoring_target_id, trx);
-            if (!hasCapability(target, actor.id, ['VERIFIER'])) forbidden('Hanya Verifier yang dapat reopen follow-up');
+            await authSvc.assertHasCapability(actor, fu.monitoring_target_id, ['VERIFIER'], trx);
           }
           break;
         default:

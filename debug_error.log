@@ -1,4 +1,4 @@
-Error: SOD Violation: Submitter tidak boleh melakukan Verifikasi pada target yang sama.
-    at Object.assertSegregationOfDuties (C:\My Project\satya\src\services\internalMonitoringAuthorizationService.js:90:13)
+Error: Follow-up tidak dalam status yang valid untuk aksi ini
+    at Object.updateFollowUpState (C:\My Project\satya\src\repositories\internalMonitoringRepo.js:232:19)
     at processTicksAndRejections (node:internal/process/task_queues:104:5)
-    at C:\My Project\satya\src\services\internalMonitoringService.js:180:7
+    at C:\My Project\satya\src\services\internalMonitoringService.js:432:7
