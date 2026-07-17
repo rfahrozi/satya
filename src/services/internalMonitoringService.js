@@ -1,358 +1,367 @@
 const repo = require('../repositories/internalMonitoringRepo');
-const validator = require('../validators/internalMonitoringValidator');
-const reportService = require('./reportService');
+const knex = require('../config/knex');
 
-function ok(message, data, meta) {
-  return { success: true, message, data, ...(meta ? { meta } : {}) };
+function forbidden(msg = 'Akses ditolak') {
+  const err = new Error(msg);
+  err.code = 'FORBIDDEN';
+  err.statusCode = 403;
+  throw err;
 }
 
-function notFound(entity = 'Resource') {
-  const error = new Error(`${entity} not found`);
-  error.statusCode = 404;
-  throw error;
+function badRequest(code, msg) {
+  const err = new Error(msg);
+  err.code = code;
+  err.statusCode = 400;
+  throw err;
 }
 
-function badRequest(message) {
-  const error = new Error(message);
-  error.statusCode = 400;
-  throw error;
+function notFound(msg) {
+  const err = new Error(msg);
+  err.code = 'NOT_FOUND';
+  err.statusCode = 404;
+  throw err;
 }
 
-function buildReportTenant(user = {}) {
-  return {
-    role: user.role,
-    satkerId: user.satkerId || user.satker_id || null,
-    userId: user.id || null,
-  };
+// Check authorization capabilities
+function hasCapability(target, userId, capabilities) {
+  if (!target.assignees) return false;
+  return target.assignees.some(a => a.user_id === userId && capabilities.includes(a.capability));
+}
+
+function logSodOverride(trx, targetId, actorId, action, notes) {
+  return repo.insertActivity({
+    monitoring_target_id: targetId,
+    actor_user_id: actorId,
+    action: `SOD_OVERRIDE_${action}`,
+    description: notes
+  }, trx);
 }
 
 class InternalMonitoringService {
-  async listUnits(query = {}) {
-    const filters = { ...validator.validatePagination(query), ...query };
-    const { rows, meta } = await repo.listUnits(filters);
-    return ok('Internal units fetched successfully', rows, meta);
+  async getTarget(id, actor) {
+    const target = await repo.getTargetDetail(id, knex);
+    if (!target) notFound('Target tidak ditemukan');
+    return target;
   }
-  async getUnitById(id) { const row = await repo.getById('internal_units', id); if (!row) notFound('Internal unit'); return ok('Internal unit fetched successfully', row); }
-  async createUnit(payload) { const row = await repo.create('internal_units', payload); return ok('Internal unit created successfully', row); }
-  async updateUnit(id, payload) { const row = await repo.update('internal_units', id, payload); if (!row) notFound('Internal unit'); return ok('Internal unit updated successfully', row); }
-  async deleteUnit(id) { const row = await repo.softDelete('internal_units', id); if (!row) notFound('Internal unit'); return ok('Internal unit deleted successfully', row); }
+  
+  async saveDraft(id, payload, actor) {
+    return knex.transaction(async (trx) => {
+      const target = await repo.getTargetDetail(id, trx);
+      if (!target) notFound('Target tidak ditemukan');
+      
+      const allowed = ['NOT_STARTED', 'IN_PROGRESS', 'REVISION_REQUIRED'];
+      if (!allowed.includes(target.workflow_status)) {
+        badRequest('INVALID_STATE_TRANSITION', 'Hanya bisa save draft pada status NOT_STARTED, IN_PROGRESS, atau REVISION_REQUIRED');
+      }
 
-  async listPositions(query = {}) { const filters = { ...validator.validatePagination(query), ...query }; const { rows, meta } = await repo.listPositions(filters); return ok('Positions fetched successfully', rows, meta); }
-  async getPositionById(id) { const row = await repo.getById('positions', id); if (!row) notFound('Position'); return ok('Position fetched successfully', row); }
-  async createPosition(payload) { const row = await repo.create('positions', payload); return ok('Position created successfully', row); }
-  async updatePosition(id, payload) { const row = await repo.update('positions', id, payload); if (!row) notFound('Position'); return ok('Position updated successfully', row); }
-  async deletePosition(id) { const row = await repo.softDelete('positions', id); if (!row) notFound('Position'); return ok('Position deleted successfully', row); }
+      if (actor.role !== 'ADMIN_PT' && !hasCapability(target, actor.id, ['COLLECTOR', 'SUPPORTING_PIC'])) {
+        forbidden('Hanya Collector yang dapat menyimpan draft');
+      }
 
-  async listAssignments(query = {}) { const filters = { ...validator.validatePagination(query), ...query }; const { rows, meta } = await repo.listAssignments(filters); return ok('Assignments fetched successfully', rows, meta); }
-  async createAssignment(payload) { const row = await repo.create('internal_assignments', payload); return ok('Assignment created successfully', row); }
-  async updateAssignment(id, payload) { const row = await repo.update('internal_assignments', id, payload); if (!row) notFound('Assignment'); return ok('Assignment updated successfully', row); }
-  async deleteAssignment(id) { const row = await repo.softDelete('internal_assignments', id); if (!row) notFound('Assignment'); return ok('Assignment deleted successfully', row); }
-
-  async listPackages(query = {}) { const filters = { ...validator.validatePagination(query), ...query }; const { rows, meta } = await repo.listPackages(filters); return ok('Monitoring packages fetched successfully', rows, meta); }
-  async getPackageById(id) { const row = await repo.getById('monitoring_packages', id); if (!row) notFound('Monitoring package'); return ok('Monitoring package fetched successfully', row); }
-  async createPackage(payload) { const row = await repo.create('monitoring_packages', payload); return ok('Monitoring package created successfully', row); }
-  async updatePackage(id, payload) { const row = await repo.update('monitoring_packages', id, payload); if (!row) notFound('Monitoring package'); return ok('Monitoring package updated successfully', row); }
-  async deletePackage(id) { const row = await repo.softDelete('monitoring_packages', id); if (!row) notFound('Monitoring package'); return ok('Monitoring package deleted successfully', row); }
-
-  async listItems(query = {}) { const filters = { ...validator.validatePagination(query), ...query }; const { rows, meta } = await repo.listItems(filters); return ok('Monitoring items fetched successfully', rows, meta); }
-  async getItemById(id) { const row = await repo.getById('monitoring_items', id); if (!row) notFound('Monitoring item'); return ok('Monitoring item fetched successfully', row); }
-  async createItem(payload) { const row = await repo.create('monitoring_items', payload); return ok('Monitoring item created successfully', row); }
-  async updateItem(id, payload) { const row = await repo.update('monitoring_items', id, payload); if (!row) notFound('Monitoring item'); return ok('Monitoring item updated successfully', row); }
-  async deleteItem(id) { const row = await repo.softDelete('monitoring_items', id); if (!row) notFound('Monitoring item'); return ok('Monitoring item deleted successfully', row); }
-
-  async listItemAssignments(query = {}) { const filters = { ...validator.validatePagination(query), ...query }; const { rows, meta } = await repo.listItemAssignments(filters); return ok('Item assignments fetched successfully', rows, meta); }
-  async createItemAssignment(payload) { const row = await repo.create('monitoring_item_assignments', payload); return ok('Item assignment created successfully', row); }
-  async updateItemAssignment(id, payload) { const row = await repo.update('monitoring_item_assignments', id, payload); if (!row) notFound('Item assignment'); return ok('Item assignment updated successfully', row); }
-  async deleteItemAssignment(id) { const row = await repo.softDelete('monitoring_item_assignments', id); if (!row) notFound('Item assignment'); return ok('Item assignment deleted successfully', row); }
-
-  async listPeriods(query = {}) { const filters = { ...validator.validatePagination(query), ...query }; const { rows, meta } = await repo.listPeriods(filters); return ok('Monitoring periods fetched successfully', rows, meta); }
-  async getPeriodById(id) { const row = await repo.getPeriodById(id); if (!row) notFound('Monitoring period'); return ok('Monitoring period fetched successfully', row); }
-  async createPeriod(payload, user) { const row = await repo.create('monitoring_periods', { ...payload, created_by: user?.id || null }); return ok('Monitoring period created successfully', row); }
-  async updatePeriod(id, payload) { const row = await repo.update('monitoring_periods', id, payload); if (!row) notFound('Monitoring period'); return ok('Monitoring period updated successfully', row); }
-  async openPeriod(id) { const row = await repo.update('monitoring_periods', id, { status: 'OPEN', opened_at: new Date() }); if (!row) notFound('Monitoring period'); return ok('Monitoring period opened successfully', row); }
-  async closePeriod(id) { const row = await repo.update('monitoring_periods', id, { status: 'CLOSED', closed_at: new Date() }); if (!row) notFound('Monitoring period'); return ok('Monitoring period closed successfully', row); }
-
-  async listTargets(query = {}) { const filters = { ...validator.validatePagination(query), ...query }; const { rows, meta } = await repo.listTargets(filters); return ok('Monitoring targets fetched successfully', rows, meta); }
-  async listMyTargets(query = {}, user) { const filters = { ...validator.validatePagination(query), ...query, assigned_user_id: user?.id }; const { rows, meta } = await repo.listTargets(filters); return ok('My monitoring targets fetched successfully', rows, meta); }
-  async getTargetById(id) { const row = await repo.getTargetById(id); if (!row) notFound('Monitoring target'); return ok('Monitoring target fetched successfully', row); }
-
-  async reassignTarget(id, payload, user) {
-    const row = await repo.update('monitoring_targets', id, payload);
-    if (!row) notFound('Monitoring target');
-    await repo.createActivity({ monitoring_target_id: id, actor_user_id: user?.id || null, action: 'TARGET_REASSIGNED', description: payload.reason || 'Target reassigned', payload });
-    return ok('Monitoring target assignment updated successfully', row);
-  }
-
-  async refreshStatuses(payload = {}, user) {
-    await repo.createActivity({ monitoring_target_id: null, actor_user_id: user?.id || null, action: 'BULK_STATUS_REFRESH', description: 'Bulk status refresh triggered', payload });
-    return ok('Monitoring target statuses refreshed successfully', { updated_count: 0, overdue_count: 0 });
-  }
-
-  async saveDraft(id, payload, user) {
-    const row = await repo.update('monitoring_targets', id, payload);
-    if (!row) notFound('Monitoring target');
-    await repo.createActivity({ monitoring_target_id: id, actor_user_id: user?.id || null, action: 'DRAFT_SAVED', description: 'Draft metadata saved', payload });
-    return ok('Monitoring draft saved successfully', row);
-  }
-
-  async uploadTargetDocument(id, req, user) {
-    const target = await repo.getTargetById(id);
-    if (!target) notFound('Monitoring target');
-
-    const reportType = await repo.getInternalReportTypeByMonitoringItem(target.monitoring_item_id);
-    if (!reportType) badRequest('Report type untuk monitoring item ini belum dikonfigurasi.');
-
-    const file = req.files && req.files.dokumen_monev ? req.files.dokumen_monev[0] : null;
-    const fileExcel = req.files && req.files.dokumen_excel ? req.files.dokumen_excel[0] : null;
-    if (!file && !fileExcel) badRequest('Minimal satu file (PDF atau Excel/Word) harus diunggah.');
-
-    const tenant = buildReportTenant(user);
-    const periodType = target.period_month ? 'monthly' : (target.period_quarter ? 'quarterly' : 'annually');
-    const periodUnit = String(target.period_month || target.period_quarter || 1);
-    const tahun = String(target.period_year);
-
-    const submissionId = await reportService.uploadReportDocument(
-      tenant,
-      file,
-      fileExcel,
-      reportType.id,
-      periodType,
-      periodUnit,
-      tahun
-    );
-
-    const row = await repo.updateReportSubmission(submissionId, {
-      scope_type: 'PT_INTERNAL',
-      internal_unit_id: target.internal_unit_id,
-      position_id: target.position_id,
-      monitoring_target_id: Number(id),
-      submitted_by_user_id: user?.id || null,
-      submission_context: {
-        source: 'internal-monitoring',
-        monitoring_target_id: Number(id),
-        monitoring_item_id: target.monitoring_item_id,
-        item_code: target.item_code,
-        notes: req.body?.notes || null,
-      },
-    });
-
-    await repo.update('monitoring_targets', id, {
-      latest_report_id: submissionId,
-      status: 'UNDER_REVIEW',
-      assigned_user_id: target.assigned_user_id || user?.id || null,
-    });
-
-    await repo.createActivity({
-      monitoring_target_id: id,
-      actor_user_id: user?.id || null,
-      action: 'DOCUMENT_UPLOADED',
-      description: 'Document uploaded to target',
-      payload: { notes: req.body?.notes || null, report_id: submissionId },
-    });
-
-    return ok('Monitoring document uploaded successfully', {
-      target_id: Number(id),
-      report_id: submissionId,
-      status: 'UNDER_REVIEW',
-      submitted_by_user_id: user?.id || null,
-      file_received: Boolean(file),
-      excel_received: Boolean(fileExcel),
-      submission: row,
+      const nextStatus = target.workflow_status === 'NOT_STARTED' ? 'IN_PROGRESS' : target.workflow_status;
+      
+      await repo.updateTargetState(id, null, {
+        workflow_status: nextStatus,
+        updated_by: actor.id
+      }, target.lock_version, trx);
+      
+      return { success: true, message: 'Draft saved' };
     });
   }
 
-  async reuploadTargetDocument(id, req, user) {
-    const response = await this.uploadTargetDocument(id, req, user);
-    if (response?.data?.target_id) {
-      await repo.createActivity({
-        monitoring_target_id: response.data.target_id,
-        actor_user_id: user?.id || null,
-        action: 'DOCUMENT_REUPLOADED',
-        description: 'Document reuploaded to target',
-        payload: { notes: req.body?.notes || null, report_id: response.data.report_id },
-      });
-    }
-    response.message = 'Monitoring document reuploaded successfully';
-    return response;
-  }
+  async submitTarget(id, actor) {
+    return knex.transaction(async (trx) => {
+      const target = await repo.getTargetDetail(id, trx);
+      if (!target) notFound('Target tidak ditemukan');
 
-  async getSubmissions(id) {
-    const target = await repo.getTargetById(id);
-    if (!target) notFound('Monitoring target');
-    const rows = await repo.getSubmissionHistoryByTarget(id);
-    const data = rows.map((row, index) => ({
-      id: row.id,
-      report_id: row.report_id,
-      version: rows.length - index,
-      action_type: row.action_type,
-      file_url: row.file_url,
-      excel_file_url: row.excel_file_url,
-      file_name: row.nama_file_asli,
-      excel_file_name: row.nama_excel_file_asli,
-      status: row.status_verifikasi,
-      notes: row.notes,
-      actor: row.actor,
-      created_at: row.created_at,
-    }));
-    return ok('Submission history fetched successfully', data);
-  }
+      if (!['IN_PROGRESS', 'REVISION_REQUIRED'].includes(target.workflow_status)) {
+        badRequest('INVALID_STATE_TRANSITION', 'Submit hanya dari IN_PROGRESS atau REVISION_REQUIRED');
+      }
 
-  async downloadLatest(id, user) {
-    const target = await repo.getTargetById(id);
-    if (!target) notFound('Monitoring target');
-    const latest = await repo.getLatestSubmissionByTarget(id);
-    if (!latest) notFound('Dokumen');
+      if (actor.role !== 'ADMIN_PT' && !hasCapability(target, actor.id, ['COLLECTOR'])) {
+        forbidden('Hanya Collector yang dapat submit target');
+      }
 
-    const tenant = buildReportTenant(user);
-    const downloadUrl = await reportService.generatePresignedUrl(latest.id, tenant, 'pdf');
+      // Validate evidence completeness
+      const validation = await repo.validateEvidenceCompleteness(id, trx);
+      if (!validation.complete) {
+        badRequest('EVIDENCE_INCOMPLETE', 'Bukti wajib belum lengkap');
+      }
 
-    return ok('Download URL generated successfully', {
-      report_id: latest.id,
-      download_url: downloadUrl,
+      const nextStatus = target.workflow_status === 'REVISION_REQUIRED' && target.current_review_stage 
+                         ? target.current_review_stage 
+                         : 'AWAITING_APPROVAL';
+
+      const wasLate = new Date() > new Date(target.due_at);
+
+      await repo.updateTargetState(id, null, {
+        workflow_status: nextStatus,
+        submitted_at: knex.fn.now(),
+        was_submitted_late: wasLate,
+        updated_by: actor.id
+      }, target.lock_version, trx);
+
+      // Lock draft evidences
+      await trx('monitoring_evidences')
+        .where({ monitoring_target_id: id, evidence_status: 'DRAFT' })
+        .update({ evidence_status: 'SUBMITTED' });
+
+      await repo.insertActivity({
+        monitoring_target_id: id,
+        actor_user_id: actor.id,
+        action: 'SUBMIT',
+        description: 'Target disubmit'
+      }, trx);
+
+      return { success: true };
     });
   }
 
-  async verifyTarget(id, payload, user) {
-    const target = await repo.getTargetById(id);
-    if (!target) notFound('Monitoring target');
-    const latest = await repo.getLatestSubmissionByTarget(id);
-    if (!latest) badRequest('Belum ada submission untuk diverifikasi.');
+  async approveTarget(id, actor) {
+    return knex.transaction(async (trx) => {
+      const target = await repo.getTargetDetail(id, trx);
+      if (!target) notFound('Target tidak ditemukan');
 
-    const tenant = buildReportTenant(user);
-    await reportService.verifyAndNotify(
-      tenant,
-      latest.id,
-      'lengkap',
-      payload.verification_note || null,
-      payload.score !== undefined ? payload.score : null
-    );
+      if (target.workflow_status !== 'AWAITING_APPROVAL') {
+        badRequest('INVALID_STATE_TRANSITION', 'Hanya dapat approve dari AWAITING_APPROVAL');
+      }
 
-    const row = await repo.update('monitoring_targets', id, {
-      status: 'VERIFIED',
-      score: payload.score || null,
-      grade: payload.grade || null,
-      verified_by: user?.id || null,
-      verified_at: new Date(),
-      remarks: payload.verification_note || null,
-      latest_report_id: latest.id,
+      // SOD check
+      const isCollector = hasCapability(target, actor.id, ['COLLECTOR']);
+      const isApprover = hasCapability(target, actor.id, ['ACCOUNTABLE_OWNER', 'APPROVER']);
+      
+      if (actor.role !== 'ADMIN_PT') {
+        if (!isApprover) forbidden('Hanya Approver yang dapat menyetujui');
+        if (isCollector) {
+          await logSodOverride(trx, id, actor.id, 'APPROVE', 'Collector melakukan approve sendiri');
+          // for slice, we let it pass with an override log, or fail? "Exception harus dicatat sebagai SOD_OVERRIDE" implies it passes but is logged.
+        }
+      }
+
+      await repo.updateTargetState(id, null, {
+        workflow_status: 'AWAITING_VERIFICATION',
+        approved_at: knex.fn.now(),
+        updated_by: actor.id
+      }, target.lock_version, trx);
+
+      await repo.insertActivity({
+        monitoring_target_id: id,
+        actor_user_id: actor.id,
+        action: 'APPROVE',
+        description: 'Target disetujui'
+      }, trx);
+
+      return { success: true };
     });
-
-    await repo.createVerification({
-      monitoring_target_id: id,
-      actor_user_id: user?.id || null,
-      action: 'VERIFIED',
-      note: payload.verification_note,
-      score: payload.score || null,
-      grade: payload.grade || null,
-      payload,
-    });
-
-    await repo.createActivity({
-      monitoring_target_id: id,
-      actor_user_id: user?.id || null,
-      action: 'TARGET_VERIFIED',
-      description: payload.verification_note,
-      payload,
-    });
-
-    return ok('Monitoring target verified successfully', row);
   }
 
-  async requestRevision(id, payload, user) {
-    const current = await repo.getTargetById(id);
-    if (!current) notFound('Monitoring target');
-    const latest = await repo.getLatestSubmissionByTarget(id);
-    if (!latest) badRequest('Belum ada submission untuk direvisi.');
+  async verifyTarget(id, actor, payload) {
+    return knex.transaction(async (trx) => {
+      const target = await repo.getTargetDetail(id, trx);
+      if (!target) notFound('Target tidak ditemukan');
 
-    const tenant = buildReportTenant(user);
-    await reportService.verifyAndNotify(
-      tenant,
-      latest.id,
-      'revisi',
-      payload.revision_note,
-      payload.score !== undefined ? payload.score : null
-    );
+      if (target.workflow_status !== 'AWAITING_VERIFICATION') {
+        badRequest('INVALID_STATE_TRANSITION', 'Hanya dapat verify dari AWAITING_VERIFICATION');
+      }
 
-    const revision_count = Number(current.revision_count || 0) + 1;
-    const row = await repo.update('monitoring_targets', id, {
-      status: 'REVISION_REQUIRED',
-      revision_count,
-      remarks: payload.revision_note,
-      latest_report_id: latest.id,
+      const isCollector = hasCapability(target, actor.id, ['COLLECTOR']);
+      const isVerifier = hasCapability(target, actor.id, ['VERIFIER']);
+      
+      if (actor.role !== 'ADMIN_PT') {
+        if (!isVerifier) forbidden('Hanya Verifier yang dapat memverifikasi');
+        if (isCollector) {
+          await logSodOverride(trx, id, actor.id, 'VERIFY', 'Collector memverifikasi target sendiri');
+        }
+      }
+
+      await repo.updateTargetState(id, null, {
+        workflow_status: 'VERIFIED',
+        verified_at: knex.fn.now(),
+        updated_by: actor.id
+      }, target.lock_version, trx);
+
+      const verification = await repo.insertVerification({
+        monitoring_target_id: id,
+        actor_user_id: actor.id,
+        action: 'VERIFIED',
+        note: payload.note || ''
+      }, trx);
+
+      await repo.insertActivity({
+        monitoring_target_id: id,
+        actor_user_id: actor.id,
+        action: 'VERIFY',
+        description: 'Target diverifikasi: ' + (payload.note || '')
+      }, trx);
+
+      return { success: true, verification };
     });
-
-    await repo.createVerification({
-      monitoring_target_id: id,
-      actor_user_id: user?.id || null,
-      action: 'REVISION_REQUIRED',
-      note: payload.revision_note,
-      revision_due_date: payload.due_date || null,
-      payload,
-    });
-
-    await repo.createActivity({
-      monitoring_target_id: id,
-      actor_user_id: user?.id || null,
-      action: 'REVISION_REQUESTED',
-      description: payload.revision_note,
-      payload,
-    });
-
-    return ok('Revision requested successfully', row);
   }
 
-  async rejectSubmission(id, payload, user) {
-    const target = await repo.getTargetById(id);
-    if (!target) notFound('Monitoring target');
-    const latest = await repo.getLatestSubmissionByTarget(id);
-    if (!latest) badRequest('Belum ada submission untuk ditolak.');
+  async requestRevision(id, actor, payload) {
+    return knex.transaction(async (trx) => {
+      const target = await repo.getTargetDetail(id, trx);
+      if (!target) notFound('Target tidak ditemukan');
 
-    const tenant = buildReportTenant(user);
-    await reportService.verifyAndNotify(tenant, latest.id, 'revisi', payload.reason, null);
+      if (!['AWAITING_APPROVAL', 'AWAITING_VERIFICATION'].includes(target.workflow_status)) {
+        badRequest('INVALID_STATE_TRANSITION', 'Hanya dapat revisi dari Approval atau Verification');
+      }
 
-    const row = await repo.update('monitoring_targets', id, {
-      status: 'REJECTED',
-      remarks: payload.reason,
-      latest_report_id: latest.id,
+      if (actor.role !== 'ADMIN_PT' && !hasCapability(target, actor.id, ['APPROVER', 'VERIFIER', 'ACCOUNTABLE_OWNER'])) {
+        forbidden('Hanya Approver atau Verifier yang dapat meminta revisi');
+      }
+
+      if (!payload.note) badRequest('VALIDATION_ERROR', 'Note revisi wajib diisi');
+
+      const returnStage = target.workflow_status;
+
+      await repo.updateTargetState(id, null, {
+        workflow_status: 'REVISION_REQUIRED',
+        current_review_stage: returnStage,
+        updated_by: actor.id
+      }, target.lock_version, trx);
+
+      await repo.insertVerification({
+        monitoring_target_id: id,
+        actor_user_id: actor.id,
+        action: 'REVISION_REQUIRED',
+        note: payload.note
+      }, trx);
+
+      await repo.insertActivity({
+        monitoring_target_id: id,
+        actor_user_id: actor.id,
+        action: 'REQUEST_REVISION',
+        description: 'Meminta revisi: ' + payload.note
+      }, trx);
+
+      return { success: true };
     });
-
-    await repo.createVerification({
-      monitoring_target_id: id,
-      actor_user_id: user?.id || null,
-      action: 'REJECTED',
-      note: payload.reason,
-      payload,
-    });
-
-    await repo.createActivity({
-      monitoring_target_id: id,
-      actor_user_id: user?.id || null,
-      action: 'SUBMISSION_REJECTED',
-      description: payload.reason,
-      payload,
-    });
-
-    return ok('Monitoring submission rejected successfully', row);
   }
 
-  async getVerificationHistory(id) {
-    const target = await repo.getTargetById(id);
-    if (!target) notFound('Monitoring target');
-    const rows = await repo.listVerificationsByTarget(id);
-    return ok('Verification history fetched successfully', rows);
+  async addEvidence(id, requirementId, payload, actor) {
+    return knex.transaction(async (trx) => {
+      const target = await repo.getTargetDetail(id, trx);
+      if (!target) notFound('Target tidak ditemukan');
+      
+      if (!['NOT_STARTED', 'IN_PROGRESS', 'REVISION_REQUIRED'].includes(target.workflow_status)) {
+        badRequest('INVALID_STATE_TRANSITION', 'Tidak dapat upload evidence pada status ini');
+      }
+
+      if (actor.role !== 'ADMIN_PT' && !hasCapability(target, actor.id, ['COLLECTOR', 'SUPPORTING_PIC'])) {
+        forbidden('Hanya Collector yang dapat menambah evidence');
+      }
+
+      const reqs = await repo.getEvidenceRequirements(target.monitoring_item_id, new Date(), trx);
+      const req = reqs.find(r => r.id === parseInt(requirementId));
+      if (!req) notFound('Requirement tidak valid');
+
+      // Versioning
+      const existingVersions = await trx('monitoring_evidences')
+        .where({ monitoring_target_id: id, requirement_id: requirementId });
+      
+      const newVersionNo = existingVersions.length > 0 ? Math.max(...existingVersions.map(e => e.version_no)) + 1 : 1;
+
+      // Supersede older drafts if they exist
+      await trx('monitoring_evidences')
+        .where({ monitoring_target_id: id, requirement_id: requirementId, evidence_status: 'DRAFT' })
+        .update({ evidence_status: 'SUPERSEDED', superseded_at: knex.fn.now() });
+
+      const evidence = await repo.insertEvidenceVersion({
+        monitoring_target_id: id,
+        requirement_id: requirementId,
+        version_no: newVersionNo,
+        evidence_type: req.evidence_type,
+        ...payload,
+        submitted_by: actor.id,
+        evidence_status: 'DRAFT'
+      }, trx);
+      
+      // Auto-update target status to IN_PROGRESS if NOT_STARTED
+      if (target.workflow_status === 'NOT_STARTED') {
+        await repo.updateTargetState(id, null, { workflow_status: 'IN_PROGRESS' }, target.lock_version, trx);
+      }
+
+      return evidence;
+    });
   }
 
-  async getActivityLog(id) {
-    const target = await repo.getTargetById(id);
-    if (!target) notFound('Monitoring target');
-    const rows = await repo.listActivitiesByTarget(id);
-    return ok('Activity log fetched successfully', rows);
+  // --- Follow-ups ---
+  async listFollowUps(targetId, actor) {
+    return repo.listFollowUpsByTarget(targetId, knex);
   }
 
-  async getGlobalActivityLog(query = {}) {
-    const filters = { ...validator.validatePagination(query), ...query };
-    const { rows, meta } = await repo.getGlobalActivities(filters);
-    return ok('Global activity log fetched successfully', rows, meta);
+  async createFollowUp(targetId, payload, actor) {
+    return knex.transaction(async (trx) => {
+      const target = await repo.getTargetDetail(targetId, trx);
+      if (!target) notFound('Target tidak ditemukan');
+
+      if (actor.role !== 'ADMIN_PT' && !hasCapability(target, actor.id, ['VERIFIER'])) {
+        forbidden('Hanya Verifier yang dapat membuat follow-up');
+      }
+
+      const fu = await repo.createFollowUp({
+        monitoring_target_id: targetId,
+        title: payload.title,
+        description: payload.description || '',
+        owner_user_id: payload.owner_user_id,
+        due_at: payload.due_at,
+        status: 'OPEN',
+        created_by: actor.id
+      }, trx);
+
+      return fu;
+    });
+  }
+
+  async changeFollowUpStatus(fuId, action, payload, actor) {
+    return knex.transaction(async (trx) => {
+      const fu = await trx('monitoring_follow_ups').where({ id: fuId }).first();
+      if (!fu) notFound('Follow-up tidak ditemukan');
+
+      let nextStatus;
+      let fromStatuses = [];
+
+      switch (action) {
+        case 'start':
+          fromStatuses = ['OPEN', 'REOPENED'];
+          nextStatus = 'IN_PROGRESS';
+          if (actor.id !== fu.owner_user_id && actor.role !== 'ADMIN_PT') forbidden('Hanya owner yang dapat start follow up');
+          break;
+        case 'submit-resolution':
+          fromStatuses = ['IN_PROGRESS'];
+          nextStatus = 'AWAITING_VERIFICATION';
+          if (actor.id !== fu.owner_user_id && actor.role !== 'ADMIN_PT') forbidden('Hanya owner yang dapat resolve');
+          break;
+        case 'close':
+          fromStatuses = ['AWAITING_VERIFICATION'];
+          nextStatus = 'CLOSED';
+          if (actor.role !== 'ADMIN_PT') {
+            const target = await repo.getTargetDetail(fu.monitoring_target_id, trx);
+            if (!hasCapability(target, actor.id, ['VERIFIER'])) forbidden('Hanya Verifier yang dapat close follow-up');
+          }
+          break;
+        case 'reopen':
+          fromStatuses = ['AWAITING_VERIFICATION'];
+          nextStatus = 'REOPENED';
+          if (actor.role !== 'ADMIN_PT') {
+            const target = await repo.getTargetDetail(fu.monitoring_target_id, trx);
+            if (!hasCapability(target, actor.id, ['VERIFIER'])) forbidden('Hanya Verifier yang dapat reopen follow-up');
+          }
+          break;
+        default:
+          badRequest('INVALID_ACTION', 'Action tidak dikenali');
+      }
+
+      const patch = { status: nextStatus };
+      if (action === 'submit-resolution') patch.resolution_note = payload.resolution_note;
+      if (action === 'submit-resolution') patch.submitted_at = knex.fn.now();
+      if (action === 'close') patch.closed_at = knex.fn.now();
+
+      await repo.updateFollowUpState(fuId, fromStatuses, patch, trx);
+      
+      return { success: true };
+    });
   }
 }
 

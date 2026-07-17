@@ -199,7 +199,6 @@ async function verifyAndNotify(tenant, submissionId, status, catatan, score) {
         }
     }
 }
-}
 
 /**
  * [DELETE] Hapus Dokumen Permanen (DB + MinIO)

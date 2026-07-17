@@ -23,10 +23,13 @@ CANDIDATES = [
     "internalMonitoringRepo.js",
     "internalMonitoringService.js",
     "internalMonitoringController.js",
+    "internalMonitoringMasterController.js",
+    "internalMonitoringDashboardController.js",
+    "internalMonitoringValidator.js",
     "internalMonitoringGeneratorService.js",
     "internalMonitoringDashboardService.js",
     "reportService.js",
-    "tenantContext.js",
+    "tenant.js",
     "202607170001_internal_monitoring_foundation.js",
 ]
 
