@@ -43,6 +43,7 @@ router.post('/targets/:id/verify', operationalController.verifyTarget);
 router.get('/targets/:id/evidence', operationalController.listEvidence);
 router.post('/targets/:id/evidence', operationalController.addEvidence);
 router.post('/targets/:id/evidence/:requirementId/file', upload.single('file'), operationalController.addEvidenceFile);
+router.get('/targets/:id/evidence/:evidenceId/download', operationalController.getEvidenceDownloadUrl);
 
 // --- Follow-ups ---
 router.get('/targets/:id/follow-ups', operationalController.listFollowUps);

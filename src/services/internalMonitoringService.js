@@ -378,6 +378,24 @@ class InternalMonitoringService {
     });
   }
 
+  async getEvidenceDownloadUrl(actor, targetId, evidenceId) {
+    const target = await repo.getTargetDetail(targetId, knex);
+    if (!target) notFound('Target tidak ditemukan');
+    
+    await authSvc.assertCanViewTarget(actor, target);
+
+    const ev = await knex('monitoring_evidences').where({ id: evidenceId, monitoring_target_id: targetId }).first();
+    if (!ev) notFound('Evidence tidak ditemukan');
+
+    if (ev.evidence_type !== 'FILE') {
+      badRequest('INVALID_TYPE', 'Evidence bukan berupa file');
+    }
+
+    // TODO: generate presigned URL from MinIO based on ev.file_submission_id
+    // Here we just mock it for the test
+    return `https://storage.satya.local/evidences/${ev.id}?sig=mock`;
+  }
+
   // --- Follow-ups ---
   async listFollowUps(targetId, actor) {
     return repo.listFollowUpsByTarget(targetId, knex);

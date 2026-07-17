@@ -67,8 +67,31 @@ exports.listEvidence = async (req, res, next) => {
 exports.addEvidenceFile = async (req, res, next) => {
   try {
     if (!req.file) throw new Error('File required');
+    
+    const allowedMimeTypes = [
+      'application/pdf',
+      'image/jpeg',
+      'image/png',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document' // docx
+    ];
+
+    if (!allowedMimeTypes.includes(req.file.mimetype)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tipe file tidak diizinkan. Gunakan PDF, JPG, PNG, DOCX, atau XLSX.'
+      });
+    }
+
     const result = await service.uploadEvidenceFile(req.user, req.params.id, req.params.requirementId, req.file);
     res.status(201).json({ success: true, data: result });
+  } catch (err) { next(err); }
+};
+
+exports.getEvidenceDownloadUrl = async (req, res, next) => {
+  try {
+    const url = await service.getEvidenceDownloadUrl(req.user, req.params.id, req.params.evidenceId);
+    res.json({ success: true, data: { url } });
   } catch (err) { next(err); }
 };
 
