@@ -30,8 +30,11 @@ const notificationRoutes = require('./notificationRoutes');
 router.use('/notifications', notificationRoutes);
 
 // Jalur Internal Monitoring
-const internalMonitoringRoutes = require('./internalMonitoringRoutes');
-router.use('/internal-monitoring', internalMonitoringRoutes);
+// Jangan register modul internal sampai seluruh dependency tersedia.
+if (process.env.PT_INTERNAL_MONITORING_ENABLED === 'true') {
+  const internalMonitoringRoutes = require('./internalMonitoringRoutes');
+  router.use('/internal-monitoring', internalMonitoringRoutes);
+}
 
 /**
  * Health Check Endpoint
