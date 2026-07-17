@@ -142,6 +142,14 @@ async function updateTargetState(id, fromStatuses, patch, expectedLockVersion = 
   return query.update(payload);
 }
 
+async function getAssignees(targetId, capabilities, trx = knex) {
+  let query = trx('monitoring_target_assignees').where('monitoring_target_id', targetId);
+  if (capabilities && capabilities.length > 0) {
+    query = query.whereIn('capability', capabilities);
+  }
+  return query;
+}
+
 // --- Evidence ---
 async function listEvidenceByTarget(targetId, trx = knex) {
   return trx('monitoring_evidences').where({ monitoring_target_id: targetId }).orderBy('version_no', 'desc');
@@ -405,6 +413,7 @@ module.exports = {
   getTargetDetail,
   listTargets,
   listTargetsForUser,
+  getAssignees,
   updateTargetState,
   listEvidenceByTarget,
   getLatestEvidence,

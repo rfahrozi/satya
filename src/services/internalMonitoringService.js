@@ -1,6 +1,7 @@
 const repo = require('../repositories/internalMonitoringRepo');
 const knex = require('../config/knex');
 const authSvc = require('./internalMonitoringAuthorizationService');
+const notificationSvc = require('./internalMonitoringNotificationService');
 const { AppError } = require('../middlewares/errorHandler');
 
 function badRequest(code, msg) {
@@ -124,6 +125,10 @@ class InternalMonitoringService {
           description: 'Target disubmit'
         }, trx);
 
+        const approvers = await repo.getAssignees(id, ['APPROVER', 'ACCOUNTABLE_OWNER'], trx);
+        const approverIds = approvers.map(a => a.user_id);
+        await notificationSvc.notifyTargetSubmitted(target, approverIds, trx);
+
         return { success: true };
       });
     } catch (err) {
@@ -162,6 +167,10 @@ class InternalMonitoringService {
         action: 'APPROVE',
         description: 'Target disetujui'
       }, trx);
+
+      const verifiers = await repo.getAssignees(id, ['VERIFIER'], trx);
+      const verifierIds = verifiers.map(a => a.user_id);
+      await notificationSvc.notifyTargetApproved(target, verifierIds, trx);
 
       return { success: true };
     });
@@ -204,6 +213,10 @@ class InternalMonitoringService {
         action: 'VERIFY',
         description: 'Target diverifikasi: ' + (payload.note || '')
       }, trx);
+
+      const assignees = await repo.getAssignees(id, ['COLLECTOR', 'APPROVER', 'ACCOUNTABLE_OWNER', 'SUPPORTING_PIC'], trx);
+      const userIds = assignees.map(a => a.user_id);
+      await notificationSvc.notifyTargetVerified(target, userIds, trx);
 
       return { success: true, verification };
     });
@@ -249,6 +262,10 @@ class InternalMonitoringService {
         action: 'REQUEST_REVISION',
         description: 'Meminta revisi: ' + payload.note
       }, trx);
+
+      const collectors = await repo.getAssignees(id, ['COLLECTOR'], trx);
+      const collectorIds = collectors.map(a => a.user_id);
+      await notificationSvc.notifyRevisionRequested(target, collectorIds, payload.note, trx);
 
       return { success: true };
     });
@@ -382,6 +399,15 @@ class InternalMonitoringService {
         status: 'OPEN',
         created_by: actor.id
       }, trx);
+
+      await repo.insertActivity({
+        monitoring_target_id: targetId,
+        actor_user_id: actor.userId,
+        action: 'CREATE_FOLLOW_UP',
+        description: 'Follow up dibuat: ' + payload.title
+      }, trx);
+
+      await notificationSvc.notifyFollowUpAssigned(fu, target, trx);
 
       return fu;
     });
