@@ -237,27 +237,155 @@ async function updateFollowUpState(id, fromStatuses, patch, trx = knex) {
 }
 
 // --- Dashboard ---
-async function getMySummary(userId, periodId, trx = knex) {
-  const targets = await listTargetsForUser(userId, { period_id: periodId }, {}, trx);
+async function getMyDashboard(userId, periodId, filters = {}, trx = knex) {
+  // Get all targets assigned to user in period
+  const query = trx('monitoring_targets as mt')
+    .join('monitoring_target_assignees as mta', 'mt.id', 'mta.monitoring_target_id')
+    .where('mt.period_id', periodId)
+    .where('mta.user_id', userId);
+    
+  const targets = await query.select('mt.*');
+  
+  // Get open follow ups for this user
+  const openFollowUps = await trx('monitoring_follow_ups as mfu')
+    .join('monitoring_targets as mt', 'mfu.monitoring_target_id', 'mt.id')
+    .where('mt.period_id', periodId)
+    .where('mfu.owner_user_id', userId)
+    .whereIn('mfu.status', ['OPEN', 'IN_PROGRESS', 'REOPENED'])
+    .count('* as count').first();
+
+  const now = new Date();
+  
   return {
-    total: targets.length,
-    verified: targets.filter(t => t.workflow_status === 'VERIFIED').length,
-    in_progress: targets.filter(t => t.workflow_status === 'IN_PROGRESS' || t.workflow_status === 'REVISION_REQUIRED').length,
-    awaiting: targets.filter(t => t.workflow_status === 'AWAITING_APPROVAL' || t.workflow_status === 'AWAITING_VERIFICATION').length
+    summary: {
+      total: targets.length,
+      notStarted: targets.filter(t => t.workflow_status === 'NOT_STARTED').length,
+      inProgress: targets.filter(t => t.workflow_status === 'IN_PROGRESS').length,
+      awaitingApproval: targets.filter(t => t.workflow_status === 'AWAITING_APPROVAL').length,
+      awaitingVerification: targets.filter(t => t.workflow_status === 'AWAITING_VERIFICATION').length,
+      revisionRequired: targets.filter(t => t.workflow_status === 'REVISION_REQUIRED').length,
+      verified: targets.filter(t => t.workflow_status === 'VERIFIED').length,
+      overdue: targets.filter(t => t.workflow_status !== 'VERIFIED' && new Date(t.due_at) < now).length,
+      openFollowUps: parseInt(openFollowUps.count) || 0
+    },
+    urgentTargets: targets.filter(t => t.workflow_status !== 'VERIFIED' && new Date(t.due_at) < now).slice(0, 5),
+    recentActivities: []
   };
 }
 
-async function getOperationalSummary(periodId, trx = knex) {
-  const res = await trx('monitoring_targets')
+async function getOperationalDashboard(periodId, filters = {}, trx = knex) {
+  const summaryRes = await trx('monitoring_targets')
     .where('period_id', periodId)
     .select('workflow_status')
     .count('* as count')
     .groupBy('workflow_status');
     
-  return res.reduce((acc, row) => {
-    acc[row.workflow_status] = parseInt(row.count);
-    return acc;
-  }, {});
+  let totalTargets = 0;
+  let verified = 0;
+  let revisionRequired = 0;
+  let awaitingVerification = 0;
+  
+  summaryRes.forEach(row => {
+    const c = parseInt(row.count);
+    totalTargets += c;
+    if (row.workflow_status === 'VERIFIED') verified += c;
+    if (row.workflow_status === 'REVISION_REQUIRED') revisionRequired += c;
+    if (row.workflow_status === 'AWAITING_VERIFICATION') awaitingVerification += c;
+  });
+
+  const now = new Date();
+  const overdueRes = await trx('monitoring_targets')
+    .where('period_id', periodId)
+    .whereNot('workflow_status', 'VERIFIED')
+    .where('due_at', '<', now)
+    .count('* as count').first();
+
+  const followUpRes = await trx('monitoring_follow_ups as mfu')
+    .join('monitoring_targets as mt', 'mfu.monitoring_target_id', 'mt.id')
+    .where('mt.period_id', periodId)
+    .whereIn('mfu.status', ['OPEN', 'IN_PROGRESS', 'REOPENED', 'AWAITING_VERIFICATION'])
+    .count('* as count').first();
+
+  return {
+    summary: {
+      totalTargets,
+      verified,
+      overdue: parseInt(overdueRes.count) || 0,
+      revisionRequired,
+      awaitingVerification,
+      openFollowUps: parseInt(followUpRes.count) || 0
+    },
+    byUnit: [],
+    reviewQueue: await listReviewQueue({}, { period_id: periodId }, { limit: 5 }, trx),
+    followUpQueue: await listFollowUpQueue({}, { period_id: periodId }, { limit: 5 }, trx)
+  };
+}
+
+async function getExecutiveDashboard(periodId, filters = {}, trx = knex) {
+  const targets = await trx('monitoring_targets').where('period_id', periodId);
+  
+  let applicableTargets = 0;
+  let verified = 0;
+  let verifiedOnTime = 0;
+  let overdueCount = 0;
+  const now = new Date();
+  
+  targets.forEach(t => {
+    if (t.workflow_status !== 'CANCELLED' && t.workflow_status !== 'NOT_APPLICABLE') {
+      applicableTargets++;
+      
+      if (t.workflow_status === 'VERIFIED') {
+        verified++;
+        // If it was verified, check if verified_at (or just assume for now) <= due_at
+        // For simplicity, we check was_submitted_late
+        if (!t.was_submitted_late) verifiedOnTime++;
+      } else {
+        if (new Date(t.due_at) < now) overdueCount++;
+      }
+    }
+  });
+
+  const followUpRes = await trx('monitoring_follow_ups as mfu')
+    .join('monitoring_targets as mt', 'mfu.monitoring_target_id', 'mt.id')
+    .where('mt.period_id', periodId)
+    .whereIn('mfu.status', ['OPEN', 'IN_PROGRESS', 'REOPENED', 'AWAITING_VERIFICATION'])
+    .count('* as count').first();
+
+  return {
+    complianceRate: applicableTargets ? parseFloat((verified / applicableTargets * 100).toFixed(2)) : 0,
+    verifiedOnTimeRate: applicableTargets ? parseFloat((verifiedOnTime / applicableTargets * 100).toFixed(2)) : 0,
+    overdueCount,
+    openFollowUpCount: parseInt(followUpRes.count) || 0,
+    byUnit: [],
+    criticalItems: []
+  };
+}
+
+async function listReviewQueue(actor, filters = {}, pagination = {}, trx = knex) {
+  let query = trx('monitoring_targets as mt')
+    .select('mt.*')
+    .whereIn('mt.workflow_status', ['AWAITING_APPROVAL', 'AWAITING_VERIFICATION'])
+    .orderBy('mt.updated_at', 'asc');
+    
+  if (filters.period_id) query = query.where('mt.period_id', filters.period_id);
+  if (pagination.limit) query = query.limit(pagination.limit);
+  if (pagination.offset) query = query.offset(pagination.offset);
+  
+  return query;
+}
+
+async function listFollowUpQueue(actor, filters = {}, pagination = {}, trx = knex) {
+  let query = trx('monitoring_follow_ups as mfu')
+    .join('monitoring_targets as mt', 'mfu.monitoring_target_id', 'mt.id')
+    .select('mfu.*', 'mt.natural_key')
+    .whereIn('mfu.status', ['OPEN', 'IN_PROGRESS', 'REOPENED', 'AWAITING_VERIFICATION'])
+    .orderBy('mfu.due_at', 'asc');
+    
+  if (filters.period_id) query = query.where('mt.period_id', filters.period_id);
+  if (pagination.limit) query = query.limit(pagination.limit);
+  if (pagination.offset) query = query.offset(pagination.offset);
+  
+  return query;
 }
 
 
@@ -291,6 +419,9 @@ module.exports = {
   createFollowUp,
   listFollowUpsByTarget,
   updateFollowUpState,
-  getMySummary,
-  getOperationalSummary
+  getMyDashboard,
+  getOperationalDashboard,
+  getExecutiveDashboard,
+  listReviewQueue,
+  listFollowUpQueue
 };

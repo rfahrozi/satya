@@ -24,6 +24,9 @@ router.post('/periods/:id/generate', masterController.generateTargets);
 // --- Dashboard ---
 router.get('/dashboard/my', dashboardController.getMyDashboard);
 router.get('/dashboard/operational', dashboardController.getOperationalDashboard);
+router.get('/dashboard/executive', dashboardController.getExecutiveDashboard);
+router.get('/review-queue', dashboardController.listReviewQueue);
+router.get('/follow-up-queue', dashboardController.listFollowUpQueue);
 
 // --- Target (Operational) ---
 router.get('/targets', operationalController.listTargets);
