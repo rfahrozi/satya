@@ -9,6 +9,7 @@ const bcrypt = require('bcryptjs');
 describe('Internal Monitoring - Workflow (Submit & Approve)', () => {
   let tokenCollector;
   let tokenApprover;
+  let tokenVerifier;
   let tokenOther;
   let targetId;
 
@@ -20,7 +21,8 @@ describe('Internal Monitoring - Workflow (Submit & Approve)', () => {
     await knex('users').insert([
       { id: 901, username: 'collector', password_hash: pwd, role: 'UNIT_PIC', is_active: true },
       { id: 902, username: 'approver', password_hash: pwd, role: 'PIMPINAN', is_active: true },
-      { id: 903, username: 'other', password_hash: pwd, role: 'UNIT_PIC', is_active: true }
+      { id: 903, username: 'other', password_hash: pwd, role: 'UNIT_PIC', is_active: true },
+      { id: 904, username: 'verifier', password_hash: pwd, role: 'UNIT_PIC', is_active: true }
     ]);
     
     await knex('monitoring_periods').insert({
@@ -43,7 +45,8 @@ describe('Internal Monitoring - Workflow (Submit & Approve)', () => {
 
     await knex('monitoring_target_assignees').insert([
       { monitoring_target_id: targetId, user_id: 901, capability: 'COLLECTOR' },
-      { monitoring_target_id: targetId, user_id: 902, capability: 'APPROVER' }
+      { monitoring_target_id: targetId, user_id: 902, capability: 'APPROVER' },
+      { monitoring_target_id: targetId, user_id: 904, capability: 'VERIFIER' }
     ]);
 
     await knex('monitoring_evidence_requirements').insert({
@@ -60,6 +63,9 @@ describe('Internal Monitoring - Workflow (Submit & Approve)', () => {
     
     const resApp = await request(app).post('/api/v1/auth/login').send({ username: 'approver', password: 'password123' });
     tokenApprover = resApp.body.data.token;
+    
+    const resVer = await request(app).post('/api/v1/auth/login').send({ username: 'verifier', password: 'password123' });
+    tokenVerifier = resVer.body.data.token;
     
     const resOth = await request(app).post('/api/v1/auth/login').send({ username: 'other', password: 'password123' });
     tokenOther = resOth.body.data.token;
@@ -140,5 +146,57 @@ describe('Internal Monitoring - Workflow (Submit & Approve)', () => {
     const target = await knex('monitoring_targets').where({ id: targetId }).first();
     expect(target.workflow_status).toBe('AWAITING_VERIFICATION');
     expect(target.lock_version).toBe(4);
+  });
+
+  it('7. requestRevision mengembalikan status ke REVISION_REQUIRED dan merekam current_review_stage', async () => {
+    const res = await request(app)
+      .post(`/api/v1/internal-monitoring/targets/${targetId}/request-revision`)
+      .set('Authorization', `Bearer ${tokenVerifier}`)
+      .send({ note: 'Perbaiki data X' });
+      
+    expect(res.status).toBe(200);
+    const target = await knex('monitoring_targets').where({ id: targetId }).first();
+    expect(target.workflow_status).toBe('REVISION_REQUIRED');
+    expect(target.current_review_stage).toBe('AWAITING_VERIFICATION');
+    expect(target.lock_version).toBe(5);
+  });
+
+  it('8. submitTarget (Resubmit) mengembalikan status ke current_review_stage', async () => {
+    const res = await request(app)
+      .post(`/api/v1/internal-monitoring/targets/${targetId}/submit`)
+      .set('Authorization', `Bearer ${tokenCollector}`);
+      
+    expect(res.status).toBe(200);
+    const target = await knex('monitoring_targets').where({ id: targetId }).first();
+    expect(target.workflow_status).toBe('AWAITING_VERIFICATION'); // kembali ke state sebelum revisi
+    expect(target.lock_version).toBe(6);
+  });
+
+  it('9. verifyTarget ditolak jika dilakukan oleh Submitter sendiri (SOD Violation)', async () => {
+    // Modify assignee to give collector verifier capability
+    await knex('monitoring_target_assignees').insert({ monitoring_target_id: targetId, user_id: 901, capability: 'VERIFIER' });
+
+    const res = await request(app)
+      .post(`/api/v1/internal-monitoring/targets/${targetId}/verify`)
+      .set('Authorization', `Bearer ${tokenCollector}`)
+      .send({ note: 'OK' });
+      
+    expect(res.status).toBe(403);
+    expect(res.body.message).toMatch(/SOD Violation/);
+    
+    // Clean up
+    await knex('monitoring_target_assignees').where({ monitoring_target_id: targetId, user_id: 901, capability: 'VERIFIER' }).del();
+  });
+
+  it('10. verifyTarget berhasil jika dilakukan oleh Verifier sah', async () => {
+    const res = await request(app)
+      .post(`/api/v1/internal-monitoring/targets/${targetId}/verify`)
+      .set('Authorization', `Bearer ${tokenVerifier}`)
+      .send({ note: 'Verifikasi sukses' });
+      
+    expect(res.status).toBe(200);
+    const target = await knex('monitoring_targets').where({ id: targetId }).first();
+    expect(target.workflow_status).toBe('VERIFIED');
+    expect(target.lock_version).toBe(7);
   });
 });

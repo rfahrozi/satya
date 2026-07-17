@@ -176,32 +176,31 @@ class InternalMonitoringService {
         badRequest('INVALID_STATE_TRANSITION', 'Hanya dapat verify dari AWAITING_VERIFICATION');
       }
 
-      const isCollector = hasCapability(target, actor.id, ['COLLECTOR']);
-      const isVerifier = hasCapability(target, actor.id, ['VERIFIER']);
-      
-      if (actor.role !== 'ADMIN_PT') {
-        if (!isVerifier) forbidden('Hanya Verifier yang dapat memverifikasi');
-        if (isCollector) {
-          await logSodOverride(trx, id, actor.id, 'VERIFY', 'Collector memverifikasi target sendiri');
-        }
-      }
+      await authSvc.assertHasCapability(actor, id, ['VERIFIER'], trx);
+      await authSvc.assertSegregationOfDuties(actor, target, 'VERIFY', trx);
 
-      await repo.updateTargetState(id, null, {
+      const updated = await repo.updateTargetState(id, null, {
         workflow_status: 'VERIFIED',
         verified_at: knex.fn.now(),
-        updated_by: actor.id
+        updated_by: actor.userId
       }, target.lock_version, trx);
+
+      if (updated === 0) {
+        const error = new Error('Data telah diubah oleh pengguna lain (VERSION_CONFLICT). Muat ulang dan coba lagi.');
+        error.statusCode = 409;
+        throw error;
+      }
 
       const verification = await repo.insertVerification({
         monitoring_target_id: id,
-        actor_user_id: actor.id,
+        actor_user_id: actor.userId,
         action: 'VERIFIED',
         note: payload.note || ''
       }, trx);
 
       await repo.insertActivity({
         monitoring_target_id: id,
-        actor_user_id: actor.id,
+        actor_user_id: actor.userId,
         action: 'VERIFY',
         description: 'Target diverifikasi: ' + (payload.note || '')
       }, trx);
@@ -219,30 +218,34 @@ class InternalMonitoringService {
         badRequest('INVALID_STATE_TRANSITION', 'Hanya dapat revisi dari Approval atau Verification');
       }
 
-      if (actor.role !== 'ADMIN_PT' && !hasCapability(target, actor.id, ['APPROVER', 'VERIFIER', 'ACCOUNTABLE_OWNER'])) {
-        forbidden('Hanya Approver atau Verifier yang dapat meminta revisi');
-      }
+      await authSvc.assertHasCapability(actor, id, ['APPROVER', 'VERIFIER', 'ACCOUNTABLE_OWNER'], trx);
 
       if (!payload.note) badRequest('VALIDATION_ERROR', 'Note revisi wajib diisi');
 
       const returnStage = target.workflow_status;
 
-      await repo.updateTargetState(id, null, {
+      const updated = await repo.updateTargetState(id, null, {
         workflow_status: 'REVISION_REQUIRED',
         current_review_stage: returnStage,
-        updated_by: actor.id
+        updated_by: actor.userId
       }, target.lock_version, trx);
+
+      if (updated === 0) {
+        const error = new Error('Data telah diubah oleh pengguna lain (VERSION_CONFLICT). Muat ulang dan coba lagi.');
+        error.statusCode = 409;
+        throw error;
+      }
 
       await repo.insertVerification({
         monitoring_target_id: id,
-        actor_user_id: actor.id,
+        actor_user_id: actor.userId,
         action: 'REVISION_REQUIRED',
         note: payload.note
       }, trx);
 
       await repo.insertActivity({
         monitoring_target_id: id,
-        actor_user_id: actor.id,
+        actor_user_id: actor.userId,
         action: 'REQUEST_REVISION',
         description: 'Meminta revisi: ' + payload.note
       }, trx);
