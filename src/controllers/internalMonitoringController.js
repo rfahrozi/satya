@@ -5,6 +5,15 @@ const fileType = require('file-type');
 exports.listTargets = async (req, res, next) => {
   try {
     const pagination = { limit: parseInt(req.query.limit) || 100, offset: parseInt(req.query.offset) || 0 };
+
+    // [SEC-B03] Otorisasi Kondisional (Mencegah IDOR Massal)
+    // Jika User BUKAN Admin/Pimpinan/Verifier, paksa mereka HANYA melihat data miliknya sendiri
+    const privilegedRoles = ['ADMIN_PT', 'PIMPINAN_PT', 'VERIFIER'];
+    if (!privilegedRoles.includes(req.user.role)) {
+       const targets = await repo.listTargetsForUser(req.user.id, req.query, pagination);
+       return res.json({ success: true, data: targets, pagination, enforced_personal_scope: true });
+    }
+
     const targets = await repo.listTargets(req.query, pagination);
     res.json({ success: true, data: targets, pagination });
   } catch (err) { next(err); }
