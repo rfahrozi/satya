@@ -24,10 +24,10 @@ export const internalMonitoringApi = {
   getTarget:   (id)     => axios.get(`${BASE_URL}/targets/${id}`),
 
   // ── Evidence ───────────────────────────────────────────────────────────────
-  addEvidenceText: (targetId, requirementId, text) =>
+  addEvidenceText: (targetId, requirementId, text, evidenceType = 'TEXT') =>
     axios.post(`${BASE_URL}/targets/${targetId}/evidence`, {
       requirement_id: requirementId,
-      evidence_type: 'TEXT',
+      evidence_type: evidenceType,
       value_text: text
     }),
 

@@ -299,9 +299,15 @@ class InternalMonitoringService {
       const reqs = await repo.getEvidenceRequirements(target.monitoring_item_id, new Date(), trx);
       const req = reqs.find(r => r.id === parseInt(requirementId));
       if (!req) notFound('Requirement tidak valid');
-      
-      if (payload.evidence_type && payload.evidence_type !== req.evidence_type) {
-        badRequest('EVIDENCE_TYPE_MISMATCH', `Tipe evidence harus ${req.evidence_type}`);
+
+      const incomingType = payload.evidence_type;
+
+      // [Fitur DL10 / Storage Save]: Jika requirement adalah FILE, izinkan upload tipe LINK (GDrive) sebagai alternatif.
+      if (incomingType && incomingType !== req.evidence_type) {
+        const isLinkAlternative = req.evidence_type === 'FILE' && incomingType === 'LINK';
+        if (!isLinkAlternative) {
+          badRequest('EVIDENCE_TYPE_MISMATCH', `Tipe evidence harus ${req.evidence_type}`);
+        }
       }
 
       // Versioning
