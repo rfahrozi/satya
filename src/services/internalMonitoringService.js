@@ -357,12 +357,22 @@ class InternalMonitoringService {
 
       // Upload file ke MinIO dengan path terstruktur
       const { minioClient, BUCKET_NAME } = require('../config/minio');
+      const fs = require('fs');
+      const path = require('path');
       const ttlSeconds = parseInt(process.env.MONITORING_PRESIGNED_URL_TTL_SECONDS || '3600', 10);
-      const objectKey = `internal/${targetId}/${requirementId}/${Date.now()}_${file.originalname.replace(/\s+/g, '_')}`;
 
-      await minioClient.putObject(BUCKET_NAME, objectKey, file.buffer, file.size, {
+      // [SEC-L02] Sanitasi originalname agar tidak mengandung path traversal (misal: ../../)
+      const safeFilename = path.basename(file.originalname).replace(/[^a-zA-Z0-9.\-_]/g, '_');
+      const objectKey = `internal/${targetId}/${requirementId}/${Date.now()}_${safeFilename}`;
+
+      // [SRE-01] Stream dari diskStorage (tmp) langsung ke MinIO, bukan membaca ke Buffer
+      const fileStream = fs.createReadStream(file.path);
+      await minioClient.putObject(BUCKET_NAME, objectKey, fileStream, file.size, {
         'Content-Type': file.mimetype
       });
+
+      // Hapus file dari tmp setelah berhasil diupload
+      fs.unlinkSync(file.path);
 
       // Versioning
       const existingVersions = await trx('monitoring_evidences')

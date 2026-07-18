@@ -1,5 +1,7 @@
 const express = require('express');
 const multer = require('multer');
+const os = require('os');
+const path = require('path');
 const rateLimit = require('express-rate-limit');
 const masterController = require('../controllers/internalMonitoringMasterController');
 const operationalController = require('../controllers/internalMonitoringController');
@@ -26,7 +28,18 @@ router.use((req, res, next) => {
   req.user.id = req.user.userId;
   next();
 });
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+// [SRE-01] Ganti memoryStorage dengan diskStorage untuk menghindari OOM Crash
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, os.tmpdir());
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+const upload = multer({ storage: storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 // Limit upload evidence internal monitoring maksimal 15x per menit
 const imUploadLimiter = process.env.NODE_ENV !== 'test'
@@ -38,22 +51,24 @@ const imUploadLimiter = process.env.NODE_ENV !== 'test'
     : (req, res, next) => next();
 
 // --- Period, Generation & Master Items ---
-router.get('/periods', masterController.listPeriods);
-router.post('/periods', masterController.createPeriod);
-router.post('/periods/:id/open', masterController.openPeriod);
-router.post('/periods/:id/generate-preview', masterController.generatePreview);
-router.post('/periods/:id/generate', masterController.generateTargets);
+// [SEC-B01] Tambahkan authorize() ke endpoint management periode agar hanya admin
+router.get('/periods', authorize(['ADMIN_PT', 'PIMPINAN_PT', 'PANITERA_PT', 'SEKRETARIS_PT']), masterController.listPeriods);
+router.post('/periods', authorize(['ADMIN_PT']), masterController.createPeriod);
+router.post('/periods/:id/open', authorize(['ADMIN_PT']), masterController.openPeriod);
+router.post('/periods/:id/generate-preview', authorize(['ADMIN_PT']), masterController.generatePreview);
+router.post('/periods/:id/generate', authorize(['ADMIN_PT']), masterController.generateTargets);
 router.get('/master-items', authorize(['ADMIN_PT']), masterController.listMasterItems);
 
 // --- Dashboard ---
 router.get('/dashboard/my', dashboardController.getMyDashboard);
-router.get('/dashboard/operational', dashboardController.getOperationalDashboard);
-router.get('/dashboard/executive', dashboardController.getExecutiveDashboard);
-router.get('/review-queue', dashboardController.listReviewQueue);
+router.get('/dashboard/operational', authorize(['ADMIN_PT', 'PIMPINAN_PT', 'PANITERA_PT', 'SEKRETARIS_PT', 'VERIFIER']), dashboardController.getOperationalDashboard);
+router.get('/dashboard/executive', authorize(['ADMIN_PT', 'PIMPINAN_PT', 'KPT', 'WKPT', 'HAKIM_PT']), dashboardController.getExecutiveDashboard);
+router.get('/review-queue', authorize(['ADMIN_PT', 'VERIFIER']), dashboardController.listReviewQueue);
 router.get('/follow-up-queue', dashboardController.listFollowUpQueue);
 
 // --- Target (Operational) ---
-router.get('/targets', operationalController.listTargets);
+// [SEC-B03] Mencegah general access ke seluruh target
+router.get('/targets', authorize(['ADMIN_PT', 'PIMPINAN_PT', 'VERIFIER']), operationalController.listTargets);
 router.get('/my-targets', operationalController.listMyTargets);
 router.get('/targets/:id', operationalController.getTargetDetail);
 router.patch('/targets/:id/draft', operationalController.saveDraft);
@@ -86,28 +101,29 @@ router.post('/follow-ups/:id/close', operationalController.closeFollowUp);
 router.post('/follow-ups/:id/reopen', operationalController.reopenFollowUp);
 
 // --- Master Import ---
-router.post('/master-imports/preview', upload.single('file'), masterImportController.previewImport);
-router.post('/master-imports/:id/commit', masterImportController.commitImport);
-router.get('/master-imports/:id/coverage', masterImportController.getCoverageReport);
+router.post('/master-imports/preview', authorize(['ADMIN_PT']), upload.single('file'), masterImportController.previewImport);
+router.post('/master-imports/:id/commit', authorize(['ADMIN_PT']), masterImportController.commitImport);
+router.get('/master-imports/:id/coverage', authorize(['ADMIN_PT']), masterImportController.getCoverageReport);
 
 // --- Reminder Rules ---
-router.get('/reminder-rules', reminderController.listRules);
-router.post('/reminder-rules', reminderController.createRule);
-router.patch('/reminder-rules/:id', reminderController.updateRule);
-router.post('/reminder-rules/:id/test', reminderController.testRule);
+router.get('/reminder-rules', authorize(['ADMIN_PT']), reminderController.listRules);
+router.post('/reminder-rules', authorize(['ADMIN_PT']), reminderController.createRule);
+router.patch('/reminder-rules/:id', authorize(['ADMIN_PT']), reminderController.updateRule);
+router.post('/reminder-rules/:id/test', authorize(['ADMIN_PT']), reminderController.testRule);
 
 // --- Escalation ---
-router.get('/escalation-rules', escalationController.listRules);
-router.post('/escalation-rules', escalationController.createRule);
-router.patch('/escalation-rules/:id', escalationController.updateRule);
-router.get('/escalations', escalationController.listEscalations);
+// [SEC-B02] Pencegahan Mass-Assignment ada di layer Controller/Service. Kita lindungi rutenya.
+router.get('/escalation-rules', authorize(['ADMIN_PT']), escalationController.listRules);
+router.post('/escalation-rules', authorize(['ADMIN_PT']), escalationController.createRule);
+router.patch('/escalation-rules/:id', authorize(['ADMIN_PT']), escalationController.updateRule);
+router.get('/escalations', authorize(['ADMIN_PT', 'PIMPINAN_PT', 'VERIFIER']), escalationController.listEscalations);
 router.post('/escalations/:id/acknowledge', escalationController.acknowledgeEscalation);
 router.post('/escalations/:id/resolve', escalationController.resolveEscalation);
 
 // --- SLA & Aging ---
-router.get('/dashboard/sla', slaController.getDashboardSla);
-router.get('/dashboard/aging', slaController.getAging);
-router.get('/dashboard/escalations', slaController.getEscalationsDashboard);
+router.get('/dashboard/sla', authorize(['ADMIN_PT', 'PIMPINAN_PT', 'VERIFIER']), slaController.getDashboardSla);
+router.get('/dashboard/aging', authorize(['ADMIN_PT', 'PIMPINAN_PT', 'VERIFIER']), slaController.getAging);
+router.get('/dashboard/escalations', authorize(['ADMIN_PT', 'PIMPINAN_PT', 'VERIFIER']), slaController.getEscalationsDashboard);
 // Reports
 router.post('/report-runs', authorize(['ADMIN_PT', 'PIMPINAN', 'VERIFIER', 'SATKER_PN']), internalMonitoringReportController.createReportRun);
 router.get('/report-runs', authorize(['ADMIN_PT', 'PIMPINAN', 'VERIFIER', 'SATKER_PN']), internalMonitoringReportController.getReportRuns);

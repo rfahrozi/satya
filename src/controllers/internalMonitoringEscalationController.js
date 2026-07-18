@@ -17,7 +17,23 @@ exports.createRule = async (req, res, next) => {
 
 exports.updateRule = async (req, res, next) => {
   try {
-    await knex('monitoring_escalation_rules').where('id', req.params.id).update(req.body);
+    // [SEC-B02] Whitelist properti untuk mencegah Mass-Assignment
+    const allowedFields = [
+      'code', 'name', 'from_status', 'trigger_after_days', 'escalation_level',
+      'recipient_capability', 'create_follow_up', 'follow_up_due_days', 'is_active'
+    ];
+    const safeBody = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        safeBody[field] = req.body[field];
+      }
+    }
+
+    if (Object.keys(safeBody).length === 0) {
+       return res.status(400).json({ success: false, message: 'Tidak ada data valid untuk diupdate' });
+    }
+
+    await knex('monitoring_escalation_rules').where('id', req.params.id).update(safeBody);
     res.json({ success: true, message: 'Rule updated' });
   } catch (err) { next(err); }
 };

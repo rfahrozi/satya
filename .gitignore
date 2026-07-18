@@ -39,3 +39,4 @@ src/debug-env.js
 graphify-out/
 *.pdf
 
+debug_error.log

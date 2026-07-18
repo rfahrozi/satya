@@ -33,20 +33,33 @@ async function uploadReportDocument(tenant, file, fileExcel, reportTypeId, perio
     let nama_file_asli = existing ? existing.nama_file_asli : null;
     let nama_excel_file_asli = existing ? existing.nama_excel_file_asli : null;
 
+    const fs = require('fs');
+
+    const path = require('path');
+
     if (file) {
-        filename = `${tenant.satkerId}/${tahun}/${periodType}/${periodUnit}/${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
-        await minioClient.putObject(BUCKET_NAME, filename, file.buffer, file.size, {
+        // [SEC-L02] Sanitasi nama file menghindari Path Traversal
+        const safeFilename = path.basename(file.originalname).replace(/[^a-zA-Z0-9.\-_]/g, '_');
+        filename = `${tenant.satkerId}/${tahun}/${periodType}/${periodUnit}/${Date.now()}-${safeFilename}`;
+        // [SRE-01] Stream dari diskStorage
+        const fileStream = fs.createReadStream(file.path);
+        await minioClient.putObject(BUCKET_NAME, filename, fileStream, file.size, {
             'Content-Type': file.mimetype
         });
-        nama_file_asli = file.originalname;
+        nama_file_asli = path.basename(file.originalname);
+        fs.unlinkSync(file.path); // Hapus tmp
     }
 
     if (fileExcel) {
-        excelFilename = `${tenant.satkerId}/${tahun}/${periodType}/${periodUnit}/${Date.now()}-excel-${fileExcel.originalname.replace(/\s+/g, '_')}`;
-        await minioClient.putObject(BUCKET_NAME, excelFilename, fileExcel.buffer, fileExcel.size, {
+        // [SEC-L02] Sanitasi nama file Excel
+        const safeExcelFilename = path.basename(fileExcel.originalname).replace(/[^a-zA-Z0-9.\-_]/g, '_');
+        excelFilename = `${tenant.satkerId}/${tahun}/${periodType}/${periodUnit}/${Date.now()}-excel-${safeExcelFilename}`;
+        const fileStream = fs.createReadStream(fileExcel.path);
+        await minioClient.putObject(BUCKET_NAME, excelFilename, fileStream, fileExcel.size, {
             'Content-Type': fileExcel.mimetype
         });
-        nama_excel_file_asli = fileExcel.originalname;
+        nama_excel_file_asli = path.basename(fileExcel.originalname);
+        fs.unlinkSync(fileExcel.path); // Hapus tmp
     }
 
     const dataSubmission = {

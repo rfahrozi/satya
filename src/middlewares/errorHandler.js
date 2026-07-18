@@ -46,6 +46,8 @@ const errorHandler = (err, req, res, next) => {
         statusCode: err.statusCode,
         method: req.method,
         path: req.originalUrl,
+        ip: req.ip,
+        userAgent: req.get('user-agent'),
         errorCode: err.code,
         message: err.message,
         ...(err.statusCode >= 500 && { stack: err.stack }),

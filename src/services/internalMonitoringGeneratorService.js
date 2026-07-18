@@ -61,12 +61,19 @@ class InternalMonitoringGeneratorService {
   async previewTargets(periodId, actor) {
     return knex.transaction(async (trx) => {
       const { candidates } = await this._buildCandidates(periodId, trx);
-      let alreadyExistsCount = 0;
+
       const previewCandidates = [];
-      
+      // [SRE-03] Optimasi N+1: Ambil semua natural key sekaligus menggunakan WHERE IN
+      const allNaturalKeys = candidates.map(c => c.naturalKey);
+      const existingTargets = await trx('monitoring_targets')
+        .whereIn('natural_key', allNaturalKeys)
+        .select('natural_key');
+      const existingKeySet = new Set(existingTargets.map(t => t.natural_key));
+
+      let alreadyExistsCount = 0;
+
       for (const c of candidates) {
-        const existing = await targetRepo.findTargetByNaturalKey(c.naturalKey, trx);
-        if (existing) {
+        if (existingKeySet.has(c.naturalKey)) {
           alreadyExistsCount++;
         } else {
           previewCandidates.push({
@@ -80,7 +87,7 @@ class InternalMonitoringGeneratorService {
           });
         }
       }
-      
+
       return {
         periodId,
         candidateCount: candidates.length,
@@ -95,20 +102,26 @@ class InternalMonitoringGeneratorService {
     return knex.transaction(async (trx) => {
       const period = await trx('monitoring_periods').where('id', periodId).forUpdate().first();
       if (!period) throw new Error('Period not found');
-      
+
       const { candidates } = await this._buildCandidates(periodId, trx);
-      
+
+      // [SRE-03] Batch Query WHERE IN
+      const allNaturalKeys = candidates.map(c => c.naturalKey);
+      const existingTargets = await trx('monitoring_targets')
+        .whereIn('natural_key', allNaturalKeys)
+        .select('natural_key');
+      const existingKeySet = new Set(existingTargets.map(t => t.natural_key));
+
       let created = 0;
       let skippedExisting = 0;
       const targetIds = [];
-      
+
       for (const c of candidates) {
-        const existing = await targetRepo.findTargetByNaturalKey(c.naturalKey, trx);
-        if (existing) {
+        if (existingKeySet.has(c.naturalKey)) {
           skippedExisting++;
           continue;
         }
-        
+
         const payload = {
           period_id: periodId,
           monitoring_item_id: c.itemId,

@@ -87,9 +87,10 @@ exports.addEvidenceFile = async (req, res, next) => {
     }
 
     // [SEC-06] Validasi Magic Bytes (File Signature)
-    // Office files (.docx, .xlsx) menggunakan format ZIP, sehingga deteksi magic bytes-nya adalah 'application/zip'
-    const detected = await fileType.fromBuffer(req.file.buffer);
+    // Karena kita memakai diskStorage (SRE-01), kita baca dari req.file.path
+    const detected = await fileType.fromFile(req.file.path);
     if (!detected) {
+      require('fs').unlinkSync(req.file.path); // Hapus file temporer
       return res.status(400).json({
         success: false,
         message: 'Tidak dapat memverifikasi isi file. File mungkin rusak atau format tidak dikenali.'
@@ -98,6 +99,7 @@ exports.addEvidenceFile = async (req, res, next) => {
 
     const safeMimes = [...allowedMimeTypes, 'application/zip'];
     if (!safeMimes.includes(detected.mime)) {
+      require('fs').unlinkSync(req.file.path); // Hapus file temporer
       return res.status(400).json({
         success: false,
         message: `Isi file (${detected.mime}) tidak sesuai dengan ekstensi yang diklaim.`
@@ -106,7 +108,12 @@ exports.addEvidenceFile = async (req, res, next) => {
 
     const result = await service.uploadEvidenceFile(req.user, req.params.id, req.params.requirementId, req.file, req.body);
     res.status(201).json({ success: true, data: result });
-  } catch (err) { next(err); }
+  } catch (err) {
+    if (req.file && req.file.path) {
+      try { require('fs').unlinkSync(req.file.path); } catch(e) {}
+    }
+    next(err);
+  }
 };
 
 exports.getEvidenceDownloadUrl = async (req, res, next) => {

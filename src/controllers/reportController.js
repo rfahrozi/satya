@@ -14,6 +14,18 @@ const VALID_STATUS_VERIFIKASI = ['belum_lengkap', 'lengkap', 'revisi'];
 // Helper checkKetepatanWaktu telah dipindahkan ke Database Level SQL Query di reportRepo.js
 // guna mencegah bottleneck N+1 CPU.
 
+const fileType = require('file-type');
+const fs = require('fs');
+
+// Helper untuk hapus file temp jika error
+const cleanupFiles = (files) => {
+    files.forEach(f => {
+        if (f && f.path) {
+            try { fs.unlinkSync(f.path); } catch(e) {}
+        }
+    });
+};
+
 /**
  * [CREATE/UPDATE] Upload atau Timpa Laporan
  */
@@ -29,6 +41,16 @@ async function uploadReport(req, res, next) {
         if (!file && !fileExcel) throw new AppError('Minimal satu file (PDF atau Excel/Word) harus diunggah.', 400);
         if (!report_type_id || !pUnit || !periode_tahun) {
             throw new AppError('Metadata laporan (ID, Periode, Tahun) tidak lengkap.', 400);
+        }
+
+        // [SEC-06] Validasi Magic Bytes untuk Report External Track
+        const allowedMimes = ['application/pdf', 'application/zip', 'application/vnd.ms-excel'];
+        for (const f of [file, fileExcel].filter(Boolean)) {
+            const detected = await fileType.fromFile(f.path);
+            if (!detected || !allowedMimes.includes(detected.mime)) {
+                cleanupFiles([file, fileExcel]);
+                return res.status(400).json({ success: false, message: `Format file ${f.originalname} tidak didukung atau corrupt.` });
+            }
         }
 
         const result = await reportService.uploadReportDocument(
@@ -47,6 +69,7 @@ async function uploadReport(req, res, next) {
             data: result
         });
     } catch (error) {
+        cleanupFiles([req.files?.dokumen_monev?.[0], req.files?.dokumen_excel?.[0]]);
         next(error);
     }
 }

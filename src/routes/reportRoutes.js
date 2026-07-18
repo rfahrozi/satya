@@ -6,6 +6,8 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const os = require('os');
+const path = require('path');
 const rateLimit = require('express-rate-limit');
 const reportController = require('../controllers/reportController');
 const tenantContext = require('../middlewares/tenant');
@@ -23,9 +25,20 @@ const uploadRateLimiter = process.env.NODE_ENV !== 'test'
     })
     : (req, res, next) => next();
 
-// Konfigurasi Multer (Penyimpanan Sementara di RAM)
+// [SRE-01] Ganti memoryStorage dengan diskStorage
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, os.tmpdir());
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+// Konfigurasi Multer
 const upload = multer({
-    storage: multer.memoryStorage(),
+    storage: storage,
     limits: { fileSize: 10 * 1024 * 1024 }, // Batas maksimal 10MB per file
     fileFilter: (req, file, cb) => {
         // Validasi tipe file: Hanya PDF dan Excel (.xlsx) / Word (.docx)

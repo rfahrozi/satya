@@ -1,5 +1,6 @@
 const repo = require('../repositories/internalMonitoring/dashboardRepo');
 const knex = require('../config/knex');
+const redis = require('../config/redis');
 
 /**
  * Ambil periode aktif jika periodId tidak disediakan.
@@ -27,7 +28,26 @@ class InternalMonitoringDashboardService {
   async getExecutiveDashboard(periodId, actor) {
     const resolved = await resolveActivePeriodId(periodId);
     if (!resolved) return { complianceRate: 0, verifiedOnTimeRate: 0, overdueCount: 0, openFollowUpCount: 0, byUnit: [], criticalItems: [] };
-    return repo.getExecutiveDashboard(resolved, {}, knex);
+
+    // [SRE-02] Redis Cache untuk Executive Dashboard
+    const cacheKey = `dashboard:executive:period:${resolved}`;
+
+    // Di environment test, redis connection kadang belum siap di-mock dengan sempurna.
+    // Kita pastikan ada fallback logic
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) return JSON.parse(cached);
+    } catch (e) {
+      // Abaikan error redis (fallback ke db)
+    }
+
+    const result = await repo.getExecutiveDashboard(resolved, {}, knex);
+
+    try {
+      await redis.setex(cacheKey, 300, JSON.stringify(result)); // 5 menit
+    } catch (e) {}
+
+    return result;
   }
 
   async listReviewQueue(periodId, pagination, actor) {
