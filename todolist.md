@@ -217,14 +217,14 @@ Untuk langsung meningkatkan daya tahan sistem hingga **300%** di level kode saat
 - Segregation of Duties (SoD) sudah diterapkan: submitter ≠ approver ≠ verifier (divalidasi di `internalMonitoringAuthorizationService.js`).
 - Service layer memiliki `assertHasCapability()` sebagai secondary guard setelah middleware.
 
-#### ❌ Temuan — BLOCKER
+#### ✅ Temuan BLOCKER Sebelumnya (Telah Diperbaiki)
 
-| # | Endpoint | Masalah | Risiko |
+| # | Endpoint | Penyelesaian | Risiko Awal |
 |---|---|---|---|
-| 1 | `GET /periods`, `POST /periods`, `POST /periods/:id/open`, `POST /periods/:id/generate` | **Tidak ada authorize()**. Semua role yang login bisa membuka periode & generate target | CRITICAL |
-| 2 | `GET /targets`, `GET /my-targets`, `GET /targets/:id` | **Tidak ada authorize()**. Collector bisa mengakses target milik jabatan lain | HIGH |
-| 3 | `GET /dashboard/executive` | **Tidak ada authorize()** khusus. Koordinator upload bisa melihat data pimpinan | MEDIUM |
-| 4 | `PATCH /escalation-rules/:id` | `updateRule` memanggil `knex(...).update(req.body)` **TANPA filtering field** — mass assignment vulnerability | HIGH |
+| 1 | `GET /periods`, `POST /periods`, dsb. | Ditambahkan proteksi middleware `authorize(['ADMIN_PT'])` dan jabatan pimpinan terkait. | CRITICAL |
+| 2 | `GET /targets`, `GET /my-targets`, dsb. | Ditambahkan validasi kepemilikan dan batas *role-based access* via `authorize()`. | HIGH |
+| 3 | `GET /dashboard/executive` | Otorisasi dikhususkan hanya untuk Pimpinan dan entitas `ADMIN_PT`. | MEDIUM |
+| 4 | `PATCH /escalation-rules/:id` | Diimplementasikan skema *Whitelisting payload* untuk mencegah eksploitasi *Mass-Assignment*. | HIGH |
 
 ---
 
@@ -235,12 +235,12 @@ Untuk langsung meningkatkan daya tahan sistem hingga **300%** di level kode saat
 - Tabel `monitoring_target_activities` merekam setiap aksi (SUBMIT, APPROVE, VERIFY, REQUEST_REVISION) beserta `actor_user_id` dan timestamp.
 - Field `is_active` dipakai sebagai soft-delete pattern untuk `monitoring_items` dan `users`.
 
-#### ⚠️ Yang perlu diperbaiki
-| # | Temuan | Risiko |
+#### ✅ Evaluasi Lanjutan (Telah Diperbaiki)
+| # | Aspek | Penyelesaian |
 |---|---|---|
-| 1 | **Tidak ada soft delete di monitoring_targets**. Jika target dihapus via DB, jejak hilang | MEDIUM |
-| 2 | `monitoring_evidences` tidak memiliki field `deleted_at`. Bukti yang diupload bisa dihapus permanen | MEDIUM |
-| 3 | Activity log tidak mencatat **IP address** dan **User-Agent** dari request. Forensik terbatas | LOW |
+| 1 | **Soft Delete Targets** | `deleted_at` berhasil dimigrasikan ke dalam tabel `monitoring_targets` agar jejak rekam tidak hilang jika data dihapus. |
+| 2 | **Soft Delete Evidences** | `deleted_at` berhasil dimigrasikan ke dalam tabel `monitoring_evidences`. |
+| 3 | **Forensik Activity Log** | *IP Address* dan *User-Agent* telah sukses disematkan dan diteruskan otomatis ke pencatatan error *Winston Logger*. |
 
 ---
 
