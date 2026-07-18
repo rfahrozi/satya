@@ -67,7 +67,7 @@ const MasterDataPT = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Master Data PT (Internal Monitoring)</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Pengelolaan Periode Aktif, 51 Checklist AMPUH/PMPZI/AKIP, dan Master Konfigurasi untuk Pengadilan Tinggi
+            Pengelolaan Periode Aktif, 295 Checklist AMPUH/PMPZI/AKIP, dan Master Konfigurasi untuk Pengadilan Tinggi
           </p>
         </div>
         <button
@@ -94,7 +94,7 @@ const MasterDataPT = () => {
             activeTab === 'items' ? 'border-indigo-600 text-indigo-600 font-bold' : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          📋 Daftar 51 Master Checklist (CHK)
+          📋 Daftar 295 Master Checklist (CHK)
         </button>
       </div>
 
