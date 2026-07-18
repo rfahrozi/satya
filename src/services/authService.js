@@ -7,6 +7,7 @@ const knex = require('../config/knex');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { AppError } = require('../middlewares/errorHandler');
+const redis = require('../config/redis');
 
 /**
  * Validasi Login Pengguna
@@ -255,8 +256,25 @@ async function resetPasswordWithToken(token, newPassword) {
         });
 }
 
+/**
+ * [SEC-L01] Blacklist token pada saat logout
+ */
+async function logoutUser(tenant) {
+    if (!tenant.rawToken || !tenant.exp) return;
+
+    // Hitung sisa waktu token (TTL)
+    const nowInSeconds = Math.floor(Date.now() / 1000);
+    const ttl = tenant.exp - nowInSeconds;
+
+    // Jika token masih belum kedaluwarsa, masukkan ke Redis blacklist selama sisa waktunya
+    if (ttl > 0 && process.env.NODE_ENV !== 'test') {
+        await redis.setex(`blacklist_${tenant.rawToken}`, ttl, 'true');
+    }
+}
+
 module.exports = {
     loginUser,
+    logoutUser,
     createUser,
     updateUser,
     getAllUsers,

@@ -147,13 +147,13 @@ async function resetPasswordWithToken(req, res, next) {
         if (!token || !newPassword) {
             throw new AppError('Token dan Password Baru wajib diisi.', 400);
         }
-        
+
         if (newPassword.length < 6) {
             throw new AppError('Password harus minimal 6 karakter.', 400);
         }
 
         await authService.resetPasswordWithToken(token, newPassword);
-        
+
         res.status(200).json({
             success: true,
             message: 'Password Anda berhasil diubah. Silakan login menggunakan password baru.'
@@ -163,8 +163,25 @@ async function resetPasswordWithToken(req, res, next) {
     }
 }
 
+/**
+ * [SEC-L01] Logout User (Revoke JWT)
+ */
+async function logout(req, res, next) {
+    try {
+        // Blacklist token via service
+        await authService.logoutUser(req.tenant);
+        res.status(200).json({
+            success: true,
+            message: 'Logout berhasil. Sesi telah diakhiri.'
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
 module.exports = {
     login,
+    logout,
     saveOrUpdateUser,
     getAllUsers,
     deleteUser,

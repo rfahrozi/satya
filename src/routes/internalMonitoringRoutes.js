@@ -68,8 +68,9 @@ router.get('/review-queue', authorize(['ADMIN_PT', 'VERIFIER']), dashboardContro
 router.get('/follow-up-queue', dashboardController.listFollowUpQueue);
 
 // --- Target (Operational) ---
-// [SEC-B03] Mencegah general access ke seluruh target
-router.get('/targets', authorize(['ADMIN_PT', 'PIMPINAN_PT', 'VERIFIER']), operationalController.listTargets);
+// [SEC-B03] Mencegah general access ke seluruh target di-handle di level controller/service
+// sehingga request dari Frontend (yang menambahkan query params) tidak terpotong HTTP 403.
+router.get('/targets', operationalController.listTargets);
 router.get('/my-targets', operationalController.listMyTargets);
 router.get('/targets/:id', operationalController.getTargetDetail);
 router.patch('/targets/:id/draft', operationalController.saveDraft);

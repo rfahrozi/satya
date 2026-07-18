@@ -6,6 +6,13 @@
 process.env.JWT_SECRET = 'test_secret_key_untuk_unit_testing';
 
 const jwt = require('jsonwebtoken');
+
+// Mock redis client
+jest.mock('../../src/config/redis', () => ({
+    get: jest.fn().mockResolvedValue(null),
+    setex: jest.fn().mockResolvedValue('OK')
+}));
+
 const tenantContext = require('../../src/middlewares/tenant');
 const { AppError, errorHandler, notFoundHandler } = require('../../src/middlewares/errorHandler');
 
@@ -19,36 +26,36 @@ describe('Unit Test: Middleware', () => {
             mockNext = jest.fn();
         });
 
-        it('harus menolak jika tidak ada Authorization header', () => {
-            tenantContext(mockReq, mockRes, mockNext);
+        it('harus menolak jika tidak ada Authorization header', async () => {
+            await tenantContext(mockReq, mockRes, mockNext);
             expect(mockNext).toHaveBeenCalledWith(expect.any(AppError));
             expect(mockNext.mock.calls[0][0].statusCode).toBe(401);
         });
 
-        it('harus menolak jika Authorization header tidak dimulai dengan Bearer', () => {
+        it('harus menolak jika Authorization header tidak dimulai dengan Bearer', async () => {
             mockReq.headers.authorization = 'Basic abc123';
-            tenantContext(mockReq, mockRes, mockNext);
+            await tenantContext(mockReq, mockRes, mockNext);
             expect(mockNext).toHaveBeenCalledWith(expect.any(AppError));
         });
 
-        it('harus menolak jika token invalid', () => {
+        it('harus menolak jika token invalid', async () => {
             mockReq.headers.authorization = 'Bearer invalid.token.here';
-            tenantContext(mockReq, mockRes, mockNext);
+            await tenantContext(mockReq, mockRes, mockNext);
             expect(mockNext).toHaveBeenCalledWith(expect.any(AppError));
         });
 
-        it('harus mengekstrak tenant dari token valid', () => {
+        it('harus mengekstrak tenant dari token valid', async () => {
             const token = jwt.sign({ id: 1, role: 'ADMIN_PT', satkerId: null }, process.env.JWT_SECRET);
             mockReq.headers.authorization = `Bearer ${token}`;
-            tenantContext(mockReq, mockRes, mockNext);
+            await tenantContext(mockReq, mockRes, mockNext);
             expect(mockNext).toHaveBeenCalledWith(); // no error
-            expect(mockReq.tenant).toEqual({ userId: 1, role: 'ADMIN_PT', satkerId: null });
+            expect(mockReq.tenant).toEqual(expect.objectContaining({ userId: 1, role: 'ADMIN_PT', satkerId: null }));
         });
 
-        it('harus mengekstrak satkerId dari token satker', () => {
+        it('harus mengekstrak satkerId dari token satker', async () => {
             const token = jwt.sign({ id: 5, role: 'SATKER_PN', satkerId: 2 }, process.env.JWT_SECRET);
             mockReq.headers.authorization = `Bearer ${token}`;
-            tenantContext(mockReq, mockRes, mockNext);
+            await tenantContext(mockReq, mockRes, mockNext);
             expect(mockReq.tenant.satkerId).toBe(2);
             expect(mockReq.tenant.role).toBe('SATKER_PN');
         });

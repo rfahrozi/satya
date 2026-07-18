@@ -193,7 +193,7 @@ const ExecutiveDashboard = () => {
       setError(null);
 
       // Resolusi periode aktif
-      const pRes    = await internalMonitoringApi.listPeriods({ status: 'ACTIVE' });
+      const pRes    = await internalMonitoringApi.listPeriods({ status: 'OPEN' });
       const periods = pRes.data?.data || [];
       const period  = periods[0] || null;
       setActivePeriod(period);
@@ -395,7 +395,7 @@ const ExecutiveDashboard = () => {
       </div>
 
       {/* ── Management Review shortcut ──────────────────────────────────────── */}
-      <div className="bg-gradient-to-r from-blue-50 to-teal-50 border border-blue-200 rounded-xl p-5">
+      <div className="bg-linear-to-r from-blue-50 to-teal-50 border border-blue-200 rounded-xl p-5">
         <div className="flex items-center gap-4">
           <span className="text-3xl">🗂️</span>
           <div className="flex-1">

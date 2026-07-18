@@ -95,8 +95,8 @@ const InternalPortal = () => {
       setLoading(true);
       setError(null);
 
-      // Ambil periode aktif
-      const pRes = await internalMonitoringApi.listPeriods({ status: 'ACTIVE' });
+      // Ambil periode aktif (status dari backend adalah 'OPEN', bukan 'ACTIVE')
+      const pRes = await internalMonitoringApi.listPeriods({ status: 'OPEN' });
       const periods = pRes.data?.data || [];
       const period  = periods[0] || null;
       setActivePeriod(period);
@@ -365,7 +365,7 @@ const InternalPortal = () => {
                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-gray-500">
                       {target.unit_name && <span>📍 {target.unit_name}</span>}
                       {target.duty_cluster && (
-                        <span className="text-gray-400 italic truncate max-w-[200px]" title={target.duty_cluster}>
+                        <span className="text-gray-400 italic truncate max-w-50" title={target.duty_cluster}>
                           {target.duty_cluster}
                         </span>
                       )}

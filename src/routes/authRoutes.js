@@ -83,6 +83,9 @@ router.post('/reset-password', passwordLimiter, authController.resetPasswordWith
  */
 router.use(tenantContext);
 
+// [SEC-L01] Endpoint Logout: Revoke JWT Token ke Redis Blacklist
+router.post('/logout', authController.logout);
+
 // [ADMIN] Ambil semua daftar user (Hanya Admin PT)
 router.get('/users', authController.getAllUsers);
 

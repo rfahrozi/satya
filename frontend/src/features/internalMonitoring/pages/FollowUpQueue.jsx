@@ -22,7 +22,7 @@ const FollowUpQueue = () => {
       try {
         setLoading(true);
         // Gunakan periode aktif, bukan hardcoded 999
-        const periodRes = await internalMonitoringApi.listPeriods({ status: 'ACTIVE' });
+        const periodRes = await internalMonitoringApi.listPeriods({ status: 'OPEN' });
         const periods   = periodRes.data?.data || [];
         const periodId  = periods[0]?.id ?? null;
         setActivePeriodId(periodId);
