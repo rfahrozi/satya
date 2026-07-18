@@ -3,7 +3,7 @@
  * Logika Bisnis Utama untuk Pengelolaan Dokumen dan Alur Kerja
  */
 
-const { minioClient, BUCKET_NAME } = require('../config/minio');
+const { minioClient, minioUploadBreaker, BUCKET_NAME } = require('../config/minio');
 const reportRepo = require('../repositories/reportRepo');
 const knex = require('../config/knex');
 const { AppError } = require('../middlewares/errorHandler');
@@ -43,7 +43,8 @@ async function uploadReportDocument(tenant, file, fileExcel, reportTypeId, perio
         filename = `${tenant.satkerId}/${tahun}/${periodType}/${periodUnit}/${Date.now()}-${safeFilename}`;
         // [SRE-01] Stream dari diskStorage
         const fileStream = fs.createReadStream(file.path);
-        await minioClient.putObject(BUCKET_NAME, filename, fileStream, file.size, {
+        // [SRE-04] Gunakan Circuit Breaker
+        await minioUploadBreaker.fire(BUCKET_NAME, filename, fileStream, file.size, {
             'Content-Type': file.mimetype
         });
         nama_file_asli = path.basename(file.originalname);
@@ -55,7 +56,8 @@ async function uploadReportDocument(tenant, file, fileExcel, reportTypeId, perio
         const safeExcelFilename = path.basename(fileExcel.originalname).replace(/[^a-zA-Z0-9.\-_]/g, '_');
         excelFilename = `${tenant.satkerId}/${tahun}/${periodType}/${periodUnit}/${Date.now()}-excel-${safeExcelFilename}`;
         const fileStream = fs.createReadStream(fileExcel.path);
-        await minioClient.putObject(BUCKET_NAME, excelFilename, fileStream, fileExcel.size, {
+        // [SRE-04] Gunakan Circuit Breaker
+        await minioUploadBreaker.fire(BUCKET_NAME, excelFilename, fileStream, fileExcel.size, {
             'Content-Type': fileExcel.mimetype
         });
         nama_excel_file_asli = path.basename(fileExcel.originalname);

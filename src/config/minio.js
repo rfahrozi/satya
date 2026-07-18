@@ -4,6 +4,7 @@
  */
 
 const Minio = require('minio');
+const CircuitBreaker = require('opossum');
 require('dotenv').config();
 
 // Inisialisasi Client MinIO
@@ -17,6 +18,26 @@ const minioClient = new Minio.Client({
 
 // Nama Bucket dari file .env
 const BUCKET_NAME = process.env.MINIO_BUCKET_NAME || 'satya-documents';
+
+// [SRE-04] Opossum Circuit Breaker untuk fungsi upload MinIO
+// Mencegah server Node.js crash/hang ketika storage sedang down
+const minioBreakerOptions = {
+    timeout: 10000,           // Jika 10 detik file belum berhasil terunggah, anggap gagal (timeout)
+    errorThresholdPercentage: 50, // Jika 50% request gagal, sirkuit terbuka (Open)
+    resetTimeout: 30000       // Tunggu 30 detik sebelum mencoba menyambungkan ulang (Half-Open)
+};
+
+// Bungkus fungsi putObject ke dalam promise agar didukung oleh Circuit Breaker
+const asyncPutObject = async (bucketName, objectName, stream, size, metaData) => {
+    return minioClient.putObject(bucketName, objectName, stream, size, metaData);
+};
+
+const minioUploadBreaker = new CircuitBreaker(asyncPutObject, minioBreakerOptions);
+minioUploadBreaker.fallback((bucketName, objectName, stream, size, metaData, error) => {
+    const fallbackError = new Error(`Sistem Storage (MinIO) sedang mengalami gangguan atau Timeout (${error.message}). Harap coba unggah dokumen Anda beberapa saat lagi.`);
+    fallbackError.statusCode = 503;
+    throw fallbackError;
+});
 
 /**
  * Fungsi untuk memastikan Bucket sudah tersedia di server MinIO.
@@ -45,6 +66,7 @@ async function initMinio() {
 
 module.exports = {
     minioClient,
+    minioUploadBreaker,
     initMinio,
     BUCKET_NAME
 };

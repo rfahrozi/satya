@@ -356,7 +356,7 @@ class InternalMonitoringService {
       }
 
       // Upload file ke MinIO dengan path terstruktur
-      const { minioClient, BUCKET_NAME } = require('../config/minio');
+      const { minioClient, minioUploadBreaker, BUCKET_NAME } = require('../config/minio');
       const fs = require('fs');
       const path = require('path');
       const ttlSeconds = parseInt(process.env.MONITORING_PRESIGNED_URL_TTL_SECONDS || '3600', 10);
@@ -367,7 +367,9 @@ class InternalMonitoringService {
 
       // [SRE-01] Stream dari diskStorage (tmp) langsung ke MinIO, bukan membaca ke Buffer
       const fileStream = fs.createReadStream(file.path);
-      await minioClient.putObject(BUCKET_NAME, objectKey, fileStream, file.size, {
+
+      // [SRE-04] Gunakan Circuit Breaker untuk perlindungan timeout MinIO
+      await minioUploadBreaker.fire(BUCKET_NAME, objectKey, fileStream, file.size, {
         'Content-Type': file.mimetype
       });
 

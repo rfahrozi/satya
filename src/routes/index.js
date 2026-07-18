@@ -74,6 +74,18 @@ router.get('/health', async (req, res) => {
 });
 
 /**
+ * [SRE-06] Prometheus Metrics Endpoint
+ */
+const promClient = require('prom-client');
+const collectDefaultMetrics = promClient.collectDefaultMetrics;
+collectDefaultMetrics(); // Aktifkan metrik RAM, CPU, dan Event Loop default Node.js
+
+router.get('/metrics', async (req, res) => {
+    res.set('Content-Type', promClient.register.contentType);
+    res.end(await promClient.register.metrics());
+});
+
+/**
  * Handle rute yang tidak terdaftar (Fallback 404)
  */
 router.all('*', notFoundHandler);

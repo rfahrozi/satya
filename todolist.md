@@ -194,6 +194,12 @@ Untuk langsung meningkatkan daya tahan sistem hingga **300%** di level kode saat
 - [x] **[SRE-03] Refactor N+1 Loop Database menjadi *Batch Query* (WHERE IN).** ✅
   - Digantikan dengan single `whereIn` pada `candidates.map(c => c.naturalKey)` untuk `previewTargets` & `generateTargets` secara sukses. 
 
+### 7. Rencana Aksi Lanjutan (SRE Advanced) - ✅ SELESAI
+- [x] **[SRE-04] Opossum Circuit Breaker di MinIO** ✅
+  - Membungkus koneksi `.putObject` S3 ke dalam `minioUploadBreaker` di file config untuk menerapkan mode fail-fast jika *Object Storage* melambat, mencegah API nge-hang massal.
+- [x] **[SRE-05 & SRE-06] Endpoint Prometheus dan Tracing DB Node.js** ✅
+  - Integrasi `@sentry/node` (APM auto-instrumentation buat query Knex) serta librari `prom-client` telah diregistrasikan di jalur router `GET /metrics` untuk visualisasi RAM & CPU lewat Grafana / Prometheus.
+
 ---
 
 ## 🔐 Laporan Cybersecurity Audit & DevSecOps — MVP Readiness
