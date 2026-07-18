@@ -30,10 +30,12 @@ Sistem ini menjalankan **"Dual Track Monitoring"**:
 - **Notifikasi Otomatis (BullMQ & Redis):** Pengiriman email otomatis H-3, H-1, dan H-0 *(Deadline)* ke alamat surel pengunggah tanpa mengganggu *thread* antarmuka.
 - **Pembuatan Pack Review Otomatis:** *Management Review Pack* menyusun rangkuman temuan, *Action Plans*, dan resolusi secara otomatis.
 
-### 4. Skalabilitas & Keamanan
-- **Storage Terisolasi (MinIO / S3):** Mengatasi isu batasan ukuran storage lokal menggunakan *Object Storage* yang dapat diskalakan dan diatur batas 10MB/unggah. File diakses menggunakan tautan presigned URL dengan durasi 1 jam.
-- **Keamanan (JWT & Rate Limiting):** Melindungi endpoint *upload* dengan pembatasan (*max 15 req/min*) untuk menghindari spamming. Token dilengkapi sistem *refresh* 7 hari.
-- **Audit Trail Penuh:** Aktivitas kritikal, pengunggahan ulang, revisi, hingga penerimaan risiko Pimpinan dicatat rapi secara persisten.
+### 4. Skalabilitas & Keamanan (SRE & DevSecOps)
+- **High-Performance Upload (Direct Streaming):** Proses unggah langsung di-*stream* dari Disk-ke-S3 (MinIO) tanpa membebani RAM NodeJS (Mencegah *Out-of-Memory / OOM Crash*).
+- **Caching & Optimisasi N+1 Query:** Dashboard memanfaatkan Redis Cache, dan *Batch Query* (WHERE IN) telah diimplementasikan untuk menjamin operasi database tetap ringan di bawah trafik puluhan ribu baris data.
+- **Circuit Breaker (Opossum):** Node.js tidak akan *hang* jika koneksi ke Object Storage melambat atau terputus berkat perlindungan *Circuit Breaker*.
+- **Security Hardening:** Implementasi JWT Revocation (Redis Blacklisting), Sanitasi Path Traversal pada _filename_, Validasi _Magic Bytes_ dari _file type_, hingga pembatasan *Rate Limiting* berlapis pada Endpoint Login & Lupa Kata Sandi.
+- **Deep Health & APM Tracing:** Integrasi `@sentry/node` untuk penelusuran Query Database serta ketersediaan `GET /metrics` bagi *Prometheus Analytics Scraping*.
 
 ---
 

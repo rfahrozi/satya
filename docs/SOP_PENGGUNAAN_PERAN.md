@@ -100,8 +100,8 @@ Dokumen ini berisi Standard Operating Procedure (SOP) untuk masing-masing peran 
 **Peran:** Pengelola Sistem & Data Master
 
 ### Hak Akses:
-- Seluruh fitur di atas
-- Master Data (Unit, Paket, Checklist)
+- Seluruh fitur di atas (Dashboard Operational, Retensi/Audit)
+- Master Data (Unit, Paket, Checklist - 295 items)
 - User Management
 - Buka/Tutup Periode
 
@@ -109,10 +109,11 @@ Dokumen ini berisi Standard Operating Procedure (SOP) untuk masing-masing peran 
 1. **Inisiasi Siklus (Awal Bulan/Tahun):**
    - Buka menu **Master Data** -> **Periode**.
    - Buat periode baru dan set status menjadi `ACTIVE`.
-   - Generate targets agar semua unit mendapat tugas checklist.
+   - Klik **Generate Targets** agar sistem mendistribusikan ke-295 *Master Checklist* secara otomatis sesuai pemetaan jabatan definitif.
 2. **Persiapan Management Review:**
    - Buka menu **Management Review** -> Klik **+ Review Baru**.
    - Klik **Build Pack** agar sistem mengompilasi semua temuan dan risiko otomatis.
-3. **Bantuan Teknis:**
-   - Monitor **Email Queue** di Dashboard Pimpinan untuk memastikan tidak ada email gagal kirim.
-   - Bantu reset password satker/internal jika diperlukan.
+3. **Bantuan Teknis & Keamanan (New):**
+   - Jika pengguna melaporkan kelambatan akses unggah, hal itu wajar jika kuota **Rate Limit** mereka habis (batasnya 15 berkas per menit, dan login 10 percobaan per 15 menit). Anjurkan mereka menunggu sesaat.
+   - Peringatkan pengguna untuk tidak mengunggah file melebihi 10MB karena akan terblokir oleh batasan Server (Storage). File otomatis di-stream dan diverifikasi ekstensi aslinya.
+   - Bantu *reset password* melalui halaman User Management jika pengguna lupa kata sandi.

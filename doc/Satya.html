@@ -273,6 +273,23 @@ body{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--n900);
           <li style="display:flex;gap:9px;font-size:.78rem;color:var(--n300);padding:7px 0"><span style="color:#a78bfa;font-weight:700;flex-shrink:0">›</span><strong>Viewer:</strong> Berhak memonitor seluruh dokumen di Portal Checklist tanpa hak mengubah dokumen.</li>
         </ul>
       </div>
+
+      <!-- FITUR BARU SRE & KEAMANAN -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="padding:18px 22px 14px;display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(16,185,129,.14),rgba(5,150,105,.07));border-bottom:1px solid rgba(16,185,129,.2)">
+          <div style="width:44px;height:44px;border-radius:var(--r-md);background:rgba(16,185,129,.2);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">🛡️</div>
+          <div>
+            <div style="font-size:.92rem;font-weight:700;color:#fff">Security & SRE (High Availability)</div>
+            <span style="font-size:.62rem;font-weight:600;padding:2px 8px;border-radius:var(--r-f);background:rgba(16,185,129,.15);color:var(--ok);border:1px solid rgba(16,185,129,.3);letter-spacing:.06em;text-transform:uppercase">Reliabilitas v2.1.0</span>
+          </div>
+        </div>
+        <ul style="list-style:none;padding:14px 22px 18px">
+          <li style="display:flex;gap:9px;font-size:.78rem;color:var(--n300);padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04)"><span style="color:var(--ok);font-weight:700;flex-shrink:0">›</span><strong>Circuit Breaker (Opossum):</strong> API tetap melayani antrean secara <em>Fail-Fast</em> saat MinIO down tanpa menghanguskan server.</li>
+          <li style="display:flex;gap:9px;font-size:.78rem;color:var(--n300);padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04)"><span style="color:var(--ok);font-weight:700;flex-shrink:0">›</span><strong>Disk Storage & Caching:</strong> Menghindari <em>OOM Crash</em> dengan <em>Redis Cache</em> dan <em>Streaming File</em> dari HDD langsung ke MinIO.</li>
+          <li style="display:flex;gap:9px;font-size:.78rem;color:var(--n300);padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04)"><span style="color:var(--ok);font-weight:700;flex-shrink:0">›</span><strong>Proteksi OWASP Terkini:</strong> Validasi <em>Magic Bytes</em> MimeType, Rate Limiter Lupa Password, Pencegahan Path Traversal, hingga JWT Blacklisting.</li>
+          <li style="display:flex;gap:9px;font-size:.78rem;color:var(--n300);padding:7px 0"><span style="color:var(--ok);font-weight:700;flex-shrink:0">›</span><strong>Sentry & Prometheus:</strong> Endpoint `/health` mendeteksi ketersediaan Postgres dan Sentry Auto-Instrumentation membaca metrik <em>slow query</em>.</li>
+        </ul>
+      </div>
     </div>
   </section>
 

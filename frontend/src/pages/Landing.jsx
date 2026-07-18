@@ -75,8 +75,8 @@ const Landing = () => {
     },
     {
       icon: <ShieldCheck className="w-6 h-6 text-rose-400" />,
-      title: "Keamanan, SoD & Audit Trail",
-      description: "Arsitektur cloud terisolasi (MinIO S3), pembagian tugas yang ketat (Segregation of Duties), serta log aktivitas untuk transparansi penuh."
+      title: "Keamanan, Reliabilitas & Audit",
+      description: "Penyimpanan obyek S3 terisolasi, proteksi serangan OWASP (CORS, JWT Revocation, Rate Limiting), Opossum Circuit Breaker untuk toleransi kegagalan, dan Audit Trail."
     }
   ];
 
