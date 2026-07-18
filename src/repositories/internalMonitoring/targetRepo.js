@@ -38,8 +38,19 @@ async function _parseTargetSnapshots(targets) {
   return targets.map(t => {
     let master = {};
     let assignment = {};
-    try { master = JSON.parse(t.master_snapshot || '{}'); } catch(e){}
-    try { assignment = JSON.parse(t.assignment_snapshot || '{}'); } catch(e){}
+
+    // Postgres JSONB type is already parsed into Object by Knex/pg driver
+    if (typeof t.master_snapshot === 'object' && t.master_snapshot !== null) {
+        master = t.master_snapshot;
+    } else {
+        try { master = JSON.parse(t.master_snapshot || '{}'); } catch(e){}
+    }
+
+    if (typeof t.assignment_snapshot === 'object' && t.assignment_snapshot !== null) {
+        assignment = t.assignment_snapshot;
+    } else {
+        try { assignment = JSON.parse(t.assignment_snapshot || '{}'); } catch(e){}
+    }
 
     return {
       ...t,
