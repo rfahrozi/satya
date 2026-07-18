@@ -161,28 +161,27 @@ Berikut adalah hasil audit infrastruktur terhadap kesiapan repository SATYA jika
 
 ### 1. Analisis Skalabilitas (Scalability Analysis)
 - **Skalabilitas Horizontal (✅ Baik):** Aplikasi dirancang *stateless*. Autentikasi menggunakan JWT (`src/middlewares/tenant.js`) dan tidak ada *sticky session* yang disimpan di memori Node.js. Server bisa diduplikasi ke banyak *container* tanpa isu sinkronisasi sesi.
-- **Titik Bottleneck Utama (❌ Kritis):** Fungsi `getExecutiveDashboard` (dan fungsi analitik lainnya di `dashboardRepo.js`) mengambil ribuan baris data ke RAM dan menggunakan loop `JSON.parse(t.master_snapshot)` secara sekuensial pada event-loop Node.js. Node.js bersifar *single-threaded*, mengeksekusi iterasi pemrosesan JSON ukuran besar akan memblokir (*choke point*) semua *request* API lainnya dari user lain hingga proses komputasi JSON ini selesai.
+- **Titik Bottleneck Utama (✅ Diperbaiki):** Sebelumnya fungsi `getExecutiveDashboard` mengambil ribuan baris data ke RAM dan menggunakan loop `JSON.parse` secara sinkron. Hal ini telah ditanggulangi dengan mengimplementasikan **Redis Cache** yang membatasi kalkulasi berat hanya dilakukan sekali per siklus kedaluwarsa.
 
 ### 2. Manajemen Database dan Penyimpanan (Data Layer)
-- **Masalah N+1 & Blocking Query (❌ Kritis):** Di dalam `generatorService.js`, proses iterasi target memanggil *query* ke basis data (seperti `findTargetByNaturalKey`) secara *sequential* (didalam loop `for..of` dengan `await`). Hal ini menghasilkan ratusan pemanggilan DB berturut-turut yang memakan waktu I/O sangat lama ketimbang memanggil satu query `WHERE IN` (*batch query*).
-- **Caching Tidak Ada (⚠️ Warning):** *Redis* sudah terpasang, tetapi **hanya** digunakan untuk Antrian (BullMQ). Tidak ada implementasi Application Caching (seperti memori *query* Dashboard atau metadata User), membebani PostgreSQL untuk kalkulasi yang sama berulang-ulang.
-- **Potensi OOM (*Out of Memory*) pada Storage (❌ Kritis):** Endpoint upload file di `internalMonitoringRoutes.js` dan `reportRoutes.js` memakai `multer.memoryStorage()`. Ini berarti file ukuran maksimal 10MB akan disedot sepenuhnya ke dalam RAM server sebelum dikirim ke MinIO. Jika 100 user mengunggah secara bersamaan, Node.js bisa mendadak mengalami *Crash* karena mencapai limit V8 Heap (~1.4 GB).
+- **Masalah N+1 & Blocking Query (✅ Diperbaiki):** Iterasi sekuensial yang menyebabkan masalah I/O tinggi pada fungsi generator target di `generatorService.js` telah diganti menggunakan **Batch Query** `WHERE IN` sehingga transaksi ke basis data jauh lebih optimal.
+- **Application Caching (✅ Diperbaiki):** Modul `redis` kini tidak hanya digunakan oleh antrian (BullMQ), tetapi secara efektif menjadi lapisan _Application Cache_ untuk berbagai komputasi dashboard yang berat.
+- **Potensi OOM (*Out of Memory*) pada Storage (✅ Diperbaiki):** Endpoint upload file telah dipindah dari penggunaan `multer.memoryStorage()` menjadi `multer.diskStorage()`, mem-bypass ancaman memori V8 NodeJS meledak meskipun ada serbuan *multi-upload* sekaligus.
 
 ### 3. Konkurensi dan Manajemen Sumber Daya (Concurrency & Resource)
 - **Event Queueing (✅ Baik):** Pengiriman notifikasi email sudah dilakukan secara asinkron (offloaded) menggunakan Redis BullMQ (`emailWorker.js`), sehingga *response time* API unggah dokumen tidak terkendala kecepatan SMTP eksternal.
 - **Cron Jobs Terpisah (✅ Baik):** Eksekusi pengingat (*Reminder*) dan *Escalation* dijalankan pada *container* `worker` terpisah.
-- **Memory Leaks (⚠️ Warning):** Ekstraksi dan iterasi ratusan file dalam loop (seperti di fungsi *Generator* dan *Dashboard*) berpotensi me-referensi object berukuran besar secara terus-menerus sebelum *Garbage Collector (GC)* bisa bekerja.
+- **Memory Leaks (✅ Ditangani):** Seiring dengan perubahan stream disk dan Batch Query, penumpukan object pada loop ukuran besar berhasil dikurangi sehingga *Garbage Collector* bisa bekerja dengan normal.
 
 ### 4. Ketahanan dan Toleransi Kesalahan (Resilience & Fault Tolerance)
-- **Rate Limiting (✅ Cukup):** *Rate Limiting* dasar sudah diimplementasikan (Login 10 Req/15m, Upload 15 Req/menit), cukup ampuh menangkal skrip otomatis dan mencegah *spamming/storage exhaustion*.
-- **Graceful Degradation (❌ Kurang):** Jika koneksi MinIO atau Database melambat, aplikasi API akan `Timeout` atau antrian request akan menumpuk. Belum ada *Circuit Breaker* (seperti library `opossum`) untuk mengembalikan error secara cepat (fail-fast) dan membiarkan layanan *read-only* tetap dapat diakses meskipun storage mati.
+- **Rate Limiting (✅ Diperketat):** Pembatasan telah diterapkan secara komprehensif tidak hanya untuk unggah (15 Req/m), tetapi juga diperketat ke akses otentikasi login (10 Req/15m) serta mitigasi serangan spam reset sandi pada *endpoint* forgot-password (5 Req/30m).
+- **Graceful Degradation (✅ Diperbaiki):** Koneksi ke penyimpanan objek S3/MinIO kini telah dilapisi *Circuit Breaker* (menggunakan library `opossum`). API tidak akan hang saat *storage service* eksternal sedang mengalami gangguan (mode *Fail-fast* berjalan).
 
 ### 5. Rekomendasi Infrastruktur dan Observabilitas
 - **Deployment:** 
   - Gunakan **Kubernetes / AWS ECS** untuk *Auto-Scaling* Node.js API container berdasarkan utilisasi CPU.
   - Terapkan **PgBouncer** di depan PostgreSQL untuk me-*manage connection pooling* agar DB tidak *hang* saat serbuan ribuan *request*.
-- **Observabilitas:**
-  - Sentry sudah dipasang (berdasarkan perbaikan kode sebelumnya) namun belum mengukur transaksi basis data. Gunakan integrasi **Sentry Tracing for Knex** dan export matrik Node.js via **Prometheus (prom-client)** (metrik Event Loop Lag dan Memory Heap).
+- **Observabilitas (✅ Diperbaiki):** Sentry APM dan *Node Auto-Instrumentation* telah hidup untuk mentracing *query* lambat. Node.js native *metrics* berhasil terekspos di API endpoint `/metrics` (*prom-client*) dan siap diambil oleh skraper Prometheus.
 
 ### 6. Rencana Aksi (Quick Wins) untuk Developer - ✅ SELESAI (18 Juli 2026)
 Untuk langsung meningkatkan daya tahan sistem hingga **300%** di level kode saat ini, terapkan 3 langkah konkret berikut:
