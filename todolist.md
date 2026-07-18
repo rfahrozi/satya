@@ -246,28 +246,28 @@ Untuk langsung meningkatkan daya tahan sistem hingga **300%** di level kode saat
 
 ### 3. OWASP Top 10 — Pemindaian Cepat
 
-#### A01 – Broken Access Control
-- ❌ **BLOCKER:** Endpoint periode tanpa `authorize()` (lihat bagian 1).
-- ❌ **BLOCKER:** `PATCH /escalation-rules/:id` mengekspos mass-assignment attack.
+#### A01 – Broken Access Control (✅ Aman)
+- ✅ **Aman:** Akses ke Endpoint periode telah dibatasi dengan perlindungan middleware `authorize()` hanya untuk `ADMIN_PT` dkk.
+- ✅ **Aman:** Celah manipulasi Mass-Assignment pada endpoint `PATCH /escalation-rules/:id` telah ditambal dengan implementasi *Whitelist Fields*.
 
-#### A03 – Injection (SQL Injection)
+#### A03 – Injection (SQL Injection) (✅ Aman)
 - ✅ **Aman:** Semua query menggunakan Knex.js query builder dengan parameterized binding. Tidak ada raw string concatenation ditemukan.
 
-#### A07 – Identification & Authentication Failures
-- ✅ JWT + bcryptjs untuk password hashing.
-- ⚠️ **JWT tidak memiliki mekanisme revokasi** (blacklist). Jika token dicuri, tidak bisa di-invalidate sebelum expiry 7 hari.
+#### A07 – Identification & Authentication Failures (✅ Aman)
+- ✅ JWT + bcryptjs untuk password hashing beroperasi dengan baik.
+- ✅ **Aman:** Mekanisme JWT Revocation (Blacklist) saat logout telah diimplementasikan melalui Redis Cache yang akan memblokir penyalahgunaan akses jika token tercuri.
 
-#### A05 – Security Misconfiguration
-- ❌ **BLOCKER:** `debug_error.log` masih ada di history git.
-- ✅ Stack trace tidak ditampilkan ke client kecuali mode development.
+#### A05 – Security Misconfiguration (✅ Aman)
+- ✅ **Aman:** File rentan `debug_error.log` secara resmi telah dihapus dari repositori git.
+- ✅ Stack trace tidak pernah di-ekspos ke end-user di sisi klien (Kecuali mode _development_ diaktifkan).
 
-#### Unvalidated File Upload (A08)
-- ✅ Magic bytes validation (`file-type`) sudah diterapkan.
-- ⚠️ **Belum ada antivirus scan** (ClamAV) untuk file yang diunggah.
+#### Unvalidated File Upload / A08 (✅ Aman)
+- ✅ **Aman:** Pengecekan file *Magic bytes validation* (file-type) telah diterapkan. Server tidak mudah ditipu dengan peretas yang sekadar mengubah ekstensi `.exe` menjadi `.pdf`.
+- ⚠️ *Deferred:* Belum ada pemindaian antivirus (ClamAV) yang berjalan secara pasif pada fail yang diunggah. Ditunda mengingat _resources_ infrastruktur belum mendukung.
 
-#### IDOR (Insecure Direct Object References)
-- ✅ **Sebagian besar aman**: `getTarget()` memanggil `assertCanViewTarget(actor, target)` untuk resource-level check.
-- ⚠️ `GET /follow-ups/:id` dan `POST /follow-ups/:id/start` — tidak ada validasi bahwa follow-up ID milik target yang authorized untuk actor.
+#### IDOR (Insecure Direct Object References) (✅ Aman)
+- ✅ **Aman:** Endpoint utama `getTarget()` memanggil `assertCanViewTarget(actor, target)` untuk verifikasi kepemilikan resource-level.
+- ✅ **Aman:** Ownership check di Service *Follow-Ups* (`/follow-ups/:id`) juga telah dipastikan keberadaannya sehingga admin/kolektor lain tidak bisa mengeksekusi follow up orang lain.
 
 ---
 
