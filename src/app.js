@@ -47,20 +47,18 @@ app.use(cors({
 app.use(express.json());
 
 // ─── [BUG-01] Single Mount Strategy ──────────────────────────────────────────
-// Sebelumnya router di-mount DUA kali (BASE_PATH + '/'), menyebabkan:
-//   1. Middleware berjalan ganda
-//   2. SPA fallback '*' menangkap semua request sebelum errorHandler global terjangkau
-//
-// Strategi yang dipilih:
-//   - Mount SATU KALI di root '/'
-//   - Nginx dikonfigurasi untuk STRIP prefix /satya sebelum meneruskan ke Node
-//   - Jika Nginx belum strip prefix, tambahkan `strip_prefix /satya` di nginx.conf
+// Karena Vite mem-build frontend dengan "base: '/satya/'", file aset (js/css)
+// akan dicari di /satya/assets/*. Oleh karena itu, kita mount Express static
+// secara spesifik agar /satya/assets merujuk ke isi folder public/assets.
+
 const BASE_PATH = process.env.BASE_PATH || '/satya';
 
 const baseRouter = express.Router();
 
-// Menyajikan file statis (Frontend) dari folder public
-baseRouter.use(express.static(path.resolve(__dirname, '../public')));
+// ─── Routing Frontend (Vite Build) ─────────────────────────────────────────
+// Konfigurasi agar file statis pada /satya/* maupun /* langsung merujuk ke public/
+app.use(BASE_PATH, express.static(path.resolve(__dirname, '../public')));
+app.use(express.static(path.resolve(__dirname, '../public')));
 
 // Dokumentasi Swagger API
 baseRouter.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { customSiteTitle: 'SATYA API Docs' }));
@@ -69,16 +67,19 @@ baseRouter.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { cust
 baseRouter.use('/api/v1', routes);
 
 // Penanganan API 404 — harus sebelum SPA fallback
-baseRouter.use('/api/v1', (req, res) => {
-    res.status(404).json({ success: false, message: 'API Endpoint tidak ditemukan.' });
+baseRouter.all('/api/v1/*', (req, res, next) => {
+    const error = new Error('API Endpoint tidak ditemukan.');
+    error.statusCode = 404;
+    next(error);
 });
 
-// SPA Fallback untuk React Router — hanya untuk non-API request
+// SPA Fallback untuk React Router — pastikan tidak menangkap API requests
 baseRouter.get('*', (req, res) => {
     res.sendFile(path.resolve(__dirname, '../public', 'index.html'));
 });
 
-// Mount satu kali; Nginx harus strip BASE_PATH sebelum proxy ke Node
+// Mount baseRouter dua kali agar aplikasi tetap jalan baik di belakang reverse proxy maupun akses lokal langsung
+app.use(BASE_PATH, baseRouter);
 app.use('/', baseRouter);
 
 // ─── Global Error Handler — harus sesudah semua route ────────────────────────

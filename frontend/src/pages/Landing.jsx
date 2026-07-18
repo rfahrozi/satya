@@ -193,10 +193,10 @@ const Landing = () => {
       {/* Hero Section */}
       <section id="beranda" className="relative pt-40 pb-24 md:pt-56 md:pb-32">
         {/* Background glow effects */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-emerald-500/15 blur-[120px] rounded-full pointer-events-none"></div>
-        <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-blue-600/15 blur-[120px] rounded-full pointer-events-none"></div>
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-200 h-200 bg-emerald-500/15 blur-[120px] rounded-full pointer-events-none"></div>
+        <div className="absolute bottom-0 right-0 w-150 h-150 bg-blue-600/15 blur-[120px] rounded-full pointer-events-none"></div>
 
-        <motion.div 
+        <motion.div
           variants={staggerContainer}
           initial="hidden"
           animate="visible"
@@ -311,9 +311,9 @@ const Landing = () => {
 
       {/* Workflow Section */}
       <section id="alur" className="py-32 bg-[#050505] border-y border-white/5 relative overflow-hidden">
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none"></div>
-        
-        <motion.div 
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-150 h-150 bg-blue-600/10 blur-[120px] rounded-full pointer-events-none"></div>
+
+        <motion.div
           variants={staggerContainer}
           initial="hidden"
           whileInView="visible"
@@ -362,7 +362,7 @@ const Landing = () => {
 
       {/* Footer */}
       <footer className="pt-16 pb-8 border-t border-white/10 relative overflow-hidden">
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[200px] bg-emerald-500/10 blur-[100px] pointer-events-none"></div>
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-200 h-50 bg-emerald-500/10 blur-[100px] pointer-events-none"></div>
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8 mb-12">
             
