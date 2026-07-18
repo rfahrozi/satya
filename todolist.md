@@ -347,23 +347,41 @@ Berbasis Docker Compose agar terstandarisasi, efisien, dan low-effort:
    SEED_ON_STARTUP=true docker-compose -f docker-compose.prod.yml up -d --build
    ```
 
-4. **Konfigurasi Reverse Proxy (Nginx)**
-   *Buat file `/etc/nginx/sites-available/satya`:*
+4. **Konfigurasi Reverse Proxy (Nginx Eksisting di VPS)**
+   *Aplikasi SATYA akan berjalan bersama e-LID di `devapps.pt-kepri.go.id`.*
+   *Port aplikasi SATYA dikonfigurasi di `3004` (berdasarkan `docker-compose.prod.yml`).*
    ```nginx
-   server {
-       listen 80;
-       server_name devapps.pt-kepri.go.id/satya;
-       client_max_body_size 11M; # Izinkan upload max 10MB
-       location /satya/ {
-           proxy_pass http://localhost:3004/;
-           proxy_set_header Host $host;
-           proxy_set_header X-Real-IP $remote_addr;
-       }
-   }
-   ```
-   ```bash
-   sudo ln -s /etc/nginx/sites-available/satya /etc/nginx/sites-enabled/
-   sudo systemctl reload nginx
+    # Konfigurasi Eksisting (sebagian) di devapps.pt-kepri.go.id
+    server {
+        server_name devapps.pt-kepri.go.id;
+        client_max_body_size 50M; # Batas unggahan global
+        
+        # ... (Block konfigurasi lain seperti /elid/ ada di sini) ...
+
+        # ==========================================================
+        # ROUTING SATYA & SSL CERTBOT
+        # ==========================================================
+        location /satya {
+            return 301 $scheme://$host/satya/;
+        }
+
+        location ^~ /satya/ {
+            proxy_pass http://127.0.0.1:3004/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        listen 443 ssl; # managed by Certbot
+        ssl_certificate /etc/letsencrypt/live/devapps.pt-kepri.go.id/fullchain.pem; 
+        ssl_certificate_key /etc/letsencrypt/live/devapps.pt-kepri.go.id/privkey.pem; 
+        include /etc/letsencrypt/options-ssl-nginx.conf; 
+        ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; 
+    }
    ```
 
 5. **Script Deploy Otomatis (deploy.sh)**
