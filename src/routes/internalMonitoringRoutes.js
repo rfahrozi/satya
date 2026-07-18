@@ -52,7 +52,8 @@ const imUploadLimiter = process.env.NODE_ENV !== 'test'
 
 // --- Period, Generation & Master Items ---
 // [SEC-B01] Tambahkan authorize() ke endpoint management periode agar hanya admin
-router.get('/periods', authorize(['ADMIN_PT', 'PIMPINAN_PT', 'PANITERA_PT', 'SEKRETARIS_PT']), masterController.listPeriods);
+// Pengecualian: GET /periods boleh diakses siapapun yang sudah login agar bisa mengisi dropdown portal.
+router.get('/periods', masterController.listPeriods);
 router.post('/periods', authorize(['ADMIN_PT']), masterController.createPeriod);
 router.post('/periods/:id/open', authorize(['ADMIN_PT']), masterController.openPeriod);
 router.post('/periods/:id/generate-preview', authorize(['ADMIN_PT']), masterController.generatePreview);
