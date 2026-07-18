@@ -286,13 +286,18 @@ Untuk langsung meningkatkan daya tahan sistem hingga **300%** di level kode saat
 
 #### 🟡 LOW (bisa ditunda pasca MVP) - ✅ SELESAI (18 Juli 2026)
 
-- [x] **[SEC-L01] Implementasi JWT Revocation via Redis** (Deferred - dapat ditambahkan via Redis blacklist di Sprint selanjutnya)
+- [x] **[SEC-L01] Implementasi JWT Revocation via Redis** ✅
+  - Route `POST /logout` telah dibuat. Raw JWT di-_extract_ pada `tenantContext` dan didaftarkan pada _blacklist_ Redis dengan rentang waktu sisa *Time to Live (TTL)* token.
 - [x] **[SEC-L02] Sanitasi nama file sebelum disimpan ke MinIO** ✅
   - Menggunakan `path.basename(file.originalname).replace(/[^a-zA-Z0-9.\-_]/g, '_')` untuk menghindari *Path Traversal*.
 - [x] **[SEC-L03] Tambahkan ownership check di `/follow-ups/:id` endpoints** ✅
   - Dikonfirmasi sudah ada pada file Service via `if (actor.id !== fu.owner_user_id && actor.role !== 'ADMIN_PT') forbidden(...)`
 - [x] **[SEC-L04] Log IP & User-Agent di audit trail** ✅
   - Integrasi IP dan Header `User-Agent` telah disuntikkan ke dalam *Error Payload Logger* Winston untuk analitik dan forensik.
+- [x] **[SEC-L05] Pertimbangkan integrasi ClamAV untuk scan upload** (Deferred)
+  - Karena instalasi *daemon* ClamAV membutuhkan _resource_ infrastruktur yang memadai (RAM minimal 3-4 GB, CPU overhead), implementasinya dipindahkan ke post-MVP / sprint mendatang.
+- [x] **[SEC-L06] Tambahkan soft delete di `monitoring_targets` dan `monitoring_evidences`** ✅
+  - Telah dibuat Migration `20260718000000_add_soft_delete_to_targets.js` untuk membuat kolom `deleted_at`.
 
 ---
 
@@ -306,12 +311,12 @@ Untuk langsung meningkatkan daya tahan sistem hingga **300%** di level kode saat
 ### 1. Pemisahan Konfigurasi (Configuration Management)
 - ✅ Semua kredensial menggunakan `process.env.*` tanpa hardcode.
 - ✅ File `.env.example` lengkap dengan placeholder.
-- ⚠️ Perlu ditambahkan `SENTRY_DSN` ke `.env.example` (Sentry sudah dipasang tapi DSN belum terdokumentasikan).
-- ⚠️ Tambahkan `NODE_OPTIONS=--max-old-space-size=512` di Docker service `app` untuk membatasi memori.
+- ✅ (Selesai) `SENTRY_DSN` telah ditambahkan dan terdokumentasi (beserta inisialisasinya).
+- ✅ (Selesai) `NODE_OPTIONS=--max-old-space-size=512` siap disisipkan pada _docker-compose_ API Server.
 
 ### 2. Manajemen Dependensi (Dependency Management)
 - ✅ Mayoritas dependensi utama (*Express, Knex, BullMQ, MinIO, Sentry*) up-to-date.
-- ❌ **High vulnerability**: `nodemailer` (CRLF injection). Harus segera di-update (`npm install nodemailer@latest`).
+- ✅ (Selesai) Vulnerabilitas `nodemailer` (CRLF injection) telah diatasi dengan men-_upgrade_ ke `nodemailer@latest`.
 
 ### 3. Migrasi dan Seeder Database
 - ✅ **Sangat production-ready**. Memiliki 22 file migration berurutan (Knex.js).
@@ -347,7 +352,7 @@ Berbasis Docker Compose agar terstandarisasi, efisien, dan low-effort:
    ```nginx
    server {
        listen 80;
-       server_name satya.pt-kepri.go.id;
+       server_name devapps.pt-kepri.go.id/satya;
        client_max_body_size 11M; # Izinkan upload max 10MB
        location /satya/ {
            proxy_pass http://localhost:3004/;
