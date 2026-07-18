@@ -1,17 +1,20 @@
-const repo = require('../repositories/internalMonitoringRepo');
+const repo = require('../repositories/internalMonitoring/targetRepo');
 const service = require('../services/internalMonitoringService');
+const fileType = require('file-type');
 
 exports.listTargets = async (req, res, next) => {
   try {
-    const targets = await repo.listTargets(req.query);
-    res.json({ success: true, data: targets });
+    const pagination = { limit: parseInt(req.query.limit) || 100, offset: parseInt(req.query.offset) || 0 };
+    const targets = await repo.listTargets(req.query, pagination);
+    res.json({ success: true, data: targets, pagination });
   } catch (err) { next(err); }
 };
 
 exports.listMyTargets = async (req, res, next) => {
   try {
-    const targets = await repo.listTargetsForUser(req.user.id, req.query);
-    res.json({ success: true, data: targets });
+    const pagination = { limit: parseInt(req.query.limit) || 100, offset: parseInt(req.query.offset) || 0 };
+    const targets = await repo.listTargetsForUser(req.user.id, req.query, pagination);
+    res.json({ success: true, data: targets, pagination });
   } catch (err) { next(err); }
 };
 
@@ -31,14 +34,14 @@ exports.saveDraft = async (req, res, next) => {
 
 exports.submitTarget = async (req, res, next) => {
   try {
-    const result = await service.submitTarget(req.params.id, req.user);
+    const result = await service.submitTarget(req.params.id, req.user, req.body);
     res.json(result);
   } catch (err) { next(err); }
 };
 
 exports.approveTarget = async (req, res, next) => {
   try {
-    const result = await service.approveTarget(req.params.id, req.user);
+    const result = await service.approveTarget(req.params.id, req.user, req.body);
     res.json(result);
   } catch (err) { next(err); }
 };
@@ -79,11 +82,29 @@ exports.addEvidenceFile = async (req, res, next) => {
     if (!allowedMimeTypes.includes(req.file.mimetype)) {
       return res.status(400).json({
         success: false,
-        message: 'Tipe file tidak diizinkan. Gunakan PDF, JPG, PNG, DOCX, atau XLSX.'
+        message: 'Tipe file tidak diizinkan di level header HTTP.'
       });
     }
 
-    const result = await service.uploadEvidenceFile(req.user, req.params.id, req.params.requirementId, req.file);
+    // [SEC-06] Validasi Magic Bytes (File Signature)
+    // Office files (.docx, .xlsx) menggunakan format ZIP, sehingga deteksi magic bytes-nya adalah 'application/zip'
+    const detected = await fileType.fromBuffer(req.file.buffer);
+    if (!detected) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tidak dapat memverifikasi isi file. File mungkin rusak atau format tidak dikenali.'
+      });
+    }
+
+    const safeMimes = [...allowedMimeTypes, 'application/zip'];
+    if (!safeMimes.includes(detected.mime)) {
+      return res.status(400).json({
+        success: false,
+        message: `Isi file (${detected.mime}) tidak sesuai dengan ekstensi yang diklaim.`
+      });
+    }
+
+    const result = await service.uploadEvidenceFile(req.user, req.params.id, req.params.requirementId, req.file, req.body);
     res.status(201).json({ success: true, data: result });
   } catch (err) { next(err); }
 };

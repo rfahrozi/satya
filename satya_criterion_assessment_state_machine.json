@@ -1,0 +1,55 @@
+{
+  "_comment": "State machine konfigurasi untuk penilaian kriteria monitoring (criterion assessment). File ini mendefinisikan status yang valid, aturan validasi per status, dan nilai skor default per status. Digunakan oleh InternalMonitoringAssessmentService.",
+
+  "criterion_statuses": [
+    "NOT_ASSESSED",
+    "MET",
+    "PARTIALLY_MET",
+    "NOT_MET",
+    "NOT_APPLICABLE"
+  ],
+
+  "criterion_rules": {
+    "NOT_ASSESSED": {
+      "review_note_required": false,
+      "reason_required": false,
+      "description": "Kriteria belum dinilai — status awal setelah target dibuat."
+    },
+    "MET": {
+      "review_note_required": false,
+      "reason_required": false,
+      "description": "Kriteria terpenuhi sepenuhnya. Bukti dukung dinilai cukup dan valid."
+    },
+    "PARTIALLY_MET": {
+      "review_note_required": true,
+      "reason_required": false,
+      "description": "Kriteria terpenuhi sebagian. Catatan review wajib diisi untuk menjelaskan kekurangan."
+    },
+    "NOT_MET": {
+      "review_note_required": true,
+      "reason_required": false,
+      "description": "Kriteria tidak terpenuhi. Catatan review wajib diisi sebagai dasar tindak lanjut."
+    },
+    "NOT_APPLICABLE": {
+      "review_note_required": true,
+      "reason_required": true,
+      "description": "Kriteria tidak berlaku untuk unit/jabatan ini. Alasan wajib diisi. Hanya VERIFIER atau ADMIN_PT yang berwenang menetapkan status ini."
+    }
+  },
+
+  "score_values": {
+    "NOT_ASSESSED": null,
+    "MET": 100,
+    "PARTIALLY_MET": 50,
+    "NOT_MET": 0,
+    "NOT_APPLICABLE": null
+  },
+
+  "allowed_transitions": {
+    "NOT_ASSESSED": ["MET", "PARTIALLY_MET", "NOT_MET", "NOT_APPLICABLE"],
+    "MET":          ["PARTIALLY_MET", "NOT_MET", "NOT_APPLICABLE"],
+    "PARTIALLY_MET":["MET", "NOT_MET", "NOT_APPLICABLE"],
+    "NOT_MET":      ["MET", "PARTIALLY_MET", "NOT_APPLICABLE"],
+    "NOT_APPLICABLE":["MET", "PARTIALLY_MET", "NOT_MET"]
+  }
+}

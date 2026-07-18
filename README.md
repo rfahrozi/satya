@@ -1,102 +1,134 @@
-# SATYA (Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel)
+# SATYA (Sistem Administrasi dan Tata Kelola Yudisial yang Akuntabel)
+## Sistem Monitoring & Evaluasi Terpadu | Pengadilan Tinggi Kepulauan Riau
 
-Aplikasi Monitoring dan Evaluasi (MONEV) berbasis web untuk Pengadilan Tinggi Kepulauan Riau. Proyek ini dibangun dengan Node.js (Express), React (Vite), PostgreSQL, dan berbagai teknologi modern lainnya.
+![Version](https://img.shields.io/badge/Version-2.1.0-emerald.svg)
+![Node.js](https://img.shields.io/badge/Node.js-v20-blue.svg)
+![React](https://img.shields.io/badge/React-19-61dafb.svg)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ed.svg)
 
----
+**SATYA** adalah platform digital *Enterprise-grade* yang dirancang sebagai instrumen strategis penyelenggaraan tugas administrasi peradilan di lingkungan Pengadilan Tinggi (PT) Kepulauan Riau.
 
-## Pembaharuan Fitur Terbaru (Berdasarkan Laporan Evaluasi)
-
-Berdasarkan analisis evaluasi sistem, telah dilakukan pembaruan dan penambahan berbagai fitur kritikal (Feature Gaps) untuk memastikan sistem ini _enterprise-ready_ dan dapat dioperasikan secara penuh tanpa hambatan teknis.
-
-Berikut adalah rincian fitur-fitur baru yang telah diimplementasikan:
-
-### 1. Manajemen Data Master (Master Data Management)
-
-- **Deskripsi:** Menambahkan fungsionalitas CRUD penuh (Create, Read, Update, Delete) untuk mengelola data master, yang meliputi:
-  - Jenis Laporan (`report_types`)
-  - Satuan Kerja (`satkers`)
-  - Konfigurasi Batas Waktu / Deadline (`deadline_configs`)
-- **Dampak:** Admin PT kini memiliki antarmuka khusus untuk mengatur kebijakan laporan dan satker baru tanpa perlu menunggu _database engineer_ melakukan _seeding_ atau mengubah skema database secara manual.
-
-### 2. Audit Trail & Riwayat Revisi Dokumen
-
-- **Deskripsi:** Implementasi sistem rekam jejak (Audit Trail) melalui tabel log khusus (`report_revision_logs`). Sistem kini mencatat seluruh riwayat revisi, termasuk siapa yang mengubah, kapan dokumen diunggah, versi dokumen lama, dan catatan revisi admin.
-- **Dampak:** Mencegah hilangnya konteks historis saat Satker mengunggah ulang (menimpa) laporan yang salah. Pimpinan dan Admin dapat melihat seberapa sering suatu Satker melakukan perbaikan untuk evaluasi kualitas kinerja.
-
-### 3. Ekspor Laporan Rekapitulasi (Excel / PDF)
-
-- **Deskripsi:** Mengintegrasikan kapabilitas unduh (Export) pada dashboard rekapitulasi dan _heatmap_ kepatuhan. Pengguna kini dapat mencetak laporan dalam bentuk **Microsoft Excel (.xlsx)** maupun **PDF**.
-- **Dampak:** Memudahkan pembuatan laporan fisik atau dokumen lampiran resmi untuk rapat pimpinan secara berjenjang (misalnya untuk dikirimkan ke Mahkamah Agung).
-
-### 4. Sistem Penilaian Kinerja (Scoring & Grading)
-
-- **Deskripsi:** Evaluasi tidak lagi sebatas status "Belum Lengkap", "Lengkap", atau "Revisi", namun telah dilengkapi dengan parameter nilai angka (score `0-100`) untuk menilai kualitas akurasi dan ketepatan waktu.
-- **Dampak:** Sistem MONEV kini memiliki klasemen (_Leaderboard_) kinerja tiap Satker yang dapat digunakan oleh Pimpinan sebagai instrumen kebijakan _reward and punishment_.
-
-### 5. Notifikasi Dalam Aplikasi (In-App Notification)
-
-- **Deskripsi:** Menambahkan fitur notifikasi _real-time_ secara langsung pada _interface_ aplikasi web (berupa ikon lonceng/bell), sebagai pelengkap notifikasi email _background job_ via BullMQ.
-- **Dampak:** Proses perbaikan laporan oleh Satker menjadi jauh lebih responsif, karena Satker dapat segera melihat jika laporan mereka ditolak atau membutuhkan revisi tanpa harus membuka _email_ atau mencari di daftar laporan.
-
-### 6. Diferensiasi Dashboard (Pimpinan vs Admin PT)
-
-- **Deskripsi:** Memisahkan tampilan (_View_) dashboard antara role `ADMIN_PT` dan `PIMPINAN`.
-  - **Admin PT:** Mendapatkan tampilan antrean (_queue_) operasional yang _actionable_ (tombol periksa/verifikasi, detail catatan, dsb).
-  - **Pimpinan:** Mendapatkan tampilan _Executive Summary_, grafik tren performa, dan klasemen/ranking Satker.
-- **Dampak:** Pimpinan memiliki akses langsung ke poin-poin evaluasi yang paling esensial (manajerial) tanpa terganggu oleh detail teknis operasional.
-
-### 7. Peningkatan Antarmuka Pengguna (UI), Aksesibilitas & Animasi
-
-- **Deskripsi:** Merombak Landing Page dan Dashboard Pimpinan/Admin dengan animasi halus (_scroll reveal_, `framer-motion`), desain modern (_Glassmorphism_), komponen _Progress Bar_ kepatuhan yang memukau, serta memperbaiki standar aksesibilitas visual (tingkat kontras warna) untuk kenyamanan pimpinan.
-- **Dampak:** Pengalaman pengguna (UX) yang sangat berkelas, informatif, dan memberikan citra profesional serta kenyamanan maksimal bagi pimpinan dalam mengevaluasi data Satker.
-
-### 8. Peningkatan Kualitas Kode & Test Coverage (>90%)
-
-- **Deskripsi:** Sistem ini sekarang dilindungi oleh ratusan _Unit Test_ dan _Integration Test_ secara ketat (berbasis Jest dan React Testing Library).
-- **Cakupan Pengujian:**
-  - **Backend:** 100% Passed, coverage mencapai **>90%** (Statements & Lines). Menutup skenario kelemahan koneksi (redis/db).
-  - **Frontend:** 100% Passed, coverage mencapai **>90%** (Statements & Lines). Termasuk skenario kegagalan UI dan verifikasi _edge-cases_.
-- **Dampak:** Memastikan aplikasi sangat stabil, reliabel, dan bebas hambatan kritis (_bugs_/_memory leaks_) untuk peluncuran (_deployment_) level _enterprise_ jangka panjang.
+Sistem ini menjalankan **"Dual Track Monitoring"**:
+1. **Pengawasan Eksternal (PN → PT):** Mengelola 12 Laporan Wajib bulanan dari seluruh Pengadilan Negeri di bawah yurisdiksi PT Kepri.
+2. **Evaluasi Mandiri Internal (Bagian PT):** Memonitor pemenuhan dokumen dari tiap bagian di dalam PT sendiri untuk mendukung standar **AMPUH, PMPZI, dan AKIP** melalui 295 *Master Checklist* yang tersebar ke 15 Jabatan Resmi.
 
 ---
 
-## Teknologi yang Digunakan
+## 🌟 Fitur Utama (v2.1.0)
 
-- **Backend:** Node.js (Express), Knex.js, Jest, Supertest
-- **Frontend:** React.js, Vite, TailwindCSS v4, Framer Motion, React Testing Library
-- **Database:** PostgreSQL
-- **Penyimpanan Berkas:** MinIO (S3 Compatible Object Storage)
-- **Background Jobs:** Redis, BullMQ (untuk email dan reminder)
+### 1. Sistem "Dual Track" Terintegrasi
+- **Portal Satker (PN):** Antarmuka unggah mandiri untuk PN (Pengadilan Negeri) yang dilengkapi dengan notifikasi revisi seketika.
+- **Portal Internal (PT):** Antarmuka terpisah untuk Kepala Bagian & Koordinator Pengadilan Tinggi dengan dukungan unggahan *Evidence* tekstual dan *File* berdasar Standar Kriteria (AMPUH/PMPZI/AKIP).
 
-Saran Pengembangan Selanjutnya (Roadmap Fase 3: Inovasi & AI)
-Untuk membuat sistem MONEV ini menjadi State-of-the-Art dan menjadi percontohan (benchmark) bagi Pengadilan Tinggi lain di seluruh Indonesia, saya menyarankan beberapa fitur Advanced berikut untuk fase pengembangan selanjutnya:
+### 2. Dashboard Eksekutif & Heatmap
+- **Pimpinan Dashboard:** Menyajikan metrik kepatuhan (*Compliance Rate*), item kritis/terlambat (*Overdue*), dan progres langsung dari masing-masing Unit.
+- **Risk Heatmap & Trend:** Matriks interaktif 5×5 (Likelihood × Impact) dan grafik tren bulanan untuk tata kelola risiko manajemen.
+- **Ekspor PDF & Excel:** Otomatis menghasilkan rekapitulasi data kepatuhan bulanan, semesteran, hingga tahunan (menggunakan `jsPDF` & `exceljs`).
 
-A. Otomatisasi Verifikasi Berbasis AI (OCR / LLM)
-Saat ini, Admin PT harus memverifikasi dokumen secara manual satu persatu.
+### 3. Otomasi & Alur Kerja (Workflow) Cerdas
+- **State Machine Workflow:** Dokumen akan bertransisi secara ketat: `NOT_STARTED` → `IN_PROGRESS` → `AWAITING_APPROVAL` → `AWAITING_VERIFICATION` → `VERIFIED` atau `REVISION_REQUIRED`.
+- **Notifikasi Otomatis (BullMQ & Redis):** Pengiriman email otomatis H-3, H-1, dan H-0 *(Deadline)* ke alamat surel pengunggah tanpa mengganggu *thread* antarmuka.
+- **Pembuatan Pack Review Otomatis:** *Management Review Pack* menyusun rangkuman temuan, *Action Plans*, dan resolusi secara otomatis.
 
-Saran: Integrasikan sistem dengan modul Optical Character Recognition (OCR) dan Model Bahasa AI.
-Use Case: Sistem dapat memindai file PDF yang diunggah secara otomatis untuk mendeteksi:
-Apakah dokumen sudah ditandatangani dan dicap oleh Ketua Pengadilan Negeri setempat?
-Apakah format tabel laporan sudah sesuai standar?
-Dampak: Memangkas beban kerja verifikasi Admin PT hingga 70%. Dokumen yang jelas-jelas tidak ada tanda tangan bisa otomatis ditolak oleh sistem dalam hitungan detik.
-B. Analitik Prediktif & Laporan Naratif Otomatis (Generative AI)
-Dashboard agregat saat ini memberikan visualisasi statistik yang sangat bagus (Heatmap & Bar chart).
+### 4. Skalabilitas & Keamanan
+- **Storage Terisolasi (MinIO / S3):** Mengatasi isu batasan ukuran storage lokal menggunakan *Object Storage* yang dapat diskalakan dan diatur batas 10MB/unggah. File diakses menggunakan tautan presigned URL dengan durasi 1 jam.
+- **Keamanan (JWT & Rate Limiting):** Melindungi endpoint *upload* dengan pembatasan (*max 15 req/min*) untuk menghindari spamming. Token dilengkapi sistem *refresh* 7 hari.
+- **Audit Trail Penuh:** Aktivitas kritikal, pengunggahan ulang, revisi, hingga penerimaan risiko Pimpinan dicatat rapi secara persisten.
 
-Saran: Tambahkan fitur "AI Executive Summary Generator" khusus untuk layar PIMPINAN.
-Use Case: AI menganalisis data heatmap dan otomatis merangkum kalimat naratif seperti: "Pada bulan ini, PN Batam mengalami penurunan kepatuhan sebesar 15% pada laporan X. Disarankan untuk memberikan surat peringatan."
-Dampak: Pimpinan tidak perlu menganalisis angka sendiri, cukup membaca narasi insight yang dihasilkan oleh AI secara otomatis.
-C. Progressive Web App (PWA) & Push Notification Native
-Aplikasi web saat ini sangat responsif, tetapi Pimpinan / Ketua Satker mungkin lebih banyak menggunakan smartphone.
+---
 
-Saran: Konversi frontend React/Vite menjadi Progressive Web App (PWA).
-Use Case: Pengguna dapat menekan tombol "Install to Home Screen" di HP mereka tanpa melalui App Store / Play Store. Tambahkan fitur Web Push API via Service Worker untuk mengirimkan notifikasi pop-up persis seperti notifikasi WhatsApp.
-Dampak: Aksesibilitas melonjak drastis, notifikasi jatuh tempo (deadline) tidak mungkin terlewat.
-D. Single Sign-On (SSO) Mahkamah Agung
-Saat ini sistem menggunakan manajemen user dan password mandiri (authController.js & bcryptjs).
+## 🏗️ Arsitektur Teknologi
 
-Saran: Integrasikan autentikasi menggunakan protokol OAuth2 atau LDAP milik Mahkamah Agung RI.
-Dampak: User (Pimpinan/Admin Satker) cukup login menggunakan NIP/Akun SIKEP mereka. Tidak perlu menghafal banyak password, keamanan terpusat.
-E. Kolaborasi & Diskusi Dokumen Real-time
-Saran: Ubah fitur "Catatan Admin" yang satu arah menjadi fitur Comment Thread interaktif.
-Use Case: Saat Admin PT menolak laporan, mereka bisa menandai (highlight) bagian PDF yang salah, dan berdiskusi dengan Admin Satker di kolom komentar dokumen layaknya Google Docs.
-Dampak: Menghilangkan kebiasaan "bertanya lewat WhatsApp" yang tidak tercatat di dalam sistem audit.
+SATYA dirancang dengan pemisahan lapisan (*layered architecture*), memudahkan pemeliharaan dan pengujian.
+
+| Lapisan | Teknologi Utama | Keterangan |
+|---|---|---|
+| **Frontend** | React 19, Vite 8, TailwindCSS 4 | SPA, TanStack Query, Framer Motion, *Role-Based Access Control* (RBAC) pada router (`App.jsx`). |
+| **Backend API** | Node.js, Express.js | Arsitektur: Router → Controller → Service → Repository → Database. |
+| **Database** | PostgreSQL 15, Knex.js | Relasional, Query builder & *Schema Migration*. |
+| **Penyimpanan** | MinIO (S3-Compatible) | Penyimpanan file PDF & Excel dengan `Presigned URL`. |
+| **Antrean & Job** | Redis 7, BullMQ 5 | Antrean tugas asinkron (pengiriman Email dan Pengecekan SLA Cron). |
+| **Infrastruktur** | Docker, Docker Compose | Orkestrasi kontainer dev & production (*multi-container environment*). |
+
+---
+
+## 🚀 Panduan Instalasi & Menjalankan (Docker Lokal)
+
+Aplikasi ini sudah dipaketkan menggunakan *Docker Compose*, membuat instalasi lokal bisa berjalan secara instan.
+
+### Prasyarat
+- [Docker Desktop](https://www.docker.com/products/docker-desktop)
+- Node.js (V20+) *untuk pengembangan lokal jika dibutuhkan*
+
+### Langkah-langkah
+1. **Salin Environment Variables**
+   ```bash
+   cp .env.example .env
+   # Buka file .env dan pastikan PT_INTERNAL_MONITORING_ENABLED=true
+   ```
+
+2. **Jalankan Infrastruktur via Docker Compose**
+   ```bash
+   docker-compose -f docker-compose.dev.yml up -d --build
+   ```
+   *Proses ini akan membangun ulang UI React, lalu menjalankan kontainer Node (App & Worker), PostgreSQL, Redis, dan MinIO.*
+
+3. **Inisialisasi Master Data & Seed (PENTING)**
+   Aplikasi membutuhkan data awal agar bisa digunakan. Jalankan command ini ke dalam container:
+   ```bash
+   # Masukkan master data konfigurasi & 295 Checklist Kriteria (dengan mapping jabatan yg akurat)
+   docker exec satya_app_dev npx knex seed:run --specific=40_rebuild_assignments_by_jabatan.js
+   
+   # Buat akun User Testing (15 Jabatan Resmi PT: KPT, Hakim, Panitera, dll)
+   docker exec satya_app_dev npx knex seed:run --specific=50_add_jabatan_pt_accounts.js
+   
+   # Generate target dokumen untuk periode aktif berjalan
+   docker exec satya_app_dev node scripts/generate_uat_targets.js
+   ```
+
+4. **Akses Aplikasi**
+   - Web App: [http://localhost:3000/satya](http://localhost:3000/satya)
+   - MinIO Console: [http://localhost:9001](http://localhost:9001)
+
+---
+
+## 🔑 Kredensial Uji Coba (UAT) & Matriks Akses Peran
+
+Sistem SATYA memisahkan hak akses secara ketat (*Strict Segregation of Duties*) agar tidak ada peran ganda yang tumpang tindih (misalnya Admin tidak boleh merangkap sebagai Uploader). Setiap pengguna hanya akan melihat menu dan halaman yang relevan dengan tugasnya.
+
+*(Semua akun di bawah menggunakan kata sandi default: `password123`)*
+
+| Kategori Peran | Akun Username | Role Code | Hak Akses Menu & Fungsi Utama |
+|---|---|---|---|
+| **1. Pimpinan Eksekutif** | `ketua_pt`, `wakil_ketua`, `hakim_tinggi` | `KPT`, `WKPT`, `HAKIM_PT` | **Dashboard Eksekutif PT** & **Monitoring Internal PT**.<br>Melihat seluruh statistik progres, grafik *Heatmap* risiko, serta mengesahkan *Management Review*. |
+| **2. Pejabat Eselon III** | `panitera_pt`, `sekretaris_pt`, `kabag_perenc`, `kabag_umum` | `PANITERA_PT`, `SEKRETARIS_PT`, `KABAG_PERENC_KEP`, `KABAG_UMUM_KEU` | **Monitoring Internal PT** & **Portal Checklist PT**.<br>Memonitor progres pengunggahan dari sub-bagian di bawahnya, memberi *Approval*, sekaligus mengunggah dokumen target mereka sendiri. |
+| **3. Koordinator Proses (Uploader)** | `panmud_hukum`, `pan_pengganti`, `kasubbag_turt`, `kasubbag_ptip`, dsb | `PANMUD_*`, `KASUBBAG_*`, `STAFF_*`, `PANITERA_PENGGANTI` | **Portal Checklist PT**.<br>Mengunggah (*upload*) berkas/bukti dukung format PDF/Excel pada 295 item checklist sesuai tupoksi masing-masing dan menekan tombol *Submit Target*. |
+| **4. Verifikator Mutu** | `tim_verifier` | `VERIFIER` | **Monitoring Internal PT (Antrian Review)** & **Portal Checklist PT (Read-Only)**.<br>Melakukan verifikasi akhir setelah dokumen di-*approve*. Memberikan nilai atau menolak (*Revisi*) berkas yang tidak memenuhi kriteria. |
+| **5. Administrator PT** | `admin_pt` | `ADMIN_PT` | **Manajemen User**, **Master Data PN**, & **Master Data PT**.<br>Mengelola akun pengguna, membuka/menutup periode pelaporan aktif, generate target monitoring, serta mengelola referensi 295 Master Checklist. Admin **tidak dapat mengupload** bukti di portal checklist. |
+
+---
+
+## 📚 Dokumentasi Lanjutan
+Untuk dokumentasi pengoperasian dan standar alur, Anda dapat merujuk ke file dan folder berikut:
+- **[Panduan Kontribusi (CONTRIBUTING.md)](CONTRIBUTING.md)** — Jika Anda developer baru, mulailah dari sini.
+- **[Changelog (CHANGELOG.md)](CHANGELOG.md)** — Daftar riwayat perubahan rilis (berbasis standar *Keep a Changelog*).
+- **[SOP Penggunaan Peran (SOP_PENGGUNAAN_PERAN.md)](docs/SOP_PENGGUNAAN_PERAN.md)** — Rincian tugas untuk KPT, Kabag, Koordinator, Verifikator, & Admin PT.
+- **[Checklist Deployment Production (DEPLOYMENT_CHECKLIST.md)](docs/DEPLOYMENT_CHECKLIST.md)** — Daftar pengecekan sebelum *go-live* ke server publik.
+- **API Documentation (Swagger)** — Saat server berjalan di mode development lokal, buka `http://localhost:3000/api-docs` untuk spesifikasi rute.
+
+---
+
+## 🧪 Menjalankan Test (Developer)
+Aplikasi ini dilengkapi 121 unit & integration tests berbasis Jest. Jalankan dengan:
+
+```bash
+# Menjalankan seluruh test suite beserta coverage report
+npm test
+
+# Menjalankan spesifik ke modul auth/dashboard saja
+npm test -- --testPathPattern=authFlow
+npm test -- --testPathPattern=internalMonitoringDashboard
+```
+
+---
+*Dikembangkan secara khusus untuk menyokong ekosistem digital institusi hukum Pengadilan Tinggi di lingkungan Mahkamah Agung Republik Indonesia.*

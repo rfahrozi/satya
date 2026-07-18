@@ -38,14 +38,38 @@ if (process.env.PT_INTERNAL_MONITORING_ENABLED === 'true') {
 
 /**
  * Health Check Endpoint
- * Digunakan untuk memonitor apakah API berjalan (Uptime Monitoring)
+ * Digunakan untuk memonitor uptime & APM (OPS-01)
  */
-router.get('/health', (req, res) => {
-    res.status(200).json({
-        success: true,
-        message: 'SATYA API PT KEPRI is healthy and operational.',
+const knex = require('../config/knex');
+
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Mengecek status kesehatan layanan API
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: Server beroperasi normal
+ */
+router.get('/health', async (req, res) => {
+    let dbStatus = 'ok';
+    try {
+        await knex.raw('SELECT 1');
+    } catch (err) {
+        dbStatus = 'error';
+    }
+
+    const isHealthy = dbStatus === 'ok';
+
+    res.status(isHealthy ? 200 : 503).json({
+        success: isHealthy,
+        message: isHealthy ? 'SATYA API is healthy and operational.' : 'SATYA API is experiencing issues.',
         timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'development'
+        environment: process.env.NODE_ENV || 'development',
+        dependencies: {
+            database: dbStatus
+        }
     });
 });
 

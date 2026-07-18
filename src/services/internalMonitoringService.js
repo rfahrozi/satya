@@ -2,6 +2,7 @@ const repo = require('../repositories/internalMonitoringRepo');
 const knex = require('../config/knex');
 const authSvc = require('./internalMonitoringAuthorizationService');
 const notificationSvc = require('./internalMonitoringNotificationService');
+const { assertValidTransition } = require('../domain/internalMonitoringStateMachine');
 const { AppError } = require('../middlewares/errorHandler');
 
 function badRequest(code, msg) {
@@ -25,6 +26,21 @@ function conflict(code, msg) {
   throw err;
 }
 
+function checkLockVersion(target, payload) {
+  if (payload && payload.lockVersion !== undefined) {
+    if (target.lock_version !== payload.lockVersion) {
+      conflict('VERSION_CONFLICT', 'Data telah berubah (VERSION_CONFLICT). Muat ulang dan coba lagi.');
+    }
+  }
+}
+
+// [REFACTOR-01] Helper untuk duplikasi pengecekan affected rows pada Optimistic Locking
+function throwIfVersionConflict(updatedCount) {
+  if (updatedCount === 0) {
+    conflict('VERSION_CONFLICT', 'Data telah diubah oleh pengguna lain (VERSION_CONFLICT). Muat ulang dan coba lagi.');
+  }
+}
+
 function logSodOverride(trx, targetId, actorId, action, notes) {
   return repo.insertActivity({
     monitoring_target_id: targetId,
@@ -46,35 +62,40 @@ class InternalMonitoringService {
       const target = await repo.getTargetDetail(id, trx);
       if (!target) notFound('Target tidak ditemukan');
       
+      checkLockVersion(target, payload);
+
       const allowed = ['NOT_STARTED', 'IN_PROGRESS', 'REVISION_REQUIRED'];
       if (!allowed.includes(target.workflow_status)) {
         badRequest('INVALID_STATE_TRANSITION', 'Hanya bisa save draft pada status NOT_STARTED, IN_PROGRESS, atau REVISION_REQUIRED');
       }
+      
+      const nextStatus = target.workflow_status === 'NOT_STARTED' ? 'IN_PROGRESS' : target.workflow_status;
+      if (nextStatus !== target.workflow_status) {
+        assertValidTransition(target.workflow_status, nextStatus);
+      }
 
       await authSvc.assertHasCapability(actor, id, ['COLLECTOR', 'SUPPORTING_PIC'], trx);
 
-      const nextStatus = target.workflow_status === 'NOT_STARTED' ? 'IN_PROGRESS' : target.workflow_status;
+
       
       const updated = await repo.updateTargetState(id, null, {
         workflow_status: nextStatus,
         updated_by: actor.userId
       }, target.lock_version, trx);
-      
-      if (updated === 0) {
-        const error = new Error('Data telah diubah oleh pengguna lain (VERSION_CONFLICT). Muat ulang dan coba lagi.');
-        error.statusCode = 409;
-        throw error;
-      }
+
+      throwIfVersionConflict(updated);
       
       return { success: true, message: 'Draft saved' };
     });
   }
 
-  async submitTarget(id, actor) {
+  async submitTarget(id, actor, payload) {
     try {
       return await knex.transaction(async (trx) => {
         const target = await repo.getTargetDetail(id, trx);
         if (!target) notFound('Target tidak ditemukan');
+
+        checkLockVersion(target, payload);
 
         if (!['IN_PROGRESS', 'REVISION_REQUIRED'].includes(target.workflow_status)) {
           badRequest('INVALID_STATE_TRANSITION', 'Submit hanya dari IN_PROGRESS atau REVISION_REQUIRED');
@@ -98,6 +119,8 @@ class InternalMonitoringService {
                            ? target.current_review_stage 
                            : 'AWAITING_APPROVAL';
 
+        assertValidTransition(target.workflow_status, nextStatus);
+
         const wasLate = new Date() > new Date(target.due_at);
 
         const updated = await repo.updateTargetState(id, null, {
@@ -107,11 +130,7 @@ class InternalMonitoringService {
           updated_by: actor.userId
         }, target.lock_version, trx);
 
-        if (updated === 0) {
-          const error = new Error('Data telah diubah oleh pengguna lain (VERSION_CONFLICT). Muat ulang dan coba lagi.');
-          error.statusCode = 409;
-          throw error;
-        }
+        throwIfVersionConflict(updated);
 
         // Lock draft evidences
         await trx('monitoring_evidences')
@@ -132,19 +151,19 @@ class InternalMonitoringService {
         return { success: true };
       });
     } catch (err) {
-      console.log('SUBMIT TARGET THREW ERROR:', err);
+      // Error dicatat oleh global error handler — tidak perlu console.log di sini
       throw err;
     }
   }
 
-  async approveTarget(id, actor) {
+  async approveTarget(id, actor, payload) {
     return knex.transaction(async (trx) => {
       const target = await repo.getTargetDetail(id, trx);
       if (!target) notFound('Target tidak ditemukan');
 
-      if (target.workflow_status !== 'AWAITING_APPROVAL') {
-        badRequest('INVALID_STATE_TRANSITION', 'Hanya dapat approve dari AWAITING_APPROVAL');
-      }
+      checkLockVersion(target, payload);
+
+      assertValidTransition(target.workflow_status, 'AWAITING_VERIFICATION');
 
       await authSvc.assertHasCapability(actor, id, ['ACCOUNTABLE_OWNER', 'APPROVER'], trx);
       await authSvc.assertSegregationOfDuties(actor, target, 'APPROVE', trx);
@@ -155,11 +174,7 @@ class InternalMonitoringService {
         updated_by: actor.userId
       }, target.lock_version, trx);
 
-      if (updated === 0) {
-        const error = new Error('Data telah diubah oleh pengguna lain (VERSION_CONFLICT). Muat ulang dan coba lagi.');
-        error.statusCode = 409;
-        throw error;
-      }
+      throwIfVersionConflict(updated);
 
       await repo.insertActivity({
         monitoring_target_id: id,
@@ -181,9 +196,9 @@ class InternalMonitoringService {
       const target = await repo.getTargetDetail(id, trx);
       if (!target) notFound('Target tidak ditemukan');
 
-      if (target.workflow_status !== 'AWAITING_VERIFICATION') {
-        badRequest('INVALID_STATE_TRANSITION', 'Hanya dapat verify dari AWAITING_VERIFICATION');
-      }
+      checkLockVersion(target, payload);
+
+      assertValidTransition(target.workflow_status, 'VERIFIED');
 
       await authSvc.assertHasCapability(actor, id, ['VERIFIER'], trx);
       await authSvc.assertSegregationOfDuties(actor, target, 'VERIFY', trx);
@@ -194,11 +209,7 @@ class InternalMonitoringService {
         updated_by: actor.userId
       }, target.lock_version, trx);
 
-      if (updated === 0) {
-        const error = new Error('Data telah diubah oleh pengguna lain (VERSION_CONFLICT). Muat ulang dan coba lagi.');
-        error.statusCode = 409;
-        throw error;
-      }
+      throwIfVersionConflict(updated);
 
       const verification = await repo.insertVerification({
         monitoring_target_id: id,
@@ -227,9 +238,9 @@ class InternalMonitoringService {
       const target = await repo.getTargetDetail(id, trx);
       if (!target) notFound('Target tidak ditemukan');
 
-      if (!['AWAITING_APPROVAL', 'AWAITING_VERIFICATION'].includes(target.workflow_status)) {
-        badRequest('INVALID_STATE_TRANSITION', 'Hanya dapat revisi dari Approval atau Verification');
-      }
+      checkLockVersion(target, payload);
+
+      assertValidTransition(target.workflow_status, 'REVISION_REQUIRED');
 
       await authSvc.assertHasCapability(actor, id, ['APPROVER', 'VERIFIER', 'ACCOUNTABLE_OWNER'], trx);
 
@@ -243,11 +254,7 @@ class InternalMonitoringService {
         updated_by: actor.userId
       }, target.lock_version, trx);
 
-      if (updated === 0) {
-        const error = new Error('Data telah diubah oleh pengguna lain (VERSION_CONFLICT). Muat ulang dan coba lagi.');
-        error.statusCode = 409;
-        throw error;
-      }
+      throwIfVersionConflict(updated);
 
       await repo.insertVerification({
         monitoring_target_id: id,
@@ -284,6 +291,8 @@ class InternalMonitoringService {
       const target = await repo.getTargetDetail(targetId, trx);
       if (!target) notFound('Target tidak ditemukan');
       
+      checkLockVersion(target, payload);
+
       const requirementId = payload.requirement_id;
       await authSvc.assertCanEditEvidence(actor, target, requirementId, trx);
 
@@ -322,18 +331,20 @@ class InternalMonitoringService {
       // Auto-update target status to IN_PROGRESS if NOT_STARTED
       if (target.workflow_status === 'NOT_STARTED') {
         const updated = await repo.updateTargetState(targetId, 'NOT_STARTED', { workflow_status: 'IN_PROGRESS' }, target.lock_version, trx);
-        if (updated === 0) conflict('VERSION_CONFLICT', 'Lock version mismatch saat auto-update ke IN_PROGRESS');
+        throwIfVersionConflict(updated);
       }
 
       return evidence;
     });
   }
 
-  async uploadEvidenceFile(actor, targetId, requirementId, file) {
+  async uploadEvidenceFile(actor, targetId, requirementId, file, payload) {
     return knex.transaction(async (trx) => {
       const target = await repo.getTargetDetail(targetId, trx);
       if (!target) notFound('Target tidak ditemukan');
       
+      checkLockVersion(target, payload);
+
       await authSvc.assertCanEditEvidence(actor, target, requirementId, trx);
 
       const reqs = await repo.getEvidenceRequirements(target.monitoring_item_id, new Date(), trx);
@@ -344,13 +355,19 @@ class InternalMonitoringService {
         badRequest('EVIDENCE_TYPE_MISMATCH', 'Requirement ini tidak menerima tipe FILE');
       }
 
-      // TODO: actual file upload to MinIO to get ID/URL, here we just simulate
-      const fileSubmissionId = null;
+      // Upload file ke MinIO dengan path terstruktur
+      const { minioClient, BUCKET_NAME } = require('../config/minio');
+      const ttlSeconds = parseInt(process.env.MONITORING_PRESIGNED_URL_TTL_SECONDS || '3600', 10);
+      const objectKey = `internal/${targetId}/${requirementId}/${Date.now()}_${file.originalname.replace(/\s+/g, '_')}`;
+
+      await minioClient.putObject(BUCKET_NAME, objectKey, file.buffer, file.size, {
+        'Content-Type': file.mimetype
+      });
 
       // Versioning
       const existingVersions = await trx('monitoring_evidences')
         .where({ monitoring_target_id: targetId, requirement_id: requirementId });
-      
+
       const newVersionNo = existingVersions.length > 0 ? Math.max(...existingVersions.map(e => e.version_no)) + 1 : 1;
 
       // Supersede older drafts
@@ -363,15 +380,15 @@ class InternalMonitoringService {
         requirement_id: requirementId,
         version_no: newVersionNo,
         evidence_type: 'FILE',
-        value_text: file.originalname, // Save filename as text
-        file_submission_id: fileSubmissionId,
+        value_text: file.originalname,
+        object_key: objectKey,
         submitted_by: actor.userId,
         evidence_status: 'DRAFT'
       }, trx);
       
       if (target.workflow_status === 'NOT_STARTED') {
         const updated = await repo.updateTargetState(targetId, 'NOT_STARTED', { workflow_status: 'IN_PROGRESS' }, target.lock_version, trx);
-        if (updated === 0) conflict('VERSION_CONFLICT', 'Lock version mismatch saat auto-update ke IN_PROGRESS');
+        throwIfVersionConflict(updated);
       }
 
       return evidence;
@@ -381,7 +398,7 @@ class InternalMonitoringService {
   async getEvidenceDownloadUrl(actor, targetId, evidenceId) {
     const target = await repo.getTargetDetail(targetId, knex);
     if (!target) notFound('Target tidak ditemukan');
-    
+
     await authSvc.assertCanViewTarget(actor, target);
 
     const ev = await knex('monitoring_evidences').where({ id: evidenceId, monitoring_target_id: targetId }).first();
@@ -391,9 +408,14 @@ class InternalMonitoringService {
       badRequest('INVALID_TYPE', 'Evidence bukan berupa file');
     }
 
-    // TODO: generate presigned URL from MinIO based on ev.file_submission_id
-    // Here we just mock it for the test
-    return `https://storage.satya.local/evidences/${ev.id}?sig=mock`;
+    const objectKey = ev.object_key || ev.file_url;
+    if (!objectKey) notFound('File evidence tidak tersedia');
+
+    // Generate presigned URL dari MinIO (berlaku sesuai TTL dari env)
+    const { minioClient, BUCKET_NAME } = require('../config/minio');
+    const ttlSeconds = parseInt(process.env.MONITORING_PRESIGNED_URL_TTL_SECONDS || '3600', 10);
+    const url = await minioClient.presignedGetObject(BUCKET_NAME, objectKey, ttlSeconds);
+    return url;
   }
 
   // --- Follow-ups ---

@@ -1,4 +1,25 @@
-Error: SOD Violation: Submitter tidak boleh melakukan Verifikasi pada target yang sama.
-    at Object.assertSegregationOfDuties (C:\My Project\satya\src\services\internalMonitoringAuthorizationService.js:90:13)
-    at processTicksAndRejections (node:internal/process/task_queues:104:5)
-    at C:\My Project\satya\src\services\internalMonitoringService.js:189:7
+Error: Tidak dapat menemukan /api/v1/endpoint-tidak-ada di server ini!
+    at notFoundHandler (C:\My Project\satya\src\middlewares\errorHandler.js:64:10)
+    at Layer.handle [as handle_request] (C:\My Project\satya\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\My Project\satya\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\My Project\satya\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\My Project\satya\node_modules\express\lib\router\layer.js:95:5)
+    at C:\My Project\satya\node_modules\express\lib\router\index.js:284:15
+    at param (C:\My Project\satya\node_modules\express\lib\router\index.js:365:14)
+    at param (C:\My Project\satya\node_modules\express\lib\router\index.js:376:14)
+    at router.process_params (C:\My Project\satya\node_modules\express\lib\router\index.js:421:3)
+    at next (C:\My Project\satya\node_modules\express\lib\router\index.js:280:10)
+    at router.handle (C:\My Project\satya\node_modules\express\lib\router\index.js:175:3)
+    at router (C:\My Project\satya\node_modules\express\lib\router\index.js:47:12)
+    at Layer.handle [as handle_request] (C:\My Project\satya\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (C:\My Project\satya\node_modules\express\lib\router\index.js:328:13)
+    at C:\My Project\satya\node_modules\express\lib\router\index.js:286:9
+    at router.process_params (C:\My Project\satya\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\My Project\satya\node_modules\express\lib\router\index.js:280:10)
+    at SendStream.error (C:\My Project\satya\node_modules\serve-static\index.js:121:7)
+    at SendStream.emit (node:events:508:28)
+    at SendStream.error (C:\My Project\satya\node_modules\send\index.js:270:17)
+    at SendStream.onStatError (C:\My Project\satya\node_modules\send\index.js:417:12)
+    at next (C:\My Project\satya\node_modules\send\index.js:730:16)
+    at onstat (C:\My Project\satya\node_modules\send\index.js:719:14)
+    at FSReqCallback.oncomplete (node:fs:195:21)

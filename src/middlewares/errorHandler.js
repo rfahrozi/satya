@@ -1,7 +1,10 @@
+'use strict';
 /**
- * SATYA - Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel - Global Error Handler
+ * SATYA - Global Error Handler
  * Menstandarisasi respon error di seluruh API
  */
+
+const logger = require('../config/logger');
 
 /**
  * Custom Error Class untuk operasional error
@@ -19,46 +22,52 @@ class AppError extends Error {
 
 /**
  * Middleware Utama Penanganan Error
+ * [LOG-01] Menggunakan Winston structured logger — tidak ada lagi console.error
+ * [TEST-01] Tidak ada lagi writeFileSync('debug_error.log') yang mencemari test
  */
 const errorHandler = (err, req, res, next) => {
     // Tangani error multer secara spesifik
     if (err.name === 'MulterError' && err.message === 'File too large') {
         err.statusCode = 400;
-        err.message = 'Ukuran file tidak boleh melebihi 5MB';
+        err.message = `Ukuran file melebihi batas maksimum (${Math.round((parseInt(process.env.MONITORING_UPLOAD_MAX_BYTES) || 10485760) / 1048576)}MB).`;
+    }
+
+    // Handle CORS error dari middleware cors()
+    if (err.message && err.message.startsWith('CORS:')) {
+        err.statusCode = 403;
     }
 
     err.statusCode = err.statusCode || 500;
     err.status = err.status || 'error';
 
-    // Log error untuk internal server error
-    if (process.env.NODE_ENV !== 'test') {
-        console.error('ERROR 💥', err);
-    } else {
-        console.error('TEST ERROR 💥', err);
-        require('fs').writeFileSync('debug_error.log', err.stack || err.message);
+    // Log terstruktur — level berdasarkan tipe error
+    // 5xx = error server (butuh investigasi), 4xx = fail client (informatif saja)
+    const logPayload = {
+        statusCode: err.statusCode,
+        method: req.method,
+        path: req.originalUrl,
+        errorCode: err.code,
+        message: err.message,
+        ...(err.statusCode >= 500 && { stack: err.stack }),
+    };
+
+    if (err.statusCode >= 500) {
+        logger.error('Server error', logPayload);
+    } else if (err.statusCode >= 400) {
+        logger.warn('Client error', logPayload);
     }
 
-    // Log error untuk kebutuhan debugging di server (Internal)
-    if (process.env.NODE_ENV !== 'test') {
-        console.error('⚠️ [ERROR LOG]:', {
-            message: err.message,
-            stack: err.stack,
-            path: req.originalUrl
-        });
-    }
-
-    // Response ke Client
+    // Response ke client — stack trace hanya di development
     res.status(err.statusCode).json({
         success: false,
         status: err.status,
         message: err.message || 'Terjadi kesalahan internal pada server.',
-        // Hanya tampilkan stack trace jika di mode development
-        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+        ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
     });
 };
 
 /**
- * Handler khusus untuk rute yang tidak ditemukan (404)
+ * Handler untuk rute yang tidak ditemukan (404)
  */
 const notFoundHandler = (req, res, next) => {
     next(new AppError(`Tidak dapat menemukan ${req.originalUrl} di server ini!`, 404));

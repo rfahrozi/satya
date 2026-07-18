@@ -35,3 +35,7 @@ src/debug-env.js
 
 # VS Code
 .vscode/
+
+graphify-out/
+*.pdf
+

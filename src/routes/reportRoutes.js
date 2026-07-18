@@ -6,9 +6,22 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const rateLimit = require('express-rate-limit');
 const reportController = require('../controllers/reportController');
 const tenantContext = require('../middlewares/tenant');
 const { AppError } = require('../middlewares/errorHandler');
+
+// Limit upload maksimal 10x per menit per satker/IP
+const uploadRateLimiter = process.env.NODE_ENV !== 'test'
+    ? rateLimit({
+        windowMs: 60 * 1000, // 1 menit
+        max: 10,
+        message: {
+            success: false,
+            message: 'Terlalu banyak permintaan unggah dari akun Anda. Silakan coba lagi setelah 1 menit.'
+        }
+    })
+    : (req, res, next) => next();
 
 // Konfigurasi Multer (Penyimpanan Sementara di RAM)
 const upload = multer({
@@ -54,8 +67,8 @@ router.use(tenantContext);
 
 // --- RUTE KHUSUS SATKER PN ---
 
-// Upload atau Timpa Laporan
-router.post('/upload', uploadMultiple([{ name: 'dokumen_monev', maxCount: 1 }, { name: 'dokumen_excel', maxCount: 1 }]), reportController.uploadReport);
+// Upload atau Timpa Laporan — dilindungi rate limiter
+router.post('/upload', uploadRateLimiter, uploadMultiple([{ name: 'dokumen_monev', maxCount: 1 }, { name: 'dokumen_excel', maxCount: 1 }]), reportController.uploadReport);
 
 // Ambil progress laporan milik satker sendiri
 router.get('/my-progress', reportController.getMyProgress);

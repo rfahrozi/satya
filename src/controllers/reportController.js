@@ -1,7 +1,8 @@
 /**
  * SATYA - Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel - Report Controller
  * Menangani siklus hidup dokumen: Upload, Progress, Verifikasi, dan CRUD
- * reportController.js/
+ * reportController.js
+ */
 
 const reportService = require('../services/reportService');
 const reportRepo = require('../repositories/reportRepo');
@@ -289,7 +290,7 @@ async function deleteReport(req, res, next) {
  */
 async function getAdminStats(req, res, next) {
     try {
-        const allowedRoles = ['ADMIN_PT', 'KPT', 'WKPT', 'PANITERA_PT'];
+        const allowedRoles = ['ADMIN_PT', 'KPT', 'WKPT', 'HAKIM_PT', 'PANITERA_PT', 'SEKRETARIS_PT', 'KABAG_PERENC_KEP', 'KABAG_UMUM_KEU'];
         if (!allowedRoles.includes(req.tenant.role)) {
             throw new AppError('Hanya Admin atau Pimpinan PT yang dapat mengakses.', 403);
         }
@@ -322,7 +323,7 @@ async function getAdminStats(req, res, next) {
  */
 async function getQueueStatus(req, res, next) {
     try {
-        const allowedRoles = ['ADMIN_PT', 'KPT', 'WKPT', 'PANITERA_PT'];
+        const allowedRoles = ['ADMIN_PT', 'KPT', 'WKPT', 'HAKIM_PT', 'PANITERA_PT', 'SEKRETARIS_PT', 'KABAG_PERENC_KEP', 'KABAG_UMUM_KEU'];
         if (!allowedRoles.includes(req.tenant.role)) {
             throw new AppError('Hanya Admin atau Pimpinan PT yang dapat mengakses.', 403);
         }

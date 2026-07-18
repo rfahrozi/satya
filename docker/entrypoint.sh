@@ -28,9 +28,19 @@ wait_for minio 9000
 # MinIO bucket init handled by app.js initMinio()
 echo "MinIO ready - bucket init by app..."
 
-# Migrate (seeding dijalankan secara manual di production untuk menghindari data loss)
 echo "Running knex migrations..."
 npx knex migrate:latest
+
+# [DX-01] Automasi seed data jika diset via environment variable (khusus Development/UAT)
+if [ "$SEED_ON_STARTUP" = "true" ]; then
+  echo "SEED_ON_STARTUP=true, running seeds and generation script..."
+  # Jalankan seluruh file seed secara berurutan
+  npx knex seed:run
+  # Buat target target berjalan
+  node scripts/generate_uat_targets.js
+else
+  echo "SEED_ON_STARTUP not true. Seeding is skipped."
+fi
 
 echo "Setup complete, exec app..."
 exec "$@"

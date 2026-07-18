@@ -1,7 +1,17 @@
 import { useState } from 'react'
 import { Outlet, useNavigate, Link, useLocation } from 'react-router-dom'
-import { LogOut, Home, Users, Landmark, FileText, Menu, X, Database, Info } from 'lucide-react'
+import { LogOut, Home, Users, Landmark, FileText, Menu, X, Database, Info, ClipboardCheck, FolderOpen, BarChart3 } from 'lucide-react'
 import NotificationBell from './NotificationBell'
+
+// Definisi Role Akses
+const R_EKSEKUTIF = ['KPT', 'WKPT'];
+const R_MONITORING = ['KABAG_PK', 'KABAG_UK', 'KPT', 'WKPT', 'PIMPINAN'];
+const R_UPLOADER = [
+  'KASUBBAG_PTIP', 'KASUBBAG_KEPEG_TI', 'KASUBBAG_TURT', 'KASUBBAG_PEL_KEU',
+  'PANITERA_PT', 'PANMUD_HUKUM_PT', 'STAFF_PANMUD_HUKUM_PT',
+  'PANMUD_PIDANA_PT', 'PANMUD_PERDATA_PT', 'PANMUD_TIPIKOR_PT'
+];
+const R_ADMIN = ['ADMIN_PT'];
 
 export default function Layout() {
   const navigate = useNavigate()
@@ -89,6 +99,66 @@ export default function Layout() {
                     >
                       <Info size={18} aria-hidden="true" /> Informasi
                     </Link>
+                )}
+
+                {/* Dashboard Eksekutif PT */}
+                {R_EKSEKUTIF.includes(user.role) && (
+                  <Link
+                    to="/internal-monitoring/executive"
+                    aria-current={location.pathname === '/internal-monitoring/executive' ? 'page' : undefined}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium text-sm transition-colors ${location.pathname === '/internal-monitoring/executive' ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-100'}`}
+                  >
+                    <BarChart3 size={18} aria-hidden="true" /> Dashboard Eksekutif PT
+                  </Link>
+                )}
+
+                {/* Menu Monitoring Internal PT */}
+                {R_MONITORING.includes(user.role) && (
+                  <Link
+                    to="/internal-monitoring/dashboard"
+                    aria-current={location.pathname.startsWith('/internal-monitoring') && !location.pathname.startsWith('/internal-monitoring/portal') && !location.pathname.startsWith('/internal-monitoring/executive') ? 'page' : undefined}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium text-sm transition-colors ${location.pathname.startsWith('/internal-monitoring') && !location.pathname.startsWith('/internal-monitoring/portal') && !location.pathname.startsWith('/internal-monitoring/executive') ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-100'}`}
+                  >
+                    <ClipboardCheck size={18} aria-hidden="true" /> Monitoring Internal PT
+                  </Link>
+                )}
+
+                {/* Menu Portal Checklist PT */}
+                {R_UPLOADER.includes(user.role) && (
+                  <Link
+                    to="/internal-monitoring/portal"
+                    aria-current={location.pathname.startsWith('/internal-monitoring/portal') ? 'page' : undefined}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium text-sm transition-colors ${location.pathname.startsWith('/internal-monitoring/portal') ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-100'}`}
+                  >
+                    <FolderOpen size={18} aria-hidden="true" /> Portal Checklist PT
+                  </Link>
+                )}
+
+                {/* Menu Manajemen User & Master Data PN & Master Data PT */}
+                {R_ADMIN.includes(user.role) && (
+                  <>
+                    <Link
+                      to="/users"
+                      aria-current={location.pathname === '/users' ? 'page' : undefined}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium text-sm transition-colors ${location.pathname === '/users' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
+                    >
+                      <Users size={18} aria-hidden="true" /> Manajemen User
+                    </Link>
+                    <Link
+                      to="/master"
+                      aria-current={location.pathname === '/master' ? 'page' : undefined}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium text-sm transition-colors ${location.pathname === '/master' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
+                    >
+                      <Database size={18} aria-hidden="true" /> Master Data PN
+                    </Link>
+                    <Link
+                      to="/master-pt"
+                      aria-current={location.pathname === '/master-pt' ? 'page' : undefined}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium text-sm transition-colors ${location.pathname === '/master-pt' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100'}`}
+                    >
+                      <Database size={18} aria-hidden="true" /> Master Data PT
+                    </Link>
+                  </>
                 )}
 
                 {pnRoles.includes(user.role) && (
@@ -185,9 +255,74 @@ export default function Layout() {
                 </Link>
             )}
 
+            {/* Dashboard Eksekutif PT (mobile) */}
+            {R_EKSEKUTIF.includes(user.role) && (
+              <Link
+                to="/internal-monitoring/executive"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-current={location.pathname === '/internal-monitoring/executive' ? 'page' : undefined}
+                className={`flex items-center gap-2 px-3 py-3 rounded-md font-medium text-sm transition-colors ${location.pathname === '/internal-monitoring/executive' ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-100'}`}
+              >
+                <BarChart3 size={18} aria-hidden="true" /> Dashboard Eksekutif PT
+              </Link>
+            )}
+
+            {/* Menu Monitoring Internal PT (mobile) */}
+            {R_MONITORING.includes(user.role) && (
+              <Link
+                to="/internal-monitoring/dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-current={location.pathname.startsWith('/internal-monitoring') && !location.pathname.startsWith('/internal-monitoring/portal') && !location.pathname.startsWith('/internal-monitoring/executive') ? 'page' : undefined}
+                className={`flex items-center gap-2 px-3 py-3 rounded-md font-medium text-sm transition-colors ${location.pathname.startsWith('/internal-monitoring') && !location.pathname.startsWith('/internal-monitoring/portal') && !location.pathname.startsWith('/internal-monitoring/executive') ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-100'}`}
+              >
+                <ClipboardCheck size={18} aria-hidden="true" /> Monitoring Internal PT
+              </Link>
+            )}
+
+            {/* Menu Portal Checklist PT (mobile) */}
+            {R_UPLOADER.includes(user.role) && (
+              <Link
+                to="/internal-monitoring/portal"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-current={location.pathname.startsWith('/internal-monitoring/portal') ? 'page' : undefined}
+                className={`flex items-center gap-2 px-3 py-3 rounded-md font-medium text-sm transition-colors ${location.pathname.startsWith('/internal-monitoring/portal') ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-100'}`}
+              >
+                <FolderOpen size={18} aria-hidden="true" /> Portal Checklist PT
+              </Link>
+            )}
+
+            {/* Menu Manajemen User & Master Data (mobile) */}
+            {R_ADMIN.includes(user.role) && (
+              <>
+                <Link
+                  to="/users"
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-current={location.pathname === '/users' ? 'page' : undefined}
+                  className={`flex items-center gap-2 px-3 py-3 rounded-md font-medium text-sm transition-colors ${location.pathname === '/users' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
+                >
+                  <Users size={18} aria-hidden="true" /> Manajemen User
+                </Link>
+                <Link
+                  to="/master"
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-current={location.pathname === '/master' ? 'page' : undefined}
+                  className={`flex items-center gap-2 px-3 py-3 rounded-md font-medium text-sm transition-colors ${location.pathname === '/master' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
+                >
+                  <Database size={18} aria-hidden="true" /> Master Data PN
+                </Link>
+                <Link
+                  to="/master-pt"
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-current={location.pathname === '/master-pt' ? 'page' : undefined}
+                  className={`flex items-center gap-2 px-3 py-3 rounded-md font-medium text-sm transition-colors ${location.pathname === '/master-pt' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100'}`}
+                >
+                  <Database size={18} aria-hidden="true" /> Master Data PT
+                </Link>
+              </>
+            )}
             {pnRoles.includes(user.role) && (
-              <Link 
-                to="/portal" 
+              <Link
+                to="/portal"
                 onClick={() => setMobileMenuOpen(false)}
                 aria-current={location.pathname === '/portal' ? 'page' : undefined}
                 className={`flex items-center gap-2 px-3 py-3 rounded-md font-medium text-sm transition-colors ${location.pathname === '/portal' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}

@@ -59,47 +59,47 @@ const Landing = () => {
 
   const features = [
     {
-      icon: <FileCheck className="w-6 h-6 text-emerald-400" />,
-      title: "Monitoring & Penilaian Mutu",
-      description: "Pantau kepatuhan secara real-time dan berikan penilaian kuantitatif (Scoring 0-100) terstandarisasi untuk kebutuhan Sertifikasi AMPUH."
+      icon: <Layers className="w-6 h-6 text-blue-400" />,
+      title: "Sistem Dual Track Monitoring",
+      description: "Satu platform untuk pelaporan Pengadilan Negeri (Eksternal) dan evaluasi mandiri Bagian/Unit di dalam Pengadilan Tinggi (Internal)."
     },
     {
-      icon: <BellRing className="w-6 h-6 text-blue-400" />,
-      title: "Notifikasi Otomatis & In-App",
-      description: "Sistem pengingat email otomatis H-3 hingga Hari-H, dilengkapi dengan In-App Alerts seketika dan log Audit Trail riwayat revisi."
+      icon: <FileCheck className="w-6 h-6 text-emerald-400" />,
+      title: "AMPUH, PMPZI & AKIP Ready",
+      description: "Didukung Master Checklist Canonical berisi 295 Item yang dipetakan ke 15 Jabatan Resmi untuk memantau kelengkapan dokumen akreditasi dan zona integritas secara terpusat."
     },
     {
       icon: <BarChart3 className="w-6 h-6 text-purple-400" />,
-      title: "Visualisasi Heatmap & Export",
-      description: "Dashboard interaktif dengan Heatmap tren 12 Bulan, didukung kapabilitas ekspor rekapitulasi performa format PDF & Excel."
+      title: "Dashboard Eksekutif & Heatmap",
+      description: "Visualisasi tren risiko bulanan, heatmap kepatuhan, serta pantauan real-time status dokumen per Pengadilan Negeri maupun per Unit Internal PT."
     },
     {
       icon: <ShieldCheck className="w-6 h-6 text-rose-400" />,
-      title: "Keamanan Tinggi & Teruji",
-      description: "Arsitektur cloud terisolasi (MinIO) dengan perlindungan akses, dijamin stabilitasnya melalui >90% Test Coverage Backend maupun Frontend."
+      title: "Keamanan, SoD & Audit Trail",
+      description: "Arsitektur cloud terisolasi (MinIO S3), pembagian tugas yang ketat (Segregation of Duties), serta log aktivitas untuk transparansi penuh."
     }
   ];
 
   const workflows = [
     {
       step: "01",
-      title: "Penetapan Master Data",
-      description: "Admin PT Kepulauan Riau menetapkan daftar laporan wajib (MONEV), struktur periode (Bulanan, Triwulan, dll), dan jadwal pengingat otomatis."
+      title: "Pengaturan Master & Target",
+      description: "Admin menetapkan daftar checklist wajib dan mengatur Periode (Bulanan/Semester/Tahunan). Sistem secara otomatis menghasilkan target pengumpulan."
     },
     {
       step: "02",
-      title: "Pengunggahan oleh Satker",
-      description: "Satuan Kerja (Pengadilan Negeri) mengunggah dokumen PDF/Excel sesuai kewajibannya ke dalam ekosistem cloud terenkripsi."
+      title: "Pemenuhan & Unggah Evidence",
+      description: "Satker (PN) dan 15 Jabatan Resmi PT mengunggah dokumen digital (PDF/Excel) ke dalam sistem terenkripsi melalui portal masing-masing."
     },
     {
       step: "03",
-      title: "Verifikasi, Scoring & Notifikasi",
-      description: "Admin memvalidasi file dan menyematkan Nilai/Skor Mutu. Sistem secara otomatis mencatat pada Audit Trail dan mengirimkan In-App Alerts revisi ke Satker."
+      title: "Verifikasi, Skoring & Revisi",
+      description: "Verifikator dan Pimpinan memvalidasi bukti. Jika tidak sesuai, notifikasi revisi dikirim seketika beserta pembuatan Action Plan tindak lanjut."
     },
     {
       step: "04",
-      title: "Evaluasi Pimpinan (AMPUH)",
-      description: "Pimpinan memantau real-time capaian seluruh Pengadilan Negeri melalui Heatmap interaktif dan mengunduh laporan PDF/Excel sebagai dasar pengambilan keputusan."
+      title: "Management Review & Evaluasi",
+      description: "Pimpinan PT memantau pencapaian KPI melalui Dashboard Eksekutif, mengesahkan penerimaan risiko, dan mem-build paket Management Review otomatis."
     }
   ];
 
@@ -204,18 +204,18 @@ const Landing = () => {
         >
           <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-emerald-400 mb-8 backdrop-blur-md">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.8)]"></span>
-            Sistem Evaluasi & Monitoring Kinerja
+            Sistem Aktif · v2.1.0 (Dual Track Monitoring)
           </motion.div>
-          
+
           <motion.h1 variants={fadeUp} className="text-5xl sm:text-6xl md:text-8xl font-extrabold tracking-tighter text-white mb-8 leading-[1.1]">
             SATYA <br className="hidden sm:block" />
             <span className="text-transparent bg-clip-text bg-linear-to-r from-emerald-400 via-teal-300 to-blue-500 text-2xl sm:text-3xl md:text-5xl block mt-4 font-bold">
               (Sistem Administrasi dan Tata kelola Yudisial yang Akuntabel)
             </span>
           </motion.h1>
-          
+
           <motion.p variants={fadeUp} className="max-w-3xl mx-auto text-lg md:text-2xl text-slate-400 mb-12 leading-relaxed font-light">
-            Platform modern untuk memonitor, mengevaluasi, dan mengelola kepatuhan laporan Satuan Kerja dengan antarmuka yang intuitif dan aman.
+            Platform modern pengawasan Pengadilan Negeri secara real-time dan evaluasi mandiri Internal PT untuk memenuhi sertifikasi AMPUH, PMPZI, serta AKIP.
           </motion.p>
           
           <motion.div variants={fadeUp} className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -326,12 +326,12 @@ const Landing = () => {
                 <Clock className="w-5 h-5 text-blue-400" />
                 <span className="text-blue-400 font-semibold tracking-wider uppercase text-sm">Alur Singkat</span>
               </div>
-              <h2 className="text-4xl md:text-6xl font-bold text-white mb-8 tracking-tight leading-[1.1]">Efisien & <br/>Tepat Waktu.</h2>
+              <h2 className="text-4xl md:text-6xl font-bold text-white mb-8 tracking-tight leading-[1.1]">Efisien, <br/>Tepat Waktu & <br/>Akuntabel.</h2>
               <p className="text-slate-400 text-xl mb-10 leading-relaxed font-light">
-                Kami merancang sistem ini untuk memangkas birokrasi dan mempercepat proses evaluasi laporan, sehingga Anda dapat fokus pada hal yang lebih strategis.
+                Kami merancang sistem <em>Dual Track</em> ini untuk memangkas birokrasi dan mempercepat proses evaluasi — baik untuk pelaporan eksternal maupun pemenuhan standar internal PT Kepri.
               </p>
               <Link to="/login">
-                <motion.button 
+                <motion.button
                   whileHover={{ x: 10 }}
                   className="inline-flex items-center gap-2 text-emerald-400 font-semibold text-lg"
                 >

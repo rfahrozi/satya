@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { internalMonitoringApi } from '../api/internalMonitoringApi';
 import StatusBadge from './StatusBadge';
 
-const EvidenceEditor = ({ targetId, requirements, evidences, onEvidenceChanged }) => {
+const EvidenceEditor = ({ targetId, requirements, evidences, onEvidenceChanged, readOnly = false }) => {
   const [uploading, setUploading] = useState(null);
   const [error, setError] = useState(null);
 
@@ -85,41 +85,43 @@ const EvidenceEditor = ({ targetId, requirements, evidences, onEvidenceChanged }
                       <span className="text-gray-400">Belum ada bukti yang disubmit.</span>
                     )}
 
-                    {/* Editor based on requirement type */}
-                    <div className="mt-2">
-                      {req.evidence_type === 'FILE' ? (
-                        <div>
-                          <input 
-                            type="file" 
-                            onChange={(e) => handleFileUpload(req.id, e)} 
-                            disabled={uploading === req.id}
-                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                          />
-                          {uploading === req.id && <span className="text-xs text-blue-500 ml-2">Mengupload...</span>}
-                        </div>
-                      ) : (
-                        <div className="flex space-x-2">
-                          <input 
-                            type="text" 
-                            id={`text-req-${req.id}`}
-                            className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md" 
-                            placeholder="Ketik teks evidence..." 
-                            disabled={uploading === req.id}
-                          />
-                          <button 
-                            type="button"
-                            disabled={uploading === req.id}
-                            onClick={() => {
-                              const input = document.getElementById(`text-req-${req.id}`);
-                              if(input.value.trim()) handleTextSubmit(req.id, input.value.trim());
-                            }}
-                            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                          >
-                            Simpan
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    {/* Editor based on requirement type — HANYA jika bukan readOnly */}
+                    {!readOnly && (
+                      <div className="mt-2">
+                        {req.evidence_type === 'FILE' ? (
+                          <div>
+                            <input
+                              type="file"
+                              onChange={(e) => handleFileUpload(req.id, e)}
+                              disabled={uploading === req.id}
+                              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                            />
+                            {uploading === req.id && <span className="text-xs text-blue-500 ml-2">Mengupload...</span>}
+                          </div>
+                        ) : (
+                          <div className="flex space-x-2">
+                            <input
+                              type="text"
+                              id={`text-req-${req.id}`}
+                              className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                              placeholder="Ketik teks evidence..."
+                              disabled={uploading === req.id}
+                            />
+                            <button
+                              type="button"
+                              disabled={uploading === req.id}
+                              onClick={() => {
+                                const input = document.getElementById(`text-req-${req.id}`);
+                                if(input.value.trim()) handleTextSubmit(req.id, input.value.trim());
+                              }}
+                              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                            >
+                              Simpan
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </dd>
               </div>

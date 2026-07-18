@@ -6,21 +6,25 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // In a real app, role would come from context/auth state
-  const role = 'UNIT_PIC'; // mock role
+  // Baca role dari auth state yang sesungguhnya, bukan hardcoded
+  const user = JSON.parse(localStorage.getItem('satya_user') || 'null');
+  const role = user?.role || 'UNIT_PIC';
+
+  // Tentukan apakah user adalah pimpinan/eksekutif berdasarkan role
+  const isExecutive = ['KPT', 'WKPT', 'PIMPINAN'].includes(role);
+  const isOperational = ['ADMIN_PT', 'VERIFIER', 'PANITERA_PT'].includes(role);
 
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
         setLoading(true);
-        // Defaulting to an example period_id
         let res;
-        if (role === 'UNIT_PIC') {
-          res = await internalMonitoringApi.getMyDashboard(999);
-        } else if (role === 'PIMPINAN') {
-          res = await internalMonitoringApi.getExecutiveDashboard(999);
+        if (isExecutive) {
+          res = await internalMonitoringApi.getExecutiveDashboard();
+        } else if (isOperational) {
+          res = await internalMonitoringApi.getOperationalDashboard();
         } else {
-          res = await internalMonitoringApi.getOperationalDashboard(999);
+          res = await internalMonitoringApi.getMyDashboard();
         }
         setSummary(res.data?.data?.summary || res.data?.data);
       } catch (err) {
@@ -38,28 +42,66 @@ const Dashboard = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Dashboard Monitoring Internal</h1>
-      
-      {summary && role === 'UNIT_PIC' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          <StatCard title="Total Target" value={summary.total} />
-          <StatCard title="Belum Mulai" value={summary.notStarted} color="text-gray-500" />
-          <StatCard title="Sedang Berjalan" value={summary.inProgress} color="text-blue-500" />
-          <StatCard title="Menunggu Approval" value={summary.awaitingApproval} color="text-yellow-500" />
-          <StatCard title="Verified" value={summary.verified} color="text-green-500" />
-          <StatCard title="Overdue" value={summary.overdue} color="text-red-500" />
-          <StatCard title="Open Follow-up" value={summary.openFollowUps} color="text-orange-500" />
+      <h1 className="text-2xl font-bold text-gray-900 mb-2">Dashboard Monitoring Internal</h1>
+      <p className="text-sm text-gray-500 mb-6">
+        {isExecutive ? 'Ringkasan eksekutif seluruh unit Pengadilan Tinggi' :
+         isOperational ? 'Tampilan operasional — semua target dalam periode aktif' :
+         'Target monitoring yang ditugaskan kepada Anda'}
+      </p>
+
+      {/* View Pimpinan / Eksekutif */}
+      {summary && isExecutive && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <StatCard title="Compliance Rate"     value={`${summary.complianceRate ?? 0}%`}        color="text-emerald-600" />
+          <StatCard title="Verified Tepat Waktu" value={`${summary.verifiedOnTimeRate ?? 0}%`}   color="text-blue-600"    />
+          <StatCard title="Overdue"             value={summary.overdueCount ?? summary.overdue ?? 0}  color="text-red-500"     />
+          <StatCard title="Follow-up Terbuka"   value={summary.openFollowUpCount ?? summary.openFollowUps ?? 0} color="text-orange-500"  />
         </div>
       )}
 
-      {summary && role !== 'UNIT_PIC' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Compliance Rate" value={`${summary.complianceRate || 0}%`} />
-          <StatCard title="Verified On Time" value={`${summary.verifiedOnTimeRate || 0}%`} />
-          <StatCard title="Overdue Targets" value={summary.overdueCount || summary.overdue || 0} color="text-red-500" />
-          <StatCard title="Open Follow-ups" value={summary.openFollowUpCount || summary.openFollowUps || 0} color="text-orange-500" />
+      {/* View Operasional (Admin / Verifier) */}
+      {summary && isOperational && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <StatCard title="Compliance Rate"     value={`${summary.complianceRate ?? 0}%`}        color="text-emerald-600" />
+          <StatCard title="Verified Tepat Waktu" value={`${summary.verifiedOnTimeRate ?? 0}%`}   color="text-blue-600"    />
+          <StatCard title="Overdue"             value={summary.overdueCount ?? summary.overdue ?? 0}  color="text-red-500"     />
+          <StatCard title="Follow-up Terbuka"   value={summary.openFollowUpCount ?? summary.openFollowUps ?? 0} color="text-orange-500"  />
         </div>
       )}
+
+      {/* View Unit PIC — tampilkan target personal */}
+      {summary && !isExecutive && !isOperational && (
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+          <StatCard title="Total Target"         value={summary.total ?? 0}              />
+          <StatCard title="Belum Mulai"          value={summary.notStarted ?? 0}         color="text-gray-500"    />
+          <StatCard title="Sedang Berjalan"      value={summary.inProgress ?? 0}         color="text-blue-500"    />
+          <StatCard title="Menunggu Approval"    value={summary.awaitingApproval ?? 0}   color="text-yellow-500"  />
+          <StatCard title="Verified"             value={summary.verified ?? 0}           color="text-green-500"   />
+          <StatCard title="Overdue"              value={summary.overdue ?? 0}            color="text-red-500"     />
+          <StatCard title="Follow-up Terbuka"    value={summary.openFollowUps ?? 0}      color="text-orange-500"  />
+        </div>
+      )}
+
+      {/* Shortcut navigasi */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <a href="/satya/internal-monitoring/targets"
+           className="block bg-white border border-gray-200 rounded-lg p-5 hover:border-blue-400 hover:shadow-md transition-all">
+          <div className="text-lg font-semibold text-gray-800 mb-1">📋 Target Saya</div>
+          <div className="text-sm text-gray-500">Lihat semua checklist yang ditugaskan kepada Anda</div>
+        </a>
+        {(isExecutive || isOperational) && (
+          <a href="/satya/internal-monitoring/review-queue"
+             className="block bg-white border border-gray-200 rounded-lg p-5 hover:border-blue-400 hover:shadow-md transition-all">
+            <div className="text-lg font-semibold text-gray-800 mb-1">🔍 Antrian Review</div>
+            <div className="text-sm text-gray-500">Target yang menunggu approval atau verifikasi</div>
+          </a>
+        )}
+        <a href="/satya/internal-monitoring/follow-ups"
+           className="block bg-white border border-gray-200 rounded-lg p-5 hover:border-blue-400 hover:shadow-md transition-all">
+          <div className="text-lg font-semibold text-gray-800 mb-1">📌 Follow-up Aktif</div>
+          <div className="text-sm text-gray-500">Tindak lanjut yang perlu diselesaikan</div>
+        </a>
+      </div>
     </div>
   );
 };

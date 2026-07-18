@@ -72,7 +72,11 @@ describe('Unit Test: authController', () => {
             authService.createUser.mockResolvedValue();
             await authController.saveOrUpdateUser(mockReq, mockRes, mockNext);
             expect(mockRes.status).toHaveBeenCalledWith(201);
-            expect(authService.createUser).toHaveBeenCalledWith(expect.objectContaining({ username: 'new_user' }));
+            // Controller mengirim (actor, userData) — actor adalah req.tenant
+            expect(authService.createUser).toHaveBeenCalledWith(
+                mockReq.tenant,
+                expect.objectContaining({ username: 'new_user' })
+            );
         });
 
         it('harus memperbarui user jika ada id', async () => {
@@ -80,7 +84,12 @@ describe('Unit Test: authController', () => {
             authService.updateUser.mockResolvedValue();
             await authController.saveOrUpdateUser(mockReq, mockRes, mockNext);
             expect(mockRes.status).toHaveBeenCalledWith(200);
-            expect(authService.updateUser).toHaveBeenCalledWith(5, expect.objectContaining({ username: 'updated_user' }));
+            // Controller mengirim (actor, id, userData) — actor adalah req.tenant
+            expect(authService.updateUser).toHaveBeenCalledWith(
+                mockReq.tenant,
+                5,
+                expect.objectContaining({ username: 'updated_user' })
+            );
         });
 
         it('harus meneruskan error ke next', async () => {
@@ -119,7 +128,8 @@ describe('Unit Test: authController', () => {
             authService.deleteUser.mockResolvedValue();
             await authController.deleteUser(mockReq, mockRes, mockNext);
             expect(mockRes.status).toHaveBeenCalledWith(200);
-            expect(authService.deleteUser).toHaveBeenCalledWith(5);
+            // Controller mengirim (actor, id) — actor adalah req.tenant
+            expect(authService.deleteUser).toHaveBeenCalledWith(mockReq.tenant, 5);
         });
 
         it('harus meneruskan error ke next', async () => {
@@ -143,7 +153,12 @@ describe('Unit Test: authController', () => {
             authService.updateUser.mockResolvedValue();
             await authController.resetPassword(mockReq, mockRes, mockNext);
             expect(mockRes.status).toHaveBeenCalledWith(200);
-            expect(authService.updateUser).toHaveBeenCalledWith(5, { password: 'password123' });
+            // Controller mengirim (actor, id, payload) — actor adalah req.tenant
+            expect(authService.updateUser).toHaveBeenCalledWith(
+                mockReq.tenant,
+                5,
+                { password: 'password123' }
+            );
         });
 
         it('harus meneruskan error ke next', async () => {

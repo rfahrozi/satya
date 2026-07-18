@@ -29,20 +29,67 @@ import ConfirmDialog from '../components/ConfirmDialog';
   - Adjust endpoint paths if your backend uses other route prefixes.
 */
 
-const ALL_ROLE_OPTIONS = [
-  { value: 'ADMIN_PT', label: 'Administrator (ADMIN_PT)' },
-  { value: 'KPT', label: 'Ketua PT (KPT)' },
-  { value: 'WKPT', label: 'Wakil Ketua PT (WKPT)' },
-  { value: 'PANITERA_PT', label: 'Panitera PT (PANITERA_PT)' },
-  { value: 'PANMUD_HUKUM_PT', label: 'Panitera Muda Hukum PT (PANMUD_HUKUM_PT)' },
-  { value: 'STAFF_PANMUD_HUKUM_PT', label: 'Staff Panmud Hukum PT (STAFF_PANMUD_HUKUM_PT)' },
-  { value: 'ADMIN_PN', label: 'Admin PN (ADMIN_PN)' },
-  { value: 'KPN', label: 'Ketua PN (KPN)' },
-  { value: 'PANITERA_PN', label: 'Panitera PN (PANITERA_PN)' },
-  { value: 'PANMUD_HUKUM_PN', label: 'Panmud Hukum PN (PANMUD_HUKUM_PN)' },
-  { value: 'STAFF_PANMUD_HUKUM_PN', label: 'Staff Panmud Hukum PN (STAFF_PANMUD_HUKUM_PN)' },
-  { value: 'SATKER_PN', label: 'Satker (SATKER_PN)' },
+// ─── Daftar lengkap role berdasarkan PDF3 (15 jabatan resmi) ─────────────────
+// Dikelompokkan per bidang agar mudah dipilih admin
+const ROLE_GROUPS = [
+  {
+    group: '🏛️ Pimpinan Pengadilan Tinggi',
+    roles: [
+      { value: 'ADMIN_PT',  label: 'Administrator Sistem (ADMIN_PT)', color: 'bg-violet-600' },
+      { value: 'KPT',       label: 'Ketua PT (KPT)',                  color: 'bg-teal-700'   },
+      { value: 'WKPT',      label: 'Wakil Ketua PT (WKPT)',           color: 'bg-teal-600'   },
+      { value: 'HAKIM_PT',  label: 'Hakim Tinggi (HAKIM_PT)',         color: 'bg-teal-500'   },
+    ],
+  },
+  {
+    group: '⚖️ Kepaniteraan Pengadilan Tinggi',
+    roles: [
+      { value: 'PANITERA_PT',         label: 'Panitera PT (PANITERA_PT)',                   color: 'bg-indigo-700' },
+      { value: 'PANMUD_HUKUM_PT',     label: 'Panitera Muda Hukum PT (PANMUD_HUKUM_PT)',   color: 'bg-indigo-600' },
+      { value: 'PANMUD_PERDATA_PT',   label: 'Panitera Muda Perdata PT (PANMUD_PERDATA_PT)',color: 'bg-indigo-500' },
+      { value: 'PANMUD_PIDANA_PT',    label: 'Panitera Muda Pidana PT (PANMUD_PIDANA_PT)', color: 'bg-indigo-400' },
+      { value: 'PANITERA_PENGGANTI',  label: 'Panitera Pengganti (PANITERA_PENGGANTI)',    color: 'bg-blue-500'   },
+      { value: 'STAFF_PANMUD_HUKUM_PT', label: 'Staff Panmud Hukum PT (STAFF_PANMUD_HUKUM_PT)', color: 'bg-blue-400' },
+    ],
+  },
+  {
+    group: '🗂️ Kesekretariatan Pengadilan Tinggi',
+    roles: [
+      { value: 'SEKRETARIS_PT',    label: 'Sekretaris PT (SEKRETARIS_PT)',                         color: 'bg-emerald-700' },
+      { value: 'KABAG_PERENC_KEP', label: 'Kabag Perencanaan & Kepegawaian (KABAG_PERENC_KEP)',    color: 'bg-emerald-600' },
+      { value: 'KABAG_UMUM_KEU',   label: 'Kabag Umum & Keuangan (KABAG_UMUM_KEU)',                color: 'bg-emerald-500' },
+      { value: 'KASUBBAG_TURT',    label: 'Kasubbag Tata Usaha & RT (KASUBBAG_TURT)',              color: 'bg-green-600'   },
+      { value: 'KASUBBAG_KEPEG_TI',label: 'Kasubbag Kepegawaian & TI (KASUBBAG_KEPEG_TI)',        color: 'bg-green-500'   },
+      { value: 'KASUBBAG_PEL_KEU', label: 'Kasubbag Keuangan & Pelaporan (KASUBBAG_PEL_KEU)',     color: 'bg-green-400'   },
+      { value: 'KASUBBAG_PTIP',    label: 'Kasubbag Perencanaan Program & Anggaran (KASUBBAG_PTIP)', color: 'bg-lime-600' },
+    ],
+  },
+  {
+    group: '🏢 Pengadilan Negeri (Satker)',
+    roles: [
+      { value: 'ADMIN_PN',             label: 'Admin PN (ADMIN_PN)',                       color: 'bg-amber-700' },
+      { value: 'KPN',                  label: 'Ketua PN (KPN)',                            color: 'bg-amber-600' },
+      { value: 'PANITERA_PN',          label: 'Panitera PN (PANITERA_PN)',                 color: 'bg-orange-600' },
+      { value: 'PANMUD_HUKUM_PN',      label: 'Panmud Hukum PN (PANMUD_HUKUM_PN)',        color: 'bg-amber-500' },
+      { value: 'STAFF_PANMUD_HUKUM_PN',label: 'Staff Panmud Hukum PN (STAFF_PANMUD_HUKUM_PN)', color: 'bg-yellow-500' },
+      { value: 'SATKER_PN',            label: 'Satker / Staf PN (SATKER_PN)',              color: 'bg-yellow-600' },
+    ],
+  },
+  {
+    group: '🔍 Tim Verifikasi & Khusus',
+    roles: [
+      { value: 'VERIFIER',   label: 'Verifikator Internal (VERIFIER)', color: 'bg-rose-600'  },
+      { value: 'VIEWER',     label: 'Penonton/Read-Only (VIEWER)',     color: 'bg-slate-500' },
+    ],
+  },
 ];
+
+// Flat list untuk kompatibilitas kode lama
+const ALL_ROLE_OPTIONS = ROLE_GROUPS.flatMap(g => g.roles);
+
+// Role yang membutuhkan Satker PN
+const PN_ROLES = ['ADMIN_PN', 'KPN', 'PANITERA_PN', 'PANMUD_HUKUM_PN', 'STAFF_PANMUD_HUKUM_PN', 'SATKER_PN'];
+
 
 const SATKER_OPTIONS = [
   { id: 1, name: 'Pengadilan Negeri Tanjungpinang' },
@@ -67,8 +114,8 @@ export default function UserManagement() {
   const isAdminPN = currentUser?.role === 'ADMIN_PN';
 
   const roleOptions = isAdminPN
-    ? ALL_ROLE_OPTIONS.filter(r => ['KPN', 'PANITERA_PN', 'PANMUD_HUKUM_PN', 'STAFF_PANMUD_HUKUM_PN', 'SATKER_PN', 'ADMIN_PN'].includes(r.value))
-    : ALL_ROLE_OPTIONS;
+    ? ROLE_GROUPS.flatMap(g => g.roles).filter(r => PN_ROLES.includes(r.value))
+    : null; // null = tampilkan semua grouped
 
   // UI state
   const [q, setQ] = useState('');
@@ -208,7 +255,7 @@ export default function UserManagement() {
       return false;
     }
 
-    const pnRoles = ['KPN', 'PANITERA_PN', 'PANMUD_HUKUM_PN', 'STAFF_PANMUD_HUKUM_PN', 'SATKER_PN', 'ADMIN_PN'];
+    const pnRoles = PN_ROLES;
     if (pnRoles.includes(form.role) && !form.satker_id) {
       setFormError('Pilih Satuan Kerja untuk role Pengadilan Negeri.');
       return false;
@@ -243,7 +290,7 @@ export default function UserManagement() {
     e.preventDefault();
     if (!validateForm()) return;
 
-    const pnRoles = ['KPN', 'PANITERA_PN', 'PANMUD_HUKUM_PN', 'STAFF_PANMUD_HUKUM_PN', 'SATKER_PN', 'ADMIN_PN'];
+    const pnRoles = PN_ROLES;
     const payload = {
       username: form.username.trim(),
       email: form.email.trim(),
@@ -290,22 +337,15 @@ export default function UserManagement() {
   }
 
   // small UI helpers
+  // RoleBadge: ambil warna dari ROLE_GROUPS
   function RoleBadge({ role }) {
-    const map = {
-      ADMIN_PT: 'bg-violet-600 text-white',
-      KPT: 'bg-teal-600 text-white',
-      WKPT: 'bg-teal-600 text-white',
-      PANITERA_PT: 'bg-teal-600 text-white',
-      PANMUD_HUKUM_PT: 'bg-indigo-500 text-white',
-      STAFF_PANMUD_HUKUM_PT: 'bg-indigo-400 text-white',
-      ADMIN_PN: 'bg-amber-600 text-white',
-      KPN: 'bg-orange-500 text-white',
-      PANITERA_PN: 'bg-orange-500 text-white',
-      PANMUD_HUKUM_PN: 'bg-amber-500 text-white',
-      STAFF_PANMUD_HUKUM_PN: 'bg-yellow-500 text-white',
-      SATKER_PN: 'bg-yellow-600 text-white',
-    };
-    return <Badge className={map[role] || 'bg-slate-500 text-white'}>{role}</Badge>;
+    const found = ALL_ROLE_OPTIONS.find(r => r.value === role);
+    const colorClass = found?.color || 'bg-slate-500';
+    return (
+      <Badge className={`${colorClass} text-white`}>
+        {found?.label?.replace(/\s*\(.*\)$/, '') || role}
+      </Badge>
+    );
   }
 
   return (
@@ -428,10 +468,34 @@ export default function UserManagement() {
               </div>
 
               <div>
-                <label htmlFor="form-role" className="block text-xs text-slate-400 mb-1">Role</label>
-                <select id="form-role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full p-2.5 bg-slate-800 border border-white/6 rounded-md">
-                  {roleOptions.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                <label htmlFor="form-role" className="block text-xs text-slate-400 mb-1">Role / Jabatan</label>
+                <select
+                  id="form-role"
+                  value={form.role}
+                  onChange={(e) => setForm({ ...form, role: e.target.value })}
+                  className="w-full p-2.5 bg-slate-800 border border-white/6 rounded-md text-sm"
+                >
+                  {isAdminPN ? (
+                    // ADMIN_PN hanya lihat role PN
+                    roleOptions.map(r => <option key={r.value} value={r.value}>{r.label}</option>)
+                  ) : (
+                    // ADMIN_PT lihat semua, dikelompokkan per bidang
+                    ROLE_GROUPS.map(g => (
+                      <optgroup key={g.group} label={g.group}>
+                        {g.roles.map(r => (
+                          <option key={r.value} value={r.value}>{r.label}</option>
+                        ))}
+                      </optgroup>
+                    ))
+                  )}
                 </select>
+                {/* Info helper: apakah role ini butuh satker? */}
+                {PN_ROLES.includes(form.role) && (
+                  <p className="text-xs text-amber-400 mt-1">⚠ Role ini memerlukan Satuan Kerja PN.</p>
+                )}
+                {!PN_ROLES.includes(form.role) && form.role !== 'ADMIN_PT' && !['VERIFIER','VIEWER'].includes(form.role) && (
+                  <p className="text-xs text-teal-400 mt-1">✓ Role internal PT — tidak perlu Satker PN.</p>
+                )}
               </div>
 
               <div>

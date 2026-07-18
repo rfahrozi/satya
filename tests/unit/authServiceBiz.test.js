@@ -86,12 +86,16 @@ describe('Unit Test: authService - Business Logic', () => {
         });
     });
 
+    // Tenant mock yang dipakai di semua test yang butuh actor
+    const mockTenant = { userId: 1, role: 'ADMIN_PT', satkerId: null };
+
     describe('createUser()', () => {
         it('harus membuat user dengan password yang di-hash', async () => {
             const mockChain = { insert: jest.fn().mockResolvedValue([1]) };
             knex.mockReturnValue(mockChain);
 
-            await authService.createUser({
+            // Service signature: createUser(tenant, { username, password, ... })
+            await authService.createUser(mockTenant, {
                 username: 'new_user',
                 password: 'password123',
                 role: 'SATKER_PN',
@@ -107,11 +111,15 @@ describe('Unit Test: authService - Business Logic', () => {
         });
 
         it('harus menolak jika password kosong', async () => {
-            await expect(authService.createUser({ username: 'test' })).rejects.toThrow('Password wajib diisi');
+            await expect(
+                authService.createUser(mockTenant, { username: 'test' })
+            ).rejects.toThrow('Password wajib diisi');
         });
 
         it('harus menolak jika password hanya whitespace', async () => {
-            await expect(authService.createUser({ username: 'test', password: '   ' })).rejects.toThrow('Password wajib diisi');
+            await expect(
+                authService.createUser(mockTenant, { username: 'test', password: '   ' })
+            ).rejects.toThrow('Password wajib diisi');
         });
     });
 
@@ -123,7 +131,8 @@ describe('Unit Test: authService - Business Logic', () => {
             };
             knex.mockReturnValue(mockChain);
 
-            await authService.updateUser(5, {
+            // Service signature: updateUser(tenant, id, { username, ... })
+            await authService.updateUser(mockTenant, 5, {
                 username: 'updated',
                 role: 'SATKER_PN',
                 satker_id: 1,
@@ -142,7 +151,7 @@ describe('Unit Test: authService - Business Logic', () => {
             };
             knex.mockReturnValue(mockChain);
 
-            await authService.updateUser(5, {
+            await authService.updateUser(mockTenant, 5, {
                 username: 'updated',
                 password: 'newpassword',
                 role: 'SATKER_PN',
@@ -165,7 +174,8 @@ describe('Unit Test: authService - Business Logic', () => {
             };
             knex.mockReturnValue(mockChain);
 
-            const result = await authService.getAllUsers();
+            // Service signature: getAllUsers(tenant)
+            const result = await authService.getAllUsers(mockTenant);
             expect(Array.isArray(result)).toBe(true);
             expect(mockChain.whereNot).toHaveBeenCalledWith('users.role', 'ADMIN_PT');
         });
@@ -179,7 +189,8 @@ describe('Unit Test: authService - Business Logic', () => {
             };
             knex.mockReturnValue(mockChain);
 
-            await authService.deleteUser(5);
+            // Service signature: deleteUser(tenant, id)
+            await authService.deleteUser(mockTenant, 5);
             expect(mockChain.where).toHaveBeenCalledWith({ id: 5 });
             expect(mockChain.del).toHaveBeenCalledTimes(1);
         });
