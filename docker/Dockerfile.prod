@@ -37,6 +37,7 @@ RUN chmod +x ./docker/entrypoint.sh && sed -i "s/\r$//" ./docker/entrypoint.sh
 # Copy app source (without frontend/node_modules)
 COPY src ./src
 COPY knexfile.js ./
+COPY satya_criterion_assessment_state_machine.json ./
 COPY migrations ./migrations
 COPY seeds ./seeds
 
