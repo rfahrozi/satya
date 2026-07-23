@@ -1,4 +1,6 @@
 const knex = require('../config/knex');
+const emailService = require('../services/emailService');
+const logger = require('../config/winston');
 
 class InternalMonitoringReminderWorker {
   async processPendingDeliveries(batchSize = 100) {
@@ -56,7 +58,7 @@ class InternalMonitoringReminderWorker {
 
     } catch (err) {
       await trx.rollback();
-      console.error('Worker failed to process batch:', err);
+      logger.error('Worker failed to process batch:', err);
       return 0;
     }
   }
@@ -74,9 +76,21 @@ class InternalMonitoringReminderWorker {
         });
         return true;
       } else if (delivery.channel === 'EMAIL') {
-        if (process.env.PT_MONITORING_EMAIL_ENABLED === 'true') {
-          // TODO: Integrate with internal emailService or node-mailer directly
-          // For now, assume success as a placeholder
+        if (process.env.PT_INTERNAL_MONITORING_EMAIL_ENABLED === 'true') {
+          // Ambil email user (harus kita lookup dulu karena delivery table cuma punya user_id)
+          const user = await knex('users').where('id', delivery.recipient_user_id).first();
+          if (!user || !user.email) {
+            logger.error(`Failed to send email delivery ${delivery.id}: User not found or has no email`);
+            return false;
+          }
+
+          await emailService.sendReminderEmail(user.email, {
+            nama: user.full_name || user.username,
+            periode: 'Periode Berjalan',
+            namaLaporan: 'Target Monitoring Internal',
+            deadline: 'Sesuai dengan target Anda',
+            pesanTambahan: 'Mohon segera selesaikan dan unggah dokumen bukti Anda.'
+          });
           return true;
         } else {
            // Silently skip if email disabled
@@ -85,7 +99,7 @@ class InternalMonitoringReminderWorker {
       }
       return false;
     } catch (error) {
-      console.error(`Failed to send delivery ${delivery.id}:`, error);
+      logger.error(`Failed to send delivery ${delivery.id}:`, error);
       return false;
     }
   }

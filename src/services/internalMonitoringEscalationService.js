@@ -108,7 +108,7 @@ class InternalMonitoringEscalationService {
         status: 'ACKNOWLEDGED',
         acknowledged_at: knex.fn.now(),
         acknowledged_by: actor.id,
-        metadata_json: knex.raw(`metadata_json || '{"ack_note": "${note}"}'::jsonb`) // simple append
+        metadata_json: knex.raw('metadata_json || ?::jsonb', [JSON.stringify({ ack_note: note })])
       });
     return rows > 0;
   }
@@ -120,7 +120,7 @@ class InternalMonitoringEscalationService {
       .update({
         status: 'RESOLVED',
         resolved_at: knex.fn.now(),
-        metadata_json: knex.raw(`metadata_json || '{"resolve_note": "${note}"}'::jsonb`) 
+        metadata_json: knex.raw('metadata_json || ?::jsonb', [JSON.stringify({ resolve_note: note })])
       });
     return rows > 0;
   }

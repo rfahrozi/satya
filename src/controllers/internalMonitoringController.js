@@ -69,6 +69,13 @@ exports.verifyTarget = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+exports.batchVerifyTargets = async (req, res, next) => {
+  try {
+    const result = await service.batchVerifyTargets(req.user, req.body);
+    res.json(result);
+  } catch (err) { next(err); }
+};
+
 exports.listEvidence = async (req, res, next) => {
   try {
     const evs = await service.listTargetEvidence(req.user, req.params.id);

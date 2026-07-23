@@ -7,7 +7,8 @@ export const internalMonitoringApi = {
   listPeriods: (params = {}) => axios.get(`${BASE_URL}/periods`, { params }),
   createPeriod: (payload)   => axios.post(`${BASE_URL}/periods`, payload),
   openPeriod: (id)          => axios.post(`${BASE_URL}/periods/${id}/open`),
-  listMasterItems: ()       => axios.get(`${BASE_URL}/master-items`),
+  listMasterItems: (params = {}) => axios.get(`${BASE_URL}/master-items`, { params }),
+  generateTargets: (periodId) => axios.post(`${BASE_URL}/periods/${periodId}/generate`),
 
   // ── Dashboards ─────────────────────────────────────────────────────────────
   // periodId opsional — jika null/undefined, backend menggunakan periode aktif
@@ -21,6 +22,7 @@ export const internalMonitoringApi = {
 
   // ── Targets ────────────────────────────────────────────────────────────────
   listTargets: (params) => axios.get(`${BASE_URL}/targets`,     { params }),
+  listMyTargets: (params) => axios.get(`${BASE_URL}/my-targets`,  { params }),
   getTarget:   (id)     => axios.get(`${BASE_URL}/targets/${id}`),
 
   // ── Evidence ───────────────────────────────────────────────────────────────
@@ -50,6 +52,7 @@ export const internalMonitoringApi = {
   approveTarget:   (targetId)        => axios.post(`${BASE_URL}/targets/${targetId}/approve`),
   requestRevision: (targetId, notes) => axios.post(`${BASE_URL}/targets/${targetId}/request-revision`, { note: notes }),
   verifyTarget:    (targetId, notes) => axios.post(`${BASE_URL}/targets/${targetId}/verify`,           { note: notes }),
+  batchVerifyTargets: (targetIds, notes) => axios.post(`${BASE_URL}/targets/batch-verify`, { targetIds, note: notes }),
 
   // ── Follow-ups ─────────────────────────────────────────────────────────────
   createFollowUp:     (targetId, payload)              => axios.post(`${BASE_URL}/targets/${targetId}/follow-ups`, payload),

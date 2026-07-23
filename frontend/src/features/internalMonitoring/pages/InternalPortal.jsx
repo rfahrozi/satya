@@ -13,9 +13,10 @@ const ASSESSMENT_TABS = [
   { code: 'REGULASI', label: '📜 Regulasi', color: 'slate'  },
 ];
 
-// Rumpun Tupoksi sesuai PDF2 — untuk filter per bidang
+// Rumpun Tupoksi sesuai XLSX Master Monitoring Pengadilan Tinggi 2026
 const RUMPUN_OPTIONS = [
   { value: 'ALL',                                    label: 'Semua Rumpun' },
+  // ── AMPUH ────────────────────────────────────────────────────────────────
   { value: 'PENGAWASAN DAN PEMBINAAN',               label: 'Pengawasan & Pembinaan' },
   { value: 'PENGAWASAN DAN INTEGRITAS',              label: 'Pengawasan & Integritas' },
   { value: 'PENGAWASAN TEKNIS PERKARA',              label: 'Pengawasan Teknis Perkara' },
@@ -34,11 +35,21 @@ const RUMPUN_OPTIONS = [
   { value: 'UMUM, KEUANGAN DAN BMN',                 label: 'Umum, Keuangan & BMN' },
   { value: 'PERENCANAAN, SDM, ORGANISASI DAN TI',    label: 'Perencanaan, SDM & TI' },
   { value: 'MANAJEMEN RISIKO',                       label: 'Manajemen Risiko' },
+  { value: 'AKUNTABILITAS KINERJA DAN MANAJEMEN',    label: 'Akuntabilitas Kinerja & Manajemen' },
+  // ── AKIP ─────────────────────────────────────────────────────────────────
   { value: 'AKUNTABILITAS KINERJA',                  label: 'Akuntabilitas Kinerja (SAKIP)' },
-  { value: 'PRIORITAS PERSIDANGAN DAN PELAYANAN',    label: 'Prioritas Persidangan' },
-  { value: 'PENYELESAIAN PERKARA BANDING',           label: 'Penyelesaian Perkara Banding' },
-  { value: 'PENGENDALIAN KEPANITERAAN',              label: 'Pengendalian Kepaniteraan' },
-  { value: 'PENGENDALIAN KESEKRETARIATAN',           label: 'Pengendalian Kesekretariatan' },
+  // ── Tambahan Regulasi (REG) — sesuai XLSX ────────────────────────────────
+  { value: 'PRIORITAS PERSIDANGAN DAN PELAYANAN',         label: 'Prioritas Persidangan & Pelayanan' },
+  { value: 'PENYELESAIAN PERKARA BANDING',                label: 'Penyelesaian Perkara Banding' },
+  { value: 'ADMINISTRASI PERKARA PERDATA BANDING',        label: 'Adm. Perkara Perdata Banding' },
+  { value: 'ADMINISTRASI PERKARA PIDANA BANDING',         label: 'Adm. Perkara Pidana Banding' },
+  { value: 'ADMINISTRASI PERKARA KHUSUS/TIPIKOR BANDING', label: 'Adm. Perkara Tipikor Banding' },
+  { value: 'DATA, TRANSPARANSI, PENGADUAN DAN ARSIP PERKARA', label: 'Data, Transparansi & Arsip Perkara' },
+  { value: 'DUKUNGAN PERSIDANGAN DAN MINUTASI',           label: 'Dukungan Persidangan & Minutasi' },
+  { value: 'PENGENDALIAN KEPANITERAAN',                   label: 'Pengendalian Kepaniteraan' },
+  { value: 'PENGENDALIAN KESEKRETARIATAN',                label: 'Pengendalian Kesekretariatan' },
+  { value: 'TATA USAHA DAN RUMAH TANGGA',                 label: 'Tata Usaha & Rumah Tangga' },
+  { value: 'PELAYANAN TERPADU SATU PINTU',                label: 'Pelayanan Terpadu Satu Pintu' },
 ];
 
 // Badge warna per assessment source
@@ -90,53 +101,82 @@ const InternalPortal = () => {
   ];
   const canUpload = UPLOADER_ROLES.includes(user?.role);
 
-  const load = useCallback(async () => {
+  const [periods, setPeriods] = useState([]);
+
+  const load = useCallback(async (selectedPeriodId = null) => {
     try {
       setLoading(true);
       setError(null);
 
-      // Ambil periode aktif (status dari backend adalah 'OPEN', bukan 'ACTIVE')
-      const pRes = await internalMonitoringApi.listPeriods({ status: 'OPEN' });
-      const periods = pRes.data?.data || [];
-      const period  = periods[0] || null;
+      let availablePeriods = periods;
+      if (availablePeriods.length === 0) {
+        const pRes = await internalMonitoringApi.listPeriods();
+        availablePeriods = pRes.data?.data || [];
+        setPeriods(availablePeriods);
+      }
+
+      let period = null;
+      if (availablePeriods.length > 0) {
+         if (selectedPeriodId) {
+             period = availablePeriods.find(p => String(p.id) === String(selectedPeriodId));
+         }
+         if (!period) {
+             period = availablePeriods.find(p => p.status === 'OPEN') || availablePeriods[0];
+         }
+      }
       setActivePeriod(period);
 
-      // Tentukan apakah user ini admin/pimpinan yang boleh melihat semua target di periode ini
       const isSuperUser = ['ADMIN_PT', 'KPT', 'WKPT', 'PIMPINAN', 'PANITERA_PT', 'VERIFIER'].includes(user?.role);
 
       let tRes;
-      if (isSuperUser) {
-        // Superuser melihat semua target pada periode aktif
-        tRes = await internalMonitoringApi.listTargets({ period_id: period?.id });
+      if (period) {
+        if (isSuperUser) {
+          tRes = await internalMonitoringApi.listTargets({ period_id: period.id });
+        } else {
+          tRes = await internalMonitoringApi.listMyTargets({ period_id: period.id });
+        }
+        setTargets(tRes.data?.data || []);
       } else {
-        // User koordinator / unit hanya melihat target yang ditugaskan ke mereka
-        tRes = await internalMonitoringApi.listTargets({ role_scope: 'UNIT_PIC', period_id: period?.id });
+        setTargets([]);
       }
-
-      setTargets(tRes.data?.data || []);
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Gagal memuat data portal.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [periods, user?.role]);
 
   useEffect(() => { load(); }, [load]);
 
+  const handlePeriodChange = (e) => {
+    load(e.target.value);
+  };
+
   // ── Filter & Grup ─────────────────────────────────────────────────────────
+  // Map tab assessment → prefix item_code (sesuai XLSX Master Revisi)
+  const ASSESSMENT_PREFIX = {
+    AMPUH:    'AMP-',
+    PMPZI:    'PZ-',
+    AKIP:     'AKIP-',
+    REGULASI: 'REG-',
+  };
+
   const filtered = targets.filter(t => {
+    const itemCode = t.item_code || t.monitoring_item_code || '';
     const matchAssessment = activeAssessment === 'ALL'
-      || (t.criteria || []).some(c => c.assessment_code === activeAssessment)
-      || (activeAssessment === 'REGULASI' && t.item_code?.startsWith('REG-'));
+      || (ASSESSMENT_PREFIX[activeAssessment]
+        ? itemCode.startsWith(ASSESSMENT_PREFIX[activeAssessment])
+        : (t.criteria || []).some(c => c.assessment_code === activeAssessment));
     const matchRumpun = activeRumpun === 'ALL'
-      || (t.duty_cluster || '').toUpperCase().includes(activeRumpun.toUpperCase());
+      || (t.duty_cluster || '').toUpperCase() === activeRumpun.toUpperCase();
     const matchStatus = statusFilter === 'ALL' || t.workflow_status === statusFilter;
     const matchSearch = !search
-      || t.monitoring_item_title?.toLowerCase().includes(search.toLowerCase())
-      || t.item_code?.toLowerCase().includes(search.toLowerCase())
+      || (t.monitoring_item_title || t.title || '').toLowerCase().includes(search.toLowerCase())
+      || itemCode.toLowerCase().includes(search.toLowerCase())
       || (t.duty_cluster || '').toLowerCase().includes(search.toLowerCase());
     return matchAssessment && matchRumpun && matchStatus && matchSearch;
   });
+
 
   // KPI Summary
   const total    = targets.length;
@@ -148,7 +188,7 @@ const InternalPortal = () => {
   if (loading) return (
     <div className="p-8 text-center">
       <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-      <p className="text-gray-500 text-sm">Memuat portal monitoring internal...</p>
+      <p className="text-slate-500 text-sm">Memuat portal monitoring internal...</p>
     </div>
   );
 
@@ -164,12 +204,25 @@ const InternalPortal = () => {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Portal Monitoring Internal</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {user?.username} · {activePeriod ? `Periode: ${activePeriod.name}` : '⚠ Tidak ada periode aktif'}
-          </p>
+          <h1 className="text-2xl font-bold text-white">Portal Monitoring Internal</h1>
+          <div className="flex items-center gap-3 mt-2">
+            <span className="text-sm text-slate-500">{user?.username}</span>
+            <span className="text-slate-600">·</span>
+            <select 
+              value={activePeriod?.id || ''} 
+              onChange={handlePeriodChange}
+              className="text-sm border border-slate-600 rounded-lg px-3 py-1.5 bg-slate-900 text-slate-300 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            >
+              {periods.length === 0 ? <option value="">Tidak ada periode</option> : null}
+              {periods.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.name} {p.status === 'OPEN' ? '(Aktif)' : '(Tutup)'}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-        <button onClick={load} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-600">
+        <button onClick={() => load(activePeriod?.id)} className="px-4 py-2 text-sm border border-slate-600 rounded-lg hover:bg-slate-800 transition-colors text-slate-400">
           🔄 Muat Ulang
         </button>
       </div>
@@ -182,32 +235,32 @@ const InternalPortal = () => {
           { label: 'Sedang Berjalan', value: inProg,          color: 'amber'   },
           { label: 'Overdue',         value: overdue,         color: 'red'     },
         ].map(k => (
-          <div key={k.label} className={`bg-white border border-gray-200 rounded-xl p-4 text-center shadow-sm`}>
+          <div key={k.label} className={`bg-slate-900 border border-slate-700/50 rounded-xl p-4 text-center shadow-sm`}>
             <div className={`text-2xl font-black text-${k.color}-600`}>{k.value}</div>
-            <div className="text-xs text-gray-500 font-medium mt-1">{k.label}</div>
+            <div className="text-xs text-slate-500 font-medium mt-1">{k.label}</div>
           </div>
         ))}
       </div>
 
       {/* Progress bar keseluruhan */}
-      <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-        <div className="flex justify-between text-sm font-medium text-gray-700 mb-2">
+      <div className="bg-slate-900 border border-slate-700/50 rounded-xl p-4 shadow-sm">
+        <div className="flex justify-between text-sm font-medium text-slate-300 mb-2">
           <span>Progress Kepatuhan</span>
           <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${progressColor(compliancePct)}`}>
             {compliancePct}%
           </span>
         </div>
-        <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+        <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all duration-700 ${compliancePct >= 80 ? 'bg-emerald-500' : compliancePct >= 50 ? 'bg-amber-400' : 'bg-red-500'}`}
+            className={`h-full rounded-full transition-all duration-700 ${compliancePct >= 80 ? 'bg-emerald-500' : compliancePct >= 50 ? 'bg-amber-400' : 'bg-red-500/80'}`}
             style={{ width: `${compliancePct}%` }}
           />
         </div>
-        <p className="text-xs text-gray-400 mt-1">{verified} dari {total} checklist telah diverifikasi</p>
+        <p className="text-xs text-slate-500 mt-1">{verified} dari {total} checklist telah diverifikasi</p>
       </div>
 
       {/* ── Filter Bar ─────────────────────────────────────────────────────── */}
-      <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-3">
+      <div className="bg-slate-900 border border-slate-700/50 rounded-xl p-4 shadow-sm space-y-3">
 
         {/* Assessment tabs */}
         <div className="flex flex-wrap gap-2">
@@ -218,7 +271,7 @@ const InternalPortal = () => {
               className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                 activeAssessment === tab.code
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-slate-800 text-slate-400 hover:bg-gray-200'
               }`}
             >
               {tab.label}
@@ -237,11 +290,11 @@ const InternalPortal = () => {
 
         {/* Rumpun Tupoksi filter */}
         <div className="flex flex-wrap gap-2 items-center">
-          <span className="text-xs font-semibold text-gray-500">Rumpun:</span>
+          <span className="text-xs font-semibold text-slate-500">Rumpun:</span>
           <select
             value={activeRumpun}
             onChange={e => setActiveRumpun(e.target.value)}
-            className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-blue-400 outline-none bg-white text-gray-700 max-w-xs"
+            className="text-xs border border-slate-700/50 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-blue-400 outline-none bg-slate-900 text-slate-300 max-w-xs"
           >
             {RUMPUN_OPTIONS.map(r => (
               <option key={r.value} value={r.value}>{r.label}</option>
@@ -250,7 +303,7 @@ const InternalPortal = () => {
           {activeRumpun !== 'ALL' && (
             <button
               onClick={() => setActiveRumpun('ALL')}
-              className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+              className="text-xs text-slate-500 hover:text-red-500 transition-colors"
             >
               ✕ Reset
             </button>
@@ -262,7 +315,7 @@ const InternalPortal = () => {
           <select
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
-            className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+            className="text-sm border border-slate-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none bg-slate-900"
           >
             <option value="ALL">Semua Status</option>
             {STATUS_ORDER.map(s => (
@@ -274,14 +327,14 @@ const InternalPortal = () => {
             placeholder="🔍 Cari kode, judul, atau rumpun..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+            className="flex-1 text-sm border border-slate-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
           />
         </div>
 
         {/* Info filter aktif */}
         {(activeAssessment !== 'ALL' || activeRumpun !== 'ALL' || statusFilter !== 'ALL' || search) && (
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <span>Menampilkan <strong className="text-gray-700">{filtered.length}</strong> dari {targets.length} checklist</span>
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <span>Menampilkan <strong className="text-slate-300">{filtered.length}</strong> dari {targets.length} checklist</span>
             <button
               onClick={() => { setActiveAssessment('ALL'); setActiveRumpun('ALL'); setStatusFilter('ALL'); setSearch(''); }}
               className="text-blue-500 hover:text-blue-700 underline"
@@ -294,11 +347,11 @@ const InternalPortal = () => {
 
       {/* ── Daftar Target ──────────────────────────────────────────────────── */}
       {filtered.length === 0 ? (
-        <div className="text-center py-12 bg-white border border-dashed border-gray-300 rounded-xl">
+        <div className="text-center py-12 bg-slate-900 border border-dashed border-slate-600 rounded-xl">
           <div className="text-4xl mb-3">📋</div>
-          <p className="text-gray-500 text-sm">Tidak ada checklist yang sesuai filter.</p>
+          <p className="text-slate-500 text-sm">Tidak ada checklist yang sesuai filter.</p>
           {total === 0 && activePeriod && (
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs text-slate-500 mt-2">
               Belum ada target yang digenerate untuk periode ini.
               Hubungi Admin PT untuk generate targets.
             </p>
@@ -315,8 +368,8 @@ const InternalPortal = () => {
             return (
               <div
                 key={target.id}
-                className={`bg-white border rounded-xl shadow-sm transition-all duration-200 ${
-                  isExpanded ? 'border-blue-300 shadow-md' : isOverdue ? 'border-red-200' : 'border-gray-200 hover:border-gray-300'
+                className={`bg-slate-900 border rounded-xl shadow-sm transition-all duration-200 ${
+                  isExpanded ? 'border-blue-300 shadow-md' : isOverdue ? 'border-red-200' : 'border-slate-700/50 hover:border-slate-600'
                 }`}
               >
                 {/* ── Baris Header Target ─────────────────────────────────── */}
@@ -349,7 +402,7 @@ const InternalPortal = () => {
                   {/* Info utama */}
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-                      <p className="text-sm font-semibold text-gray-900 truncate">
+                      <p className="text-sm font-semibold text-white truncate">
                         {target.monitoring_item_title || target.item_code}
                       </p>
                       <div className="flex flex-wrap gap-1.5">
@@ -362,15 +415,15 @@ const InternalPortal = () => {
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-gray-500">
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-slate-500">
                       {target.unit_name && <span>📍 {target.unit_name}</span>}
                       {target.duty_cluster && (
-                        <span className="text-gray-400 italic truncate max-w-50" title={target.duty_cluster}>
+                        <span className="text-slate-500 italic truncate max-w-50" title={target.duty_cluster}>
                           {target.duty_cluster}
                         </span>
                       )}
                       {daysLeft !== null && (
-                        <span className={isOverdue ? 'text-red-600 font-semibold' : daysLeft <= 3 ? 'text-amber-600 font-semibold' : ''}>
+                        <span className={isOverdue ? 'text-red-400 font-semibold' : daysLeft <= 3 ? 'text-amber-600 font-semibold' : ''}>
                           {isOverdue ? `⚠ Terlambat ${Math.abs(daysLeft)} hari`
                             : daysLeft === 0 ? '⚡ Jatuh tempo hari ini'
                             : `🗓 ${daysLeft} hari lagi`}
@@ -380,14 +433,14 @@ const InternalPortal = () => {
                   </div>
 
                   {/* Chevron */}
-                  <div className={`text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''} shrink-0 mt-1`}>
+                  <div className={`text-slate-500 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''} shrink-0 mt-1`}>
                     ▼
                   </div>
                 </div>
 
                 {/* ── Panel Upload Evidence (Expanded) ───────────────────── */}
                 {isExpanded && (
-                  <div className="border-t border-gray-100 bg-gray-50 rounded-b-xl">
+                  <div className="border-t border-slate-700/50 bg-slate-800 rounded-b-xl">
                     {/* Action bar workflow */}
                     <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-3 pb-2">
                       <div className="flex flex-wrap gap-2">
@@ -402,7 +455,7 @@ const InternalPortal = () => {
                           />
                         )}
                         {!canUpload && (
-                          <span className="text-xs italic text-gray-500 bg-gray-100 px-2.5 py-1 rounded">
+                          <span className="text-xs italic text-slate-500 bg-slate-800 px-2.5 py-1 rounded">
                             Mode Viewer (Read-Only)
                           </span>
                         )}
@@ -410,7 +463,7 @@ const InternalPortal = () => {
                       {/* Tombol ke halaman detail lengkap */}
                       <Link
                         to={`/internal-monitoring/targets/${target.id}`}
-                        className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 text-gray-600 hover:bg-white transition-colors"
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-600 text-slate-400 hover:bg-slate-900 transition-colors"
                         onClick={e => e.stopPropagation()}
                       >
                         Buka Detail ↗

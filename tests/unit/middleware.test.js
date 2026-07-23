@@ -65,7 +65,11 @@ describe('Unit Test: Middleware', () => {
         let mockReq, mockRes, mockNext;
 
         beforeEach(() => {
-            mockReq = { originalUrl: '/api/v1/test' };
+            mockReq = {
+                originalUrl: '/api/v1/test',
+                get: jest.fn().mockReturnValue('test-user-agent'),
+                ip: '127.0.0.1'
+            };
             mockRes = {
                 status: jest.fn().mockReturnThis(),
                 json: jest.fn(),

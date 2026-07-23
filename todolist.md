@@ -396,3 +396,268 @@ Berbasis Docker Compose agar terstandarisasi, efisien, dan low-effort:
    sleep 10
    curl -f http://localhost:3004/satya/api/v1/health && echo "✅ Deployment berhasil!"
    ```
+
+---
+
+---
+
+# 🚀 AUDIT MVP READINESS — VP of Engineering Review
+**Reviewer:** VP of Engineering (Agile PM · DevSecOps · DevOps)
+**Tanggal Audit:** 20 Juli 2026
+**Scope:** Kesiapan Go-Live MVP — Keamanan, Lean Architecture, Deployment
+
+---
+
+## PILAR 1 — MVP Scoping & Lean Architecture
+
+### ✅ Fitur INTI yang Wajib Ada di MVP (Core 20% → 80% Value)
+
+| Fitur | Status | Keterangan |
+|---|---|---|
+| Auth (Login/Logout/JWT) | ✅ SIAP | Solid, rate-limited, bcrypt |
+| Upload Laporan (Satker PN) | ✅ SIAP | File ke MinIO, validasi ada |
+| Verifikasi Laporan (Verifier) | ✅ SIAP | State machine jelas |
+| Dashboard Progress (Admin/Pimpinan) | ✅ SIAP | Heatmap & agregat tersedia |
+| Notifikasi In-App | ✅ SIAP | BullMQ + worker berjalan |
+| Manajemen User (CRUD Admin) | ✅ SIAP | RBAC sudah diimplementasi |
+| Manajemen Master Data | ✅ SIAP | Tipe laporan, satker, deadline |
+
+### 🔴 Fitur OVER-ENGINEERED — Wajib Ditunda ke V2.0
+
+| Fitur | File Terkait | Alasan Tunda |
+|---|---|---|
+| **Risk Management & Heatmap** | `RiskHeatmap.jsx`, `internalMonitoringRiskService.js`, `riskScoring.js` | Kompleks, butuh data historis minimal 1 siklus dulu |
+| **Repeat Findings Detection** | `internalMonitoringRepeatFindingService.js`, `RepeatFindingQueue.jsx` | Hanya relevan setelah data ≥ 2 periode terkumpul |
+| **Management Review Workflow** | `internalMonitoringManagementReviewController.js`, `ManagementReviewDetail()` | Proses manual lebih realistis untuk MVP |
+| **Retention & Legal Hold** | `internalMonitoringRetentionController.js` | Zero user demand di MVP |
+| **Frequency Engine (6 Strategi)** | `annualChangeStrategy.js`, `quarterlyStrategy.js`, dll | Cukup 1 strategi manual untuk awal |
+| **SLA & Escalation Otomatis** | `internalMonitoringEscalationController.js`, `slaService.js` | Manual reminder cukup untuk MVP |
+| **Reminder Worker Otomatis** | `internalMonitoringReminderWorker.js` | Email reminder bisa manual dulu — kode placeholder tidak berfungsi (`return true` tanpa kirim email) |
+| **Executive Dashboard Lanjutan** | `ExecutiveDashboard.jsx`, `RiskAcceptanceRegister.jsx` | Cukup dashboard dasar untuk MVP |
+| **Reporting Engine (PDF/Excel)** | `internalMonitoringReportService.js`, `InternalMonitoringAuditManifestService` | Export manual bisa dilakukan admin |
+
+### ⚠️ Workaround Manual yang Direkomendasikan untuk MVP
+
+| Proses Otomatis (kode saat ini) | Pengganti Manual MVP |
+|---|---|
+| Reminder worker kirim email otomatis | Admin PT cek dashboard & kirim WA/email manual |
+| Auto-generate targets dari frequency engine | Admin generate sekali via endpoint `POST /master-targets/generate` |
+| Escalation otomatis ke Pimpinan | Admin PT pantau dashboard aging & eskalasi manual |
+| Risk scoring otomatis | Verifier input manual setelah temuan dicatat |
+
+---
+
+## PILAR 2 — Keamanan Dasar & Hak Akses (DevSecOps)
+
+### 🔴 BLOCKER KEAMANAN — Wajib Perbaiki Sebelum Go-Live
+
+#### BUG-SEC-01: SQL Injection via `knex.raw()` dengan Interpolasi Langsung
+- **File:** `src/services/internalMonitoringEscalationService.js` baris 111 & 123
+- **Bukti:**
+  ```js
+  // BERBAHAYA — note dari user langsung diinterpolasi ke SQL
+  metadata_json: knex.raw(`metadata_json || '{"ack_note": "${note}"}'::jsonb`)
+  metadata_json: knex.raw(`metadata_json || '{"resolve_note": "${note}"}'::jsonb`)
+  ```
+- **Fix:** Gunakan parameterized binding knex atau `JSON.stringify()` terlebih dahulu:
+  ```js
+  metadata_json: knex.raw(`metadata_json || ?::jsonb`, [JSON.stringify({ ack_note: note })])
+  ```
+
+#### BUG-SEC-02: Route Shadow — `/master-imports/preview` Tanpa Auth
+- **File:** `src/routes/internalMonitoringRoutes.js` baris ~179
+- **Bukti:** Route baris 106 (dengan `authorize(['ADMIN_PT'])`) ditimpa oleh route identik baris 179 **tanpa middleware auth sama sekali**. Express akan mengeksekusi yang pertama saja, tetapi ini adalah bug desain berbahaya dan rawan regresi.
+- **Fix:** Hapus duplikat baris 179–186 (Master Engine Routes yang menduplikasi path `/master-imports/*`). Pastikan Master Engine punya prefix route sendiri misal `/v1/internal-monitoring/engine/*`.
+
+#### BUG-SEC-03: Endpoint `/metrics` Terbuka Tanpa Autentikasi
+- **File:** `src/routes/index.js` baris 83–85
+- **Bukti:** `router.get('/metrics', ...)` mengekspos Prometheus metrics (jumlah request, error rate, memory usage) tanpa middleware auth apapun.
+- **Fix:** Tambahkan IP whitelist atau token sederhana:
+  ```js
+  router.get('/metrics', (req, res, next) => {
+    const token = req.headers['x-metrics-token'];
+    if (token !== process.env.METRICS_TOKEN) return res.status(403).end();
+    next();
+  }, async (req, res) => { ... });
+  ```
+
+#### BUG-SEC-04: SSRF Risk di `proxyMinioFile`
+- **File:** `src/controllers/reportController.js` baris 142
+- **Risiko:** Jika URL MinIO dikonstruksi dari input user tanpa validasi, attacker bisa redirect request ke internal service.
+- **Fix:** Validasi bahwa `MINIO_ENDPOINT` hanya dari nilai env, bukan dari parameter request.
+
+### 🟡 Temuan Keamanan Medium Priority
+
+| ID | Temuan | Lokasi | Rekomendasi |
+|---|---|---|---|
+| SEC-M01 | `BASE_URL` fallback hardcode domain produksi | `emailService.js:121` | Wajibkan `BASE_URL` di `.env`, tidak ada fallback default |
+| SEC-M02 | Email "From" fallback hardcode `noreply@pt-kepri.go.id` | `emailService.js:40,72,97` | Gunakan hanya `process.env.SMTP_USER`, throw error jika tidak ada |
+| SEC-M03 | `lock_version` tidak diinisialisasi di `createReview()` | `internalMonitoringManagementReviewService.js` | Set `lock_version: 0` saat insert, return di response `createReview` |
+| SEC-M04 | Risk Governance endpoints tanpa `authorize()` | `internalMonitoringRoutes.js` baris ~179+ | Tambahkan `authorize(['ADMIN_PT', 'PIMPINAN'])` di semua dashboard risk |
+
+### ✅ Yang Sudah Baik (Tidak Perlu Diubah)
+
+- ✅ `.env` ada di `.gitignore` — aman, tidak pernah masuk Git
+- ✅ `.env.example` lengkap dengan panduan generate JWT_SECRET
+- ✅ Soft delete (`deleted_at`) diimplementasi di tabel utama
+- ✅ `created_by` / `updated_by` ada di tabel monitoring
+- ✅ Rate limiting di auth routes (login, password reset)
+- ✅ CORS dikonfigurasi via `ALLOWED_ORIGINS` env
+- ✅ File upload: validasi MIME type via `file-type` library (bukan ekstensi saja)
+- ✅ JWT expiry dikonfigurasi
+- ✅ Password di-hash dengan bcryptjs (rounds ≥ 10)
+- ✅ Multer membatasi ukuran file via `MONITORING_UPLOAD_MAX_BYTES`
+
+---
+
+## PILAR 3 — Kesiapan Deployment & Infrastruktur (DevOps)
+
+### 🔴 BLOCKER DEPLOYMENT — Wajib Perbaiki Sebelum Go-Live
+
+#### BUG-OPS-01: `CMD` Salah di `Dockerfile.prod` — Container Akan Crash
+- **File:** `Dockerfile.prod` baris 50
+- **Bukti:**
+  ```dockerfile
+  CMD ["npm", "start:api"]   # ❌ SALAH — npm tidak mengenal "start:api" sebagai subcommand
+  ```
+- **Fix:**
+  ```dockerfile
+  CMD ["npm", "run", "start:api"]   # ✅ BENAR
+  ```
+
+#### BUG-OPS-02: Inkonsistensi Key Email di `.env.example` vs Kode
+- **Bukti:** `.env.example` mendokumentasikan `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER`, `EMAIL_PASS` — tetapi kode `emailService.js` membaca `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`.
+- **Dampak:** Fitur email **tidak akan berfungsi di production** meski `.env` sudah diisi dengan benar mengikuti contoh.
+- **Fix:** Sinkronkan salah satu — pilih `SMTP_*` dan update `.env.example`:
+  ```env
+  SMTP_HOST=smtp.gmail.com
+  SMTP_PORT=587
+  SMTP_USER=<WAJIB_DIISI: alamat email pengirim>
+  SMTP_PASS=<WAJIB_DIISI: App Password SMTP>
+  ```
+
+### 🟡 Quick Wins DevOps
+
+| ID | Temuan | Lokasi | Fix |
+|---|---|---|---|
+| OPS-Q01 | Nama container prod masih `monev_*` | `docker-compose.prod.yml` | Rename ke `satya_*` untuk konsistensi |
+| OPS-Q02 | Migrasi dijalankan 2x (app + worker sama-sama jalankan entrypoint.sh) | `entrypoint.sh` | Jalankan migrasi hanya di service `app`, bukan `worker` |
+| OPS-Q03 | `console.log` di worker process | `internalMonitoringReminderWorker.js` | Ganti dengan `logger.info/error` dari Winston |
+| OPS-Q04 | `BASE_URL` tidak ada di `.env.example` | `.env.example` | Tambahkan `BASE_URL=https://devapps.pt-kepri.go.id/satya` |
+| OPS-Q05 | Sentry DSN tidak dikonfigurasi | `.env` aktual | Isi atau set `SENTRY_DSN=` (kosong) secara eksplisit |
+
+### ✅ Yang Sudah Baik di Sisi DevOps
+
+- ✅ `docker-compose.prod.yml` sudah ada dan fungsional
+- ✅ `Dockerfile.prod` multi-stage build (efisien)
+- ✅ `entrypoint.sh` menjalankan migrasi otomatis saat startup
+- ✅ `knex` migrations lengkap dan berurutan (20+ file)
+- ✅ Seeds tersedia: akun admin, data master, user UAT
+- ✅ Health check endpoint tersedia di `/api/v1/health`
+- ✅ Winston structured logging sudah dikonfigurasi
+- ✅ Redis + BullMQ untuk async job queue
+- ✅ Nginx reverse proxy + SSL Certbot sudah terdokumentasi
+
+---
+
+## 📊 HASIL TEST SUITE (20 Juli 2026)
+
+### Backend
+| Metrik | Nilai |
+|---|---|
+| Test Suites | 25 ✅ PASS / 11 ❌ FAIL (dari 36 total) |
+| Test Cases | **260 ✅ PASS / 32 ❌ FAIL** (dari 292 total) |
+| **Success Rate** | **89.0%** |
+| Coverage — Statements | 62.05% |
+| Coverage — Branches | 46.58% |
+| Coverage — Functions | 61.36% |
+| Coverage — Lines | **64.25%** |
+
+### Test Suites yang FAIL (perlu perhatian sebelum go-live)
+| Suite | Kategori Kegagalan |
+|---|---|
+| `internalMonitoringWorkflow.test.js` | SOD check mengembalikan pesan generic, bukan "SOD Violation" |
+| `internalMonitoringDashboard.test.js` | State assertion gagal |
+| `reportManagement.test.js` | Mock tidak sesuai implementasi terbaru |
+| `reportFlow.test.js` | Dependency mock tidak lengkap |
+| `internalMonitoringStartup.test.js` | Konfigurasi test environment |
+| `internalMonitoringMatrix.test.js` | Coverage & verification state |
+| `internalMonitoringFileSecurity.test.js` | `Minio.Client is not a constructor` — mock salah |
+| `internalMonitoringDeadline.test.js` | Assertion deadline salah |
+| `reportControllerAdmin.test.js` | Mock response tidak cocok |
+| `reportService.test.js` | `Minio.Client is not a constructor` — mock salah |
+| `middleware.test.js` | `req.get is not a function` — mock request tidak lengkap |
+
+### Frontend
+| Metrik | Nilai |
+|---|---|
+| Test Suites | 1 ❌ FAIL (`upload.test.jsx`) |
+| Coverage — Statements | 63.86% |
+| Coverage — Branches | 54.52% |
+| Coverage — Functions | 57.69% |
+| Coverage — Lines | **69.33%** |
+
+---
+
+## 🏁 GO-LIVE CHECKLIST — Action Plan Terkonsolidasi
+
+### 🔴 BLOCKER — Wajib Selesai Sebelum Deploy
+
+- [ ] **[SEC-01]** Fix SQL Injection di `internalMonitoringEscalationService.js` baris 111 & 123 — ganti interpolasi string dengan `knex.raw(query, [JSON.stringify({...})])`
+- [ ] **[SEC-02]** Hapus duplikat route `/master-imports/preview` tanpa auth di `internalMonitoringRoutes.js` baris ~179 (Master Engine block)
+- [ ] **[SEC-03]** Tambahkan autentikasi/token di endpoint `GET /metrics` (`src/routes/index.js` baris 83)
+- [ ] **[OPS-01]** Perbaiki `Dockerfile.prod` CMD: `["npm", "start:api"]` → `["npm", "run", "start:api"]`
+- [ ] **[OPS-02]** Sinkronkan key email: ubah `.env.example` dari `EMAIL_*` menjadi `SMTP_*` agar konsisten dengan kode `emailService.js`
+- [ ] **[OPS-03]** Tambahkan `BASE_URL` ke `.env.example` dan isi nilainya di `.env` production — tanpa ini, link reset password akan arahkan ke domain salah
+- [ ] **[BUG-01]** Reminder worker email selalu `return true` tanpa benar-benar kirim email (`internalMonitoringReminderWorker.js` baris ~82) — nonaktifkan fitur ini atau implementasikan benar via `emailService`
+
+### 🟡 QUICK WINS — Kerjakan Dalam 1 Hari (Sebelum atau Sesaat Setelah Deploy)
+
+- [ ] **[SEC-04]** Tambahkan `authorize()` di Risk Governance endpoints yang tidak terproteksi (`/dashboard/risk-heatmap`, `/dashboard/risk-trends`, dll)
+- [ ] **[SEC-05]** Hapus atau guard hardcode `noreply@pt-kepri.go.id` di `emailService.js` — wajibkan dari env
+- [ ] **[BUG-02]** Fix mock `Minio.Client` di `reportService.test.js` dan `internalMonitoringFileSecurity.test.js` — gunakan named export yang benar
+- [ ] **[BUG-03]** Fix mock `req.get` di `middleware.test.js` — tambahkan `get: jest.fn().mockReturnValue('test-agent')` ke objek mock `req`
+- [ ] **[BUG-04]** Fix `upload.test.jsx` frontend — tombol "Unggah" tidak ditemukan karena butuh file dipilih terlebih dahulu (state condition)
+- [ ] **[OPS-04]** Jalankan migrasi hanya di service `app` (bukan `worker`) di `entrypoint.sh` — cegah double execution
+- [ ] **[OPS-05]** Rename service `monev_*` → `satya_*` di `docker-compose.prod.yml`
+- [ ] **[OPS-06]** Ganti `console.log` di worker dengan `logger.info/error` dari Winston
+
+### 🟢 POST-MVP V2.0 — Abaikan Sekarang, Kerjakan Setelah Rilis
+
+- [ ] Risk Management: `RiskHeatmap`, `RiskAcceptanceRegister`, `RepeatFindingQueue`, `internalMonitoringRiskService` — aktifkan setelah data 1 siklus terkumpul
+- [ ] Management Review Workflow — implementasikan setelah user terbiasa dengan flow dasar
+- [ ] Frequency Engine (6 strategi) — cukup trigger manual `POST /master-targets/generate` untuk MVP
+- [ ] SLA & Escalation otomatis — manual monitoring via dashboard sudah cukup
+- [ ] Reminder Worker email otomatis — implementasikan dengan benar setelah MVP stabil
+- [ ] Retention & Legal Hold — zero urgency untuk MVP
+- [ ] Reporting Engine PDF/Excel — export manual cukup untuk awal
+- [ ] Executive Dashboard lanjutan — `ExecutiveDashboard.jsx` advanced views
+- [ ] Naikkan test coverage branch dari 46% → 70%+ (unit test di service layer)
+- [ ] Implementasikan Sentry DSN untuk error tracking production
+
+---
+
+## 💡 Rekomendasi Strategi Rilis MVP (Low-Cost, Low-Effort)
+
+```
+VPS Eksisting (devapps.pt-kepri.go.id)
+│
+├── docker-compose.prod.yml
+│   ├── app (Node.js backend, port 3000 internal → 3004 nginx)
+│   ├── worker (BullMQ worker — pertimbangkan disable untuk MVP ringan)
+│   ├── db (PostgreSQL)
+│   ├── redis (Redis)
+│   └── minio (MinIO object storage)
+│
+└── Nginx (existing) → proxy /satya/ → app:3004
+    └── SSL via Certbot (sudah ada)
+
+Deploy command:
+  git pull && docker-compose -f docker-compose.prod.yml up -d --build
+  docker-compose exec app knex migrate:latest
+  docker-compose exec app knex seed:run (hanya pertama kali)
+```
+
+**Total blockers yang harus diselesaikan: 7 item**
+**Estimasi waktu perbaikan: 4–6 jam developer**
+**Risiko terbesar jika tidak diperbaiki:** Email production tidak berfungsi (OPS-02), container crash saat start (OPS-01), SQL Injection pada fitur acknowledge escalation (SEC-01).

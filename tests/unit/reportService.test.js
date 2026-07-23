@@ -10,6 +10,9 @@ jest.mock('../../src/config/minio', () => ({
         presignedGetObject: jest.fn(),
         removeObject: jest.fn()
     },
+    minioUploadBreaker: {
+        fire: jest.fn().mockResolvedValue(true)
+    },
     BUCKET_NAME: 'test-bucket'
 }));
 

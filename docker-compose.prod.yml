@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.prod
-    container_name: monev_app
+    container_name: satya_app
     restart: unless-stopped
     ports:
       - "3004:3000"
@@ -29,13 +29,13 @@ services:
       retries: 3
       start_period: 40s
     networks:
-      - monev-net
+      - satya-net
 
   worker:
     build:
       context: .
       dockerfile: docker/Dockerfile.prod
-    container_name: monev_worker
+    container_name: satya_worker
     restart: unless-stopped
     env_file:
       - .env
@@ -51,21 +51,21 @@ services:
     healthcheck:
       disable: true
     networks:
-      - monev-net
+      - satya-net
 
   db:
     image: postgres:15-alpine
-    container_name: monev_postgres
+    container_name: satya_postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
-    # Port removed to prevent host conflict. Accessible internally via monev-net
+    # Port removed to prevent host conflict. Accessible internally via satya-net
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - monev-net
+      - satya-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -74,11 +74,11 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: monev_redis
+    container_name: satya_redis
     restart: unless-stopped
     networks:
-      - monev-net
-    # Port removed to prevent host conflict. Accessible internally via monev-net
+      - satya-net
+    # Port removed to prevent host conflict. Accessible internally via satya-net
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -89,13 +89,13 @@ services:
 
   minio:
     image: minio/minio:latest
-    container_name: monev_minio
+    container_name: satya_minio
     restart: unless-stopped
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
     command: server /data --console-address ":9001"
-    # Port removed to prevent host conflict. Accessible internally via monev-net
+    # Port removed to prevent host conflict. Accessible internally via satya-net
     volumes:
       - minio_data:/data
     healthcheck:
@@ -104,7 +104,7 @@ services:
       timeout: 20s
       retries: 3
     networks:
-      - monev-net
+      - satya-net
 
 volumes:
   postgres_data:
@@ -112,5 +112,5 @@ volumes:
   minio_data:
 
 networks:
-  monev-net:
+  satya-net:
     driver: bridge

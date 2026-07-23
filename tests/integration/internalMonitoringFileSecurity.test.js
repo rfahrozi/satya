@@ -4,7 +4,12 @@ const app = require('../../src/app');
 const knex = require('../../src/config/knex');
 const bcrypt = require('bcryptjs');
 const path = require('path');
-jest.mock('../../src/config/minio', () => ({}), { virtual: true });
+jest.mock('../../src/config/minio', () => ({
+    minioClient: { presignedGetObject: jest.fn(), putObject: jest.fn(), removeObject: jest.fn(), bucketExists: jest.fn(), makeBucket: jest.fn() },
+    minioUploadBreaker: { fire: jest.fn().mockResolvedValue(true) },
+    initMinio: jest.fn(),
+    BUCKET_NAME: 'test-bucket'
+}));
 jest.mock('../../src/emailWorker', () => ({}), { virtual: true });
 
 async function clearDatabase() {

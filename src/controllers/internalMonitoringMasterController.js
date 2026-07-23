@@ -4,8 +4,18 @@ const knex = require('../config/knex');
 
 exports.listMasterItems = async (req, res, next) => {
   try {
-    // Mengambil daftar checklist dan unit yang bertanggung jawab
-    const items = await knex('monitoring_items')
+    // Filter opsional: assessment (AMPUH|PMPZI|AKIP|REGULASI) dan duty_cluster
+    const { assessment, duty_cluster, limit, offset } = req.query;
+
+    // Map assessment tab → prefix item_code
+    const ASSESSMENT_PREFIX_MAP = {
+      AMPUH:    'AMP-%',
+      PMPZI:    'PZ-%',
+      AKIP:     'AKIP-%',
+      REGULASI: 'REG-%',
+    };
+
+    let query = knex('monitoring_items')
       .leftJoin('monitoring_item_assignments as mia', 'monitoring_items.id', 'mia.monitoring_item_id')
       .leftJoin('internal_units as iu', 'mia.internal_unit_id', 'iu.id')
       .select(
@@ -15,16 +25,33 @@ exports.listMasterItems = async (req, res, next) => {
         'monitoring_items.duty_cluster',
         'monitoring_items.frequency_type',
         'monitoring_items.is_active',
-        'iu.name as unit_name'
+        'iu.name as unit_name',
+        'iu.code as unit_code'
       )
       .where('monitoring_items.is_active', true)
       .orderBy('monitoring_items.item_code', 'asc');
 
-    res.json({ success: true, data: items });
+    // Filter berdasarkan assessment tab
+    if (assessment && ASSESSMENT_PREFIX_MAP[assessment.toUpperCase()]) {
+      query = query.whereLike('monitoring_items.item_code', ASSESSMENT_PREFIX_MAP[assessment.toUpperCase()]);
+    }
+
+    // Filter berdasarkan rumpun tupoksi
+    if (duty_cluster) {
+      query = query.where('monitoring_items.duty_cluster', duty_cluster);
+    }
+
+    // Pagination
+    if (limit) query = query.limit(parseInt(limit, 10));
+    if (offset) query = query.offset(parseInt(offset, 10));
+
+    const items = await query;
+    res.json({ success: true, data: items, total: items.length });
   } catch (err) {
     next(err);
   }
 };
+
 
 exports.listPeriods = async (req, res, next) => {
   try {

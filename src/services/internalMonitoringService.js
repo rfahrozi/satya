@@ -191,6 +191,66 @@ class InternalMonitoringService {
     });
   }
 
+
+  async batchVerifyTargets(actor, payload) {
+    if (!payload.targetIds || !Array.isArray(payload.targetIds) || payload.targetIds.length === 0) {
+      badRequest('INVALID_INPUT', 'targetIds array tidak boleh kosong');
+    }
+
+    return knex.transaction(async (trx) => {
+      let successCount = 0;
+      let failedCount = 0;
+      const errors = [];
+
+      for (const id of payload.targetIds) {
+        try {
+          const target = await repo.getTargetDetail(id, trx);
+          if (!target) { throw new Error('Target tidak ditemukan'); }
+
+          if (target.workflow_status !== 'AWAITING_VERIFICATION') {
+            throw new Error('Status target bukan AWAITING_VERIFICATION');
+          }
+
+          await authSvc.assertHasCapability(actor, id, ['VERIFIER'], trx);
+          await authSvc.assertSegregationOfDuties(actor, target, 'VERIFY', trx);
+
+          const updated = await repo.updateTargetState(id, null, {
+            workflow_status: 'VERIFIED',
+            verified_at: knex.fn.now(),
+            updated_by: actor.userId
+          }, target.lock_version, trx);
+
+          throwIfVersionConflict(updated);
+
+          await repo.insertVerification({
+            monitoring_target_id: id,
+            actor_user_id: actor.userId,
+            action: 'VERIFIED',
+            note: payload.note || 'Verified via Batch'
+          }, trx);
+
+          await repo.insertActivity({
+            monitoring_target_id: id,
+            actor_user_id: actor.userId,
+            action: 'VERIFY',
+            description: 'Target diverifikasi secara massal (Batch): ' + (payload.note || '')
+          }, trx);
+
+          const assignees = await repo.getAssignees(id, ['COLLECTOR', 'APPROVER', 'ACCOUNTABLE_OWNER', 'SUPPORTING_PIC'], trx);
+          const userIds = assignees.map(a => a.user_id);
+          await notificationSvc.notifyTargetVerified(target, userIds, trx);
+
+          successCount++;
+        } catch (err) {
+          failedCount++;
+          errors.push({ id, reason: err.message });
+        }
+      }
+
+      return { success: true, summary: { successCount, failedCount, errors } };
+    });
+  }
+
   async verifyTarget(id, actor, payload) {
     return knex.transaction(async (trx) => {
       const target = await repo.getTargetDetail(id, trx);
@@ -426,7 +486,7 @@ class InternalMonitoringService {
       badRequest('INVALID_TYPE', 'Evidence bukan berupa file');
     }
 
-    const objectKey = ev.object_key || ev.file_url;
+    const objectKey = ev.value_text;
     if (!objectKey) notFound('File evidence tidak tersedia');
 
     // Generate presigned URL dari MinIO (berlaku sesuai TTL dari env)

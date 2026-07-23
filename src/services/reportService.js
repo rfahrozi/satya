@@ -200,7 +200,7 @@ async function verifyAndNotify(tenant, submissionId, status, catatan, score) {
         if (status === 'revisi') {
         const detail = await knex('users')
             .where('satker_id', submission.satker_id)
-            .whereNotNull('email')
+            .whereRaw('email IS NOT NULL')
             .whereIn('role', ['SATKER_PN', 'PANMUD_HUKUM_PN', 'STAFF_PANMUD_HUKUM_PN'])
             .select('email as satker_email')
             .first();

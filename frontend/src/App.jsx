@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
+import DashboardWrapper from './pages/DashboardWrapper'
 import SatkerPortal from './pages/SatkerPortal'
 import UserManagement from './pages/UserManagement'
 import MasterData from './pages/MasterData'
@@ -96,7 +96,7 @@ function App() {
             path="/dashboard"
             element={
               <ProtectedRoute allowedRoles={['ADMIN_PT', ...R_MONITORING]}>
-                <Dashboard />
+                <DashboardWrapper />
               </ProtectedRoute>
             }
           />

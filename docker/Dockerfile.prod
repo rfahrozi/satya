@@ -47,4 +47,4 @@ USER satya
 
 EXPOSE 3000
 
-CMD ["npm", "start:api"]
+CMD ["npm", "run", "start:api"]

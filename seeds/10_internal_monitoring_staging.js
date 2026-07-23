@@ -50,18 +50,30 @@ exports.seed = async function(knex) {
   }
 
   // 3. Setup UAT Period & Target Baseline
-  let period = await knex('monitoring_periods').where('name', 'UAT Period').first();
+  let period = await knex('monitoring_periods').where('name', 'Tahunan 2026').first();
+  if (!period) {
+    // Cek juga nama lama agar tidak duplikat jika seed dijalankan ulang
+    period = await knex('monitoring_periods').where('name', 'UAT Period').first();
+  }
   if (!period) {
     [period] = await knex('monitoring_periods').insert({
-      name: 'UAT Period',
+      name: 'Tahunan 2026',
       year: 2026,
       month: 12,
-      start_date: '2026-12-01',
+      start_date: '2026-01-01',
       end_date: '2026-12-31',
       status: 'OPEN',
       created_by: adminId,
       opened_at: new Date()
     }).returning('*');
+  } else if (period.name === 'UAT Period') {
+    // Rename periode lama jika masih pakai nama UAT
+    await knex('monitoring_periods').where('id', period.id).update({
+      name: 'Tahunan 2026',
+      start_date: '2026-01-01',
+      end_date: '2026-12-31'
+    });
+    period.name = 'Tahunan 2026';
   }
 
   // Find some monitoring items

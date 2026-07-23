@@ -80,9 +80,24 @@ const promClient = require('prom-client');
 const collectDefaultMetrics = promClient.collectDefaultMetrics;
 collectDefaultMetrics(); // Aktifkan metrik RAM, CPU, dan Event Loop default Node.js
 
-router.get('/metrics', async (req, res) => {
-    res.set('Content-Type', promClient.register.contentType);
-    res.end(await promClient.register.metrics());
+router.get('/metrics', async (req, res, next) => {
+    // Tambahkan basic security untuk endpoint metrics agar tidak bocor
+    const authHeader = req.headers['authorization'];
+    const metricsToken = process.env.METRICS_TOKEN || 'dev-metrics-token-123';
+
+    // Format: "Bearer <token>"
+    if (process.env.NODE_ENV === 'production') {
+        if (!authHeader || !authHeader.includes(metricsToken)) {
+            return res.status(403).json({ error: 'Forbidden access to metrics' });
+        }
+    }
+
+    try {
+        res.set('Content-Type', promClient.register.contentType);
+        res.end(await promClient.register.metrics());
+    } catch (error) {
+        next(error);
+    }
 });
 
 /**

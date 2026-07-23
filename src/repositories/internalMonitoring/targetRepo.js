@@ -31,7 +31,10 @@ async function getTargetDetail(id, trx = knex) {
   target.assignees = await trx('monitoring_target_assignees').where({ monitoring_target_id: id });
   target.evidences = await listEvidenceByTarget(id, trx);
   target.follow_ups = await listFollowUpsByTarget(id, trx);
-  return target;
+
+  // Return hasil parsed snapshot agar field seperti unit_name dan requirements diisi
+  const parsed = await _parseTargetSnapshots([target]);
+  return parsed[0];
 }
 
 async function _parseTargetSnapshots(targets) {

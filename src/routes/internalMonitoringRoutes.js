@@ -23,6 +23,9 @@ const { authenticate, authorize } = require('../middlewares/auth');
 
 const router = express.Router();
 router.use(tenantContext);
+// --- Global Authentication Middleware untuk Internal Monitoring ---
+router.use(authenticate);
+
 router.use((req, res, next) => {
   req.user = req.tenant || {};
   req.user.id = req.user.userId;
@@ -61,9 +64,9 @@ router.post('/periods/:id/generate', authorize(['ADMIN_PT']), masterController.g
 router.get('/master-items', authorize(['ADMIN_PT']), masterController.listMasterItems);
 
 // --- Dashboard ---
-router.get('/dashboard/my', dashboardController.getMyDashboard);
+router.get('/dashboard/my', authenticate, dashboardController.getMyDashboard);
 router.get('/dashboard/operational', authorize(['ADMIN_PT', 'PIMPINAN_PT', 'PANITERA_PT', 'SEKRETARIS_PT', 'VERIFIER']), dashboardController.getOperationalDashboard);
-router.get('/dashboard/executive', authorize(['ADMIN_PT', 'PIMPINAN_PT', 'KPT', 'WKPT', 'HAKIM_PT']), dashboardController.getExecutiveDashboard);
+router.get('/dashboard/executive', authorize(['ADMIN_PT', 'PIMPINAN_PT', 'KPT', 'WKPT', 'HAKIM_PT', 'PIMPINAN']), dashboardController.getExecutiveDashboard);
 router.get('/review-queue', authorize(['ADMIN_PT', 'VERIFIER']), dashboardController.listReviewQueue);
 router.get('/follow-up-queue', dashboardController.listFollowUpQueue);
 
@@ -86,6 +89,7 @@ router.patch('/targets/:targetId/criteria/:criterionId/assessment', authorize(['
 router.post('/targets/:targetId/criteria/:criterionId/evidence-links', authorize(['SATKER_PN', 'VERIFIER', 'ADMIN_PT']), matrixController.linkEvidence);
 router.post('/targets/:targetId/criteria/:criterionId/parameter-links', authorize(['SATKER_PN', 'VERIFIER', 'ADMIN_PT']), matrixController.linkParameter);
 router.post('/targets/:targetId/verify', authorize(['VERIFIER', 'ADMIN_PT']), matrixController.verifyTarget);
+router.post('/targets/batch-verify', authorize(['VERIFIER', 'ADMIN_PT']), operationalController.batchVerifyTargets);
 router.post('/criterion-assessments/:criterionAssessmentId/findings', authorize(['VERIFIER', 'ADMIN_PT']), matrixController.createFinding);
 
 // --- Evidence ---
@@ -176,13 +180,15 @@ router.post('/repeat-finding-candidates/:id/confirm', authorize(['VERIFIER', 'AD
 router.post('/repeat-finding-candidates/:id/reject', authorize(['VERIFIER', 'ADMIN_PT']), internalMonitoringRiskGovernanceController.rejectRepeatFinding);
 router.post('/repeat-finding-candidates/:id/merge', authorize(['VERIFIER', 'ADMIN_PT']), internalMonitoringRiskGovernanceController.mergeRepeatFinding);
 // --- Master Engine Routes ---
-router.post('/master-imports/preview', masterEngineController.previewImport);
-router.post('/master-imports/commit', masterEngineController.commitImport);
-router.post('/master-versions/:id/activate', masterEngineController.activateVersion);
-router.get('/master-versions/:id/coverage', masterEngineController.getCoverage);
-router.post('/master-targets/preview', masterEngineController.generateTargetsPreview);
-router.post('/master-targets/generate', masterEngineController.generateTargets);
-router.post('/events', masterEngineController.createEvent);
-router.post('/events/:id/generate-targets', masterEngineController.generateEventTargets);
+// Gunakan endpoint yang berbeda (prefix: /engine) untuk master engine controller
+// agar tidak menimpa route master-imports dari legacy controller di atas
+router.post('/engine/master-imports/preview', authorize(['ADMIN_PT']), upload.single('file'), masterEngineController.previewImport);
+router.post('/engine/master-imports/commit', authorize(['ADMIN_PT']), masterEngineController.commitImport);
+router.post('/engine/master-versions/:id/activate', authorize(['ADMIN_PT']), masterEngineController.activateVersion);
+router.get('/engine/master-versions/:id/coverage', authorize(['ADMIN_PT']), masterEngineController.getCoverage);
+router.post('/engine/master-targets/preview', authorize(['ADMIN_PT']), masterEngineController.generateTargetsPreview);
+router.post('/engine/master-targets/generate', authorize(['ADMIN_PT']), masterEngineController.generateTargets);
+router.post('/engine/events', authorize(['ADMIN_PT']), masterEngineController.createEvent);
+router.post('/engine/events/:id/generate-targets', authorize(['ADMIN_PT']), masterEngineController.generateEventTargets);
 
 module.exports = router;

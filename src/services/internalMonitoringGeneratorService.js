@@ -4,6 +4,19 @@ const targetRepo = require('../repositories/internalMonitoring/targetRepo');
 const strategies = require('../domain/internalMonitoring/frequency/index');
 const deadlineService = require('./internalMonitoringDeadlineService');
 
+const path = require('path');
+const fs = require('fs');
+let exactRequirements = {};
+try {
+  const reqPath = path.join(__dirname, '../utils/exact_requirements.json');
+  if (fs.existsSync(reqPath)) {
+    exactRequirements = JSON.parse(fs.readFileSync(reqPath, 'utf8'));
+  }
+} catch(e) {
+  console.warn('Could not load exact requirements from JSON', e.message);
+}
+
+
 class InternalMonitoringGeneratorService {
 
   async _buildCandidates(periodId, trx) {
@@ -28,6 +41,25 @@ class InternalMonitoringGeneratorService {
 
       const strategy = strategies[freqKey] || strategies.monthly;
 
+      // [PROSES BISNIS] Filter Eligibility berdasarkan tipe frekuensi dan bulan dari periode saat ini
+      const m = period.month;
+      let isEligible = true;
+
+      // Aturan Dasar Evaluasi (Audit Schedule)
+      if (item.frequency_type === 'MONTHLY') {
+         isEligible = true; // Bulanan di-generate setiap bulan apa pun yang dibuka
+      } else if (item.frequency_type === 'QUARTERLY') {
+         isEligible = (m % 3 === 0); // Hanya bulan 3, 6, 9, 12
+      } else if (item.frequency_type === 'SEMIANNUAL') {
+         isEligible = (m % 6 === 0); // Hanya bulan 6 dan 12
+      } else if (item.frequency_type === 'ANNUAL_WITH_CHANGE_EVENTS' || item.frequency_type === 'ANNUAL_REGULATOR_CALENDAR') {
+         isEligible = (m === 12); // Hanya di-generate di akhir tahun (Periode Tahunan / Semester 2 / Q4)
+      } else if (item.frequency_type === 'CONTINUOUS_WITH_MONTHLY_REVIEW' || item.frequency_type === 'EVENT_WITH_MONTHLY_RECAP') {
+         isEligible = true; // Event dan Continuous selalu di-review tiap bulan
+      }
+
+      if (!isEligible) continue; // Skip item ini, jangan masukkan ke daftar generate!
+
       for (const assignment of itemWithAssignments.assignments) {
         if (assignment.responsibility_type !== 'PRIMARY') continue;
 
@@ -42,7 +74,8 @@ class InternalMonitoringGeneratorService {
           baseDueAt.setDate(baseDueAt.getDate() + assignment.sla_days);
         }
 
-        const dueAt = await deadlineService.calculateDueAt(item.frequency_type, item.frequency_config_json || {}, period.id, item.id, trx);
+        const dbDueAt = await deadlineService.calculateDueAt(item.frequency_type, item.frequency_config_json || {}, period.id, item.id, trx);
+        const dueAt = targetDeadlineDate || dbDueAt;
 
         candidates.push({
           itemCode: item.item_code,

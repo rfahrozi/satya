@@ -131,6 +131,8 @@ async function createMonitoringPeriods(knex) {
     table.integer('year').notNullable();
     table.integer('month').nullable();
     table.integer('quarter').nullable();
+    table.string('period_type', 30).nullable(); // Ditambahkan untuk filter frekuensi: MONTHLY, QUARTERLY, SEMIANNUAL, ANNUAL
+    table.integer('period_unit').nullable();
     table.date('start_date').notNullable();
     table.date('end_date').notNullable();
     table.string('status', 50).notNullable().defaultTo('DRAFT');
@@ -142,6 +144,7 @@ async function createMonitoringPeriods(knex) {
     table.index(['year']);
     table.index(['month']);
     table.index(['quarter']);
+    table.index(['period_type']);
     table.index(['status']);
   });
 }
