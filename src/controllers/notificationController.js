@@ -10,10 +10,10 @@ async function getMyNotifications(req, res, next) {
         let query = knex('in_app_notifications');
         if (satkerId) {
             query = query.where(function() {
-                this.where('satker_id', satkerId).orWhere('user_id', req.user.id);
+                this.where('satker_id', satkerId).orWhere('user_id', req.tenant.userId);
             });
         } else {
-            query = query.where('user_id', req.user.id);
+            query = query.where('user_id', req.tenant.userId);
         }
 
         const notifs = await query.orderBy('created_at', 'desc').limit(20);
@@ -34,7 +34,7 @@ async function markAsRead(req, res, next) {
 
         await knex('in_app_notifications')
             .where(function() {
-                this.where('satker_id', satkerId).orWhere('user_id', req.user.id);
+                this.where('satker_id', satkerId).orWhere('user_id', req.tenant.userId);
             })
             .where('id', id)
             .update({ is_read: true, updated_at: knex.fn.now() });
@@ -54,7 +54,7 @@ async function markAllAsRead(req, res, next) {
 
         await knex('in_app_notifications')
             .where(function() {
-                this.where('satker_id', satkerId).orWhere('user_id', req.user.id);
+                this.where('satker_id', satkerId).orWhere('user_id', req.tenant.userId);
             })
             .where('is_read', false)
             .update({ is_read: true, updated_at: knex.fn.now() });
