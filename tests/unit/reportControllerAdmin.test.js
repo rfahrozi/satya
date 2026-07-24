@@ -206,6 +206,8 @@ describe('Unit Test: reportController - Admin Endpoints', () => {
         });
 
         it('harus berhasil upload file', async () => {
+            const fileType = require('file-type');
+            jest.spyOn(fileType, 'fromFile').mockResolvedValue({ ext: 'pdf', mime: 'application/pdf' });
             mockReq.body = { report_type_id: '1', periode_bulan: '3', periode_tahun: '2026' };
             mockReq.files = {
                 dokumen_monev: [{ originalname: 'test.pdf', buffer: Buffer.from('test'), size: 100, mimetype: 'application/pdf' }],
