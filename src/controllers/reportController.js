@@ -44,7 +44,14 @@ async function uploadReport(req, res, next) {
         }
 
         // [SEC-06] Validasi Magic Bytes untuk Report External Track
-        const allowedMimes = ['application/pdf', 'application/zip', 'application/vnd.ms-excel'];
+        const allowedMimes = [
+            'application/pdf',
+            'application/zip',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+            'application/msword', // .doc
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document' // .docx
+        ];
         for (const f of [file, fileExcel].filter(Boolean)) {
             const detected = await fileType.fromFile(f.path);
             if (!detected || !allowedMimes.includes(detected.mime)) {
